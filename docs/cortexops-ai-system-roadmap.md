@@ -311,6 +311,8 @@ Acceptance criteria:
 - Each imported record keeps source file and line number.
 - Raw JSON is stored so future schema changes remain recoverable.
 
+> 已实现（Signal/Candidate 拆表），见 docs/superpowers/plans/2026-07-03-roadmap-phase2-data-import.md。
+
 ### Phase 3: Review Inbox
 
 Goal: build the human review loop.
