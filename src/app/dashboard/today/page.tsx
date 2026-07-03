@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function TodayPage() {
   const data = await getDailyReadingView();
 
-  if (!data || data.view.selectedCount === 0) {
+  if (!data) {
     return (
       <WorkbenchPage
         eyebrow="Daily command center"
@@ -51,7 +51,17 @@ export default async function TodayPage() {
 
       <div>
         <h3 className="mb-3 text-xl font-semibold text-foreground">今日 30 分钟阅读包</h3>
-        <ReadingPack items={view.readingPack} />
+        {view.readingPack.length > 0 ? (
+          <ReadingPack items={view.readingPack} />
+        ) : (
+          <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            阅读包为空 — 可在{" "}
+            <Link href="/inbox/today" className="font-medium text-primary hover:underline">
+              Inbox/Today
+            </Link>{" "}
+            加入条目。
+          </p>
+        )}
       </div>
 
       {view.candidates.length > 0 && (
@@ -69,7 +79,13 @@ export default async function TodayPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-muted-foreground">勾选加入阅读包的交互在 Inbox/Today（Phase C）。</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            在{" "}
+            <Link href="/inbox/today" className="font-medium text-primary hover:underline">
+              Inbox/Today
+            </Link>{" "}
+            勾选加入阅读包。
+          </p>
         </div>
       )}
     </section>

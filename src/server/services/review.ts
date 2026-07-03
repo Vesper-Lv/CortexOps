@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db";
+import { assertValidPool } from "@/shared/poolOptions";
 
 export type ReviewState = {
   humanStatus: string;
@@ -29,6 +30,10 @@ export function applyReviewAction(state: ReviewState, action: ReviewAction): Rev
 }
 
 export async function reviewSignal(signalId: string, action: ReviewAction, rationale?: string): Promise<void> {
+  if (action.type === "change_pool") {
+    assertValidPool(action.pool);
+  }
+
   const signal = await prisma.signal.findUnique({ where: { id: signalId } });
   if (!signal) throw new Error(`signal not found: ${signalId}`);
 
