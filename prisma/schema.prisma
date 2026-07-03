@@ -103,3 +103,29 @@ model Candidate {
   @@index([canonicalKey])
   @@index([humanStatus])
 }
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String // signal | candidate | memo
+  entityId   String
+  action     String // confirm | change_pool | reject | toggle_reading_pack | ...
+  fromValue  String?
+  toValue    String?
+  rationale  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model Memo {
+  id             String   @id @default(cuid())
+  text           String
+  status         String   @default("open") // open | done
+  sourceContext  String? // daily_report | demo | manual
+  linkedSignalId String?
+  linkedUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
