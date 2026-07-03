@@ -35,7 +35,8 @@ prompt = """
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
 每条 JSONL link object 至少包含：
-id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_summary, codex_summary, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, practice_fit, reason。
+id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_summary, codex_summary, display_summary, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, read_reason, focus_direction, known_facts, open_questions。
+其中：display_summary 为每条必填的事实摘要（AIhot 直接复用 aihot_summary，不改写）；read_reason/focus_direction 仅阅读包非 knowledge_gap 条目填写；known_facts/open_questions 仅 knowledge_gap 条目填写；去重/保留说明只写入 novelty_reason，reason 不得复述。
 
 写入规则：
 - 所有采集链接先写入 state/daily/YYYY-MM-DD-links.jsonl。
@@ -52,10 +53,15 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 用五段判断今天的大方向：产品/行业动态、GitHub/工程信号、论文/研究信号、工具/工作流信号、风险/限制/反例。
 
 ## 2. 今日 30mins 阅读包
-按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目。不要把 P0、P1、GitHub 项目另列为独立顶层章节。阅读包每条包含：标题、原始链接、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、为什么读、读的时候看什么、读完得到什么判断、候选池建议。
+按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status。随后：
+- 摘要：display_summary（AIhot 直接用 aihot_summary，纯事实，不加解读）。
+- 若建议池不是 knowledge_gap：给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度，不要臆造文章未必包含的细节）。不要再输出"读的时候看/读完判断"模板句。
+- 若建议池是 knowledge_gap：改为两部分——「文章可获得的事实」（known_facts，从文章本身能得到的事实点）与「需要额外研究的问题」（open_questions，读完仍需另行查证的问题）。
+"P0 详细阅读"仅用于确有深度的来源；若来源只是产品功能/发布介绍页（信息浅），降为 P1 扫读，靠摘要让用户判断，不要为凑深度而过度解读。
 
 ## 3. 未入选阅读包的剩余链接
-列出剩余链接，尽量保持今日信息面完整。每条直接标注：优先级、AI 建议池、reading_pack_status、human_status、是否建议人工加入阅读包、一句话理由。若为非 AIhot 补充来源，标注 source_mix_note。若该链接或项目 7 天内出现过但因 material_update / carry_over 被保留，必须在该链接后注明保留原因。
+列出剩余链接，尽量保持今日信息面完整。每条首行标注：优先级、AI 建议池、reading_pack_status、human_status、是否建议人工加入阅读包；非 AIhot 补充来源标注 source_mix_note。随后另起一行给「摘要」（display_summary，AIhot 用 aihot_summary，纯事实）。剩余链接不写推荐阅读原因/关注方向，克制解读。
+去重/保留说明只出现一次：仅当 duplicate_status 为 material_update / carry_over / duplicate_suppressed 时，追加一行「保留/去重说明：<duplicate_status> — <novelty_reason>」。novelty_reason 只写一次，reason 不得复述该内容。
 
 ## 4. 今日练习三选一
 给 3 个 20-45 分钟练习选项，并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
@@ -66,6 +72,10 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 长清单要完整，阅读包要克制。
 - 候选池建议只作为每条链接的状态字段和 UI 标签输出，不要额外生成“候选池建议表”段落。
 - 不要为了凑数加入不可验证、过期或低质量链接。
+- 每条链接都要有 display_summary；AIhot 来源直接复用 aihot_summary，不改写。
+- 事实、AIhot 摘要、Codex 判断分离；剩余链接以事实摘要为主，克制解读。
+- 去重/保留原因只写入 novelty_reason，并在报告中只呈现一次，reason 不复述。
+- knowledge_gap 用“可获得的事实 + 需要额外研究的问题”呈现，不假装给出文章未包含的判断。
 """
 status = "ACTIVE"
 rrule = "FREQ=DAILY;BYHOUR=8;BYMINUTE=30;BYSECOND=0"

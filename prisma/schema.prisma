@@ -16,3 +16,151 @@ model Job {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ImportRun {
+  id                 String      @id @default(cuid())
+  startedAt          DateTime    @default(now())
+  finishedAt         DateTime?
+  status             String      @default("running") // running | success | partial | failed
+  filesScanned       Int         @default(0)
+  linesTotal         Int         @default(0)
+  importedSignals    Int         @default(0)
+  importedCandidates Int         @default(0)
+  skipped            Int         @default(0)
+  errors             Int         @default(0)
+  notes              String?
+  signals            Signal[]
+  candidates         Candidate[]
+}
+
+model Signal {
+  id                String    @id @default(cuid())
+  recordKey         String    @unique
+  stream            String // daily | memory
+  externalId        String?
+  canonicalKey      String?
+  date              String?
+  title             String?
+  sourceName        String?
+  sourceUrl         String?
+  originalUrl       String?
+  priority          String?
+  suggestedPool     String?
+  finalPool         String?
+  humanStatus       String?
+  readingPackStatus String?
+  duplicateStatus   String?
+  practiceFit       String?
+  category          String?
+  publishedAt       String?
+  reason            String?
+  aihotSummary      String?
+  codexSummary      String?
+  rawJson           String // 原始行 JSON 文本，完整保留
+  sourceFile        String
+  sourceLine        Int
+  importRunId       String
+  importRun         ImportRun @relation(fields: [importRunId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([stream])
+  @@index([canonicalKey])
+}
+
+model Candidate {
+  id                String    @id @default(cuid())
+  recordKey         String    @unique
+  poolName          String // 池文件来源标识（文件名，如 product-inspiration）
+  externalId        String?
+  canonicalKey      String?
+  date              String?
+  title             String?
+  sourceName        String?
+  sourceUrl         String?
+  originalUrl       String?
+  priority          String?
+  suggestedPool     String?
+  finalPool         String?
+  humanStatus       String?
+  readingPackStatus String?
+  duplicateStatus   String?
+  practiceFit       String?
+  category          String?
+  publishedAt       String?
+  reason            String?
+  aihotSummary      String?
+  codexSummary      String?
+  rawJson           String
+  sourceFile        String
+  sourceLine        Int
+  importRunId       String
+  importRun         ImportRun @relation(fields: [importRunId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([poolName])
+  @@index([canonicalKey])
+  @@index([humanStatus])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String // signal | candidate | memo
+  entityId   String
+  action     String // confirm | change_pool | reject | toggle_reading_pack | ...
+  fromValue  String?
+  toValue    String?
+  rationale  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model Memo {
+  id             String   @id @default(cuid())
+  text           String
+  status         String   @default("open") // open | done
+  sourceContext  String? // daily_report | demo | manual
+  linkedSignalId String?
+  linkedUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  origin         String   @default("manual")
+  linkedSignalId String?
+  status         String   @default("inbox")
+  priority       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
+
+model DailyReport {
+  id            String   @id @default(cuid())
+  date          String   @unique
+  fivePartJson  String
+  practicesJson String
+  sourceFile    String
+  importRunId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DailySession {
+  date                    String   @id
+  selectedPracticeIndex   Int?
+  practiceAlt0Disposition String?
+  practiceAlt1Disposition String?
+  practiceAlt2Disposition String?
+  candidatesDismissed     Boolean  @default(false)
+  updatedAt               DateTime @updatedAt
+}
