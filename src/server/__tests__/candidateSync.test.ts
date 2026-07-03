@@ -45,6 +45,7 @@ describe("syncSignalToCandidate", () => {
       priority: "P1",
       suggestedPool: "knowledge_gap",
       finalPool: "demo_replication",
+      status: "confirmed",
       rawJson: "{}",
       sourceFile: "state/daily/links.jsonl",
       sourceLine: 1,
@@ -58,11 +59,13 @@ describe("syncSignalToCandidate", () => {
         where: { recordKey: "signal-sync:daily:test-1" },
         create: expect.objectContaining({
           poolName: "demo-replication",
-          humanStatus: "confirmed"
+          humanStatus: "confirmed",
+          status: "confirmed"
         }),
         update: expect.objectContaining({
           poolName: "demo-replication",
-          humanStatus: "confirmed"
+          humanStatus: "confirmed",
+          status: "confirmed"
         })
       })
     );

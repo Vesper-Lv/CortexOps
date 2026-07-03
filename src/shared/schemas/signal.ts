@@ -16,6 +16,7 @@ export const signalObjectSchema = z
     suggested_pool: z.unknown().optional(),
     final_pool: z.unknown().optional(),
     human_status: z.unknown().optional(),
+    status: z.unknown().optional(),
     reading_pack_status: z.unknown().optional(),
     duplicate_status: z.unknown().optional(),
     practice_fit: z.unknown().optional(),

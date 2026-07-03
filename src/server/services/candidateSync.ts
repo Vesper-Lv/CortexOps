@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db";
+import { computeStatusOnFinalize } from "@/shared/signalStatus";
 
 export async function syncSignalToCandidate(signalId: string): Promise<void> {
   const s = await prisma.signal.findUnique({ where: { id: signalId } });
@@ -6,6 +7,7 @@ export async function syncSignalToCandidate(signalId: string): Promise<void> {
 
   const poolName = (s.finalPool ?? s.suggestedPool ?? "archive").replace(/_/g, "-");
   const recordKey = `signal-sync:${s.recordKey}`;
+  const status = s.status ?? computeStatusOnFinalize(s.finalPool);
 
   await prisma.candidate.upsert({
     where: { recordKey },
@@ -20,6 +22,7 @@ export async function syncSignalToCandidate(signalId: string): Promise<void> {
       suggestedPool: s.suggestedPool,
       finalPool: s.finalPool,
       humanStatus: s.humanStatus,
+      status,
       rawJson: s.rawJson,
       sourceFile: s.sourceFile,
       sourceLine: s.sourceLine,
@@ -30,7 +33,8 @@ export async function syncSignalToCandidate(signalId: string): Promise<void> {
       title: s.title,
       priority: s.priority,
       finalPool: s.finalPool,
-      humanStatus: s.humanStatus
+      humanStatus: s.humanStatus,
+      status
     }
   });
 }

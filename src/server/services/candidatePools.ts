@@ -7,6 +7,7 @@ import {
   type PoolOption
 } from "@/shared/poolOptions";
 import type { PoolGroup } from "@/shared/inboxTypes";
+import { computeStatusOnFinalize } from "@/shared/signalStatus";
 
 export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
   const rows = await prisma.candidate.findMany({
@@ -21,6 +22,8 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
       title: c.title ?? "(untitled)",
       url: c.originalUrl ?? c.sourceUrl ?? "",
       humanStatus: c.humanStatus ?? "pending",
+      status: c.status,
+      finalPool: c.finalPool,
       priority: c.priority ?? ""
     });
   }
@@ -44,8 +47,13 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
   const newPoolName = poolNameFromOption(toPoolName as PoolOption);
   if (candidate.poolName === newPoolName) return;
 
-  const before = { poolName: candidate.poolName, finalPool: candidate.finalPool };
-  const after = { poolName: newPoolName, finalPool: toPoolName };
+  const status = computeStatusOnFinalize(toPoolName);
+  const before = {
+    poolName: candidate.poolName,
+    finalPool: candidate.finalPool,
+    status: candidate.status
+  };
+  const after = { poolName: newPoolName, finalPool: toPoolName, status };
 
   await prisma.$transaction([
     prisma.candidate.update({
@@ -53,7 +61,8 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
       data: {
         poolName: newPoolName,
         finalPool: toPoolName,
-        humanStatus: candidate.humanStatus === "rejected" ? "rejected" : "changed"
+        humanStatus: candidate.humanStatus === "rejected" ? "rejected" : "changed",
+        status
       }
     }),
     prisma.auditLog.create({
@@ -67,4 +76,57 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
       }
     })
   ]);
+
+  await syncLinkedSignalStatus(candidate.recordKey, { finalPool: toPoolName, status });
+}
+
+export async function watchCandidate(candidateId: string): Promise<void> {
+  const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
+  if (!candidate) throw new Error(`candidate not found: ${candidateId}`);
+  if ((candidate.humanStatus ?? "pending") === "pending") {
+    throw new Error("cannot watch pending candidate");
+  }
+  if (candidate.status === "dropped" || candidate.finalPool === "drop") {
+    throw new Error("cannot watch dropped candidate");
+  }
+
+  const before = { status: candidate.status };
+  const after = { status: "watching" };
+
+  await prisma.$transaction([
+    prisma.candidate.update({
+      where: { id: candidateId },
+      data: { status: "watching" }
+    }),
+    prisma.auditLog.create({
+      data: {
+        entityType: "candidate",
+        entityId: candidateId,
+        action: "watch",
+        fromValue: JSON.stringify(before),
+        toValue: JSON.stringify(after),
+        rationale: null
+      }
+    })
+  ]);
+
+  await syncLinkedSignalStatus(candidate.recordKey, { status: "watching" });
+}
+
+async function syncLinkedSignalStatus(
+  candidateRecordKey: string,
+  patch: { finalPool?: string; status?: string }
+): Promise<void> {
+  if (!candidateRecordKey.startsWith("signal-sync:")) return;
+  const signalRecordKey = candidateRecordKey.slice("signal-sync:".length);
+  const signal = await prisma.signal.findUnique({ where: { recordKey: signalRecordKey } });
+  if (!signal) return;
+
+  await prisma.signal.update({
+    where: { id: signal.id },
+    data: {
+      ...(patch.finalPool !== undefined ? { finalPool: patch.finalPool } : {}),
+      ...(patch.status !== undefined ? { status: patch.status } : {})
+    }
+  });
 }

@@ -13,12 +13,13 @@ import {
   type DragStartEvent
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { moveCandidatePool } from "@/server/actions/candidateActions";
+import { moveCandidatePool, watchCandidateAction } from "@/server/actions/candidateActions";
 import {
   POOL_OPTIONS,
   poolOptionFromName,
   type PoolOption
 } from "@/shared/poolOptions";
+import { canWatchCandidate } from "@/shared/signalStatus";
 import type { PoolGroup } from "@/shared/inboxTypes";
 
 type PoolBoardProps = {
@@ -33,12 +34,14 @@ function PoolCard({
   item,
   poolOption,
   pending,
-  onMove
+  onMove,
+  onWatch
 }: {
   item: PoolGroup["items"][number];
   poolOption: PoolOption | null;
   pending: boolean;
   onMove: (candidateId: string, toPool: string) => void;
+  onWatch: (candidateId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
@@ -46,6 +49,8 @@ function PoolCard({
   });
 
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+  const showWatch = canWatchCandidate({ humanStatus: item.humanStatus, status: item.status });
+  const lifecycleStatus = item.status ?? "inbox";
 
   return (
     <li
@@ -85,28 +90,45 @@ function PoolCard({
               <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {item.humanStatus}
               </span>
+              {lifecycleStatus !== "inbox" && (
+                <span className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                  {lifecycleStatus}
+                </span>
+              )}
             </div>
           </div>
         </div>
-        <select
-          disabled={pending}
-          value={poolOption ?? ""}
-          onChange={(e) => {
-            const toPool = e.target.value;
-            if (toPool && toPool !== poolOption) onMove(item.id, toPool);
-          }}
-          className="w-full rounded border border-border bg-surface px-2 py-1 text-xs md:hidden"
-          aria-label="Move to pool"
-        >
-          <option value="" disabled>
-            Move to pool…
-          </option>
-          {POOL_OPTIONS.map((p) => (
-            <option key={p} value={p}>
-              {p}
+        <div className="flex flex-wrap gap-2">
+          {showWatch && lifecycleStatus !== "watching" && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onWatch(item.id)}
+              className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+            >
+              关注
+            </button>
+          )}
+          <select
+            disabled={pending}
+            value={poolOption ?? ""}
+            onChange={(e) => {
+              const toPool = e.target.value;
+              if (toPool && toPool !== poolOption) onMove(item.id, toPool);
+            }}
+            className="min-w-0 flex-1 rounded border border-border bg-surface px-2 py-1 text-xs md:hidden"
+            aria-label="Move to pool"
+          >
+            <option value="" disabled>
+              Move to pool…
             </option>
-          ))}
-        </select>
+            {POOL_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </li>
   );
@@ -115,11 +137,13 @@ function PoolCard({
 function PoolColumn({
   group,
   pending,
-  onMove
+  onMove,
+  onWatch
 }: {
   group: PoolGroup;
   pending: boolean;
   onMove: (candidateId: string, toPool: string) => void;
+  onWatch: (candidateId: string) => void;
 }) {
   const columnId = poolColumnId(group.poolName);
   const { setNodeRef, isOver } = useDroppable({ id: columnId });
@@ -145,6 +169,7 @@ function PoolColumn({
             poolOption={poolOptionFromName(group.poolName)}
             pending={pending}
             onMove={onMove}
+            onWatch={onWatch}
           />
         ))}
       </ul>
@@ -174,6 +199,12 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     });
   };
 
+  const runWatch = (candidateId: string) => {
+    startTransition(() => {
+      void watchCandidateAction(candidateId);
+    });
+  };
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
   }
@@ -196,7 +227,7 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {groups.map((group) => (
-          <PoolColumn key={group.poolName} group={group} pending={pending} onMove={runMove} />
+          <PoolColumn key={group.poolName} group={group} pending={pending} onMove={runMove} onWatch={runWatch} />
         ))}
       </div>
       <DragOverlay>

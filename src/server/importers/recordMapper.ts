@@ -12,6 +12,7 @@ export type MappedCommon = {
   suggestedPool: string | null;
   finalPool: string | null;
   humanStatus: string | null;
+  status: string | null;
   readingPackStatus: string | null;
   duplicateStatus: string | null;
   practiceFit: string | null;
@@ -57,6 +58,7 @@ export function mapCommon(parsed: ParsedLine, sourceFile: string): MappedCommon 
     suggestedPool: s(v.suggested_pool),
     finalPool: s(v.final_pool),
     humanStatus: s(v.human_status),
+    status: s(v.status),
     readingPackStatus: s(v.reading_pack_status),
     duplicateStatus: s(v.duplicate_status),
     practiceFit: s(v.practice_fit),

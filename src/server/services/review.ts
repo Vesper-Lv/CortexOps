@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db";
 import { syncSignalToCandidate } from "@/server/services/candidateSync";
 import { assertValidPool } from "@/shared/poolOptions";
+import { computeStatusOnFinalize } from "@/shared/signalStatus";
 
 export type DraftState = {
   finalPool: string | null;
@@ -123,17 +124,19 @@ export async function finalizeSignal(signalId: string): Promise<void> {
     readingPackStatus: signal.readingPackStatus,
     initialReadingPackStatus: initial.readingPackStatus
   });
+  const status = computeStatusOnFinalize(effectiveFinalPool);
 
   const before = {
     humanStatus: signal.humanStatus ?? "pending",
-    finalPool: signal.finalPool
+    finalPool: signal.finalPool,
+    status: signal.status
   };
-  const after = { humanStatus, finalPool: effectiveFinalPool };
+  const after = { humanStatus, finalPool: effectiveFinalPool, status };
 
   await prisma.$transaction([
     prisma.signal.update({
       where: { id: signalId },
-      data: { humanStatus, finalPool: effectiveFinalPool }
+      data: { humanStatus, finalPool: effectiveFinalPool, status }
     }),
     prisma.auditLog.create({
       data: {

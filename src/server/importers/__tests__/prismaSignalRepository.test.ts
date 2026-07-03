@@ -38,6 +38,7 @@ function baseSignal(overrides: Partial<SignalInput & { importRunId: string }> = 
     suggestedPool: "knowledge_gap",
     finalPool: "knowledge_gap",
     humanStatus: "pending",
+    status: null,
     readingPackStatus: "candidate",
     duplicateStatus: null,
     practiceFit: null,
@@ -71,6 +72,7 @@ function baseCandidate(overrides: Partial<CandidateInput & { importRunId: string
     suggestedPool: "product_inspiration",
     finalPool: "product_inspiration",
     humanStatus: "pending",
+    status: null,
     readingPackStatus: null,
     duplicateStatus: null,
     practiceFit: null,
@@ -100,7 +102,8 @@ describe("prismaSignalRepository", () => {
       baseSignal({
         humanStatus: "confirmed",
         finalPool: "demo_replication",
-        readingPackStatus: "selected"
+        readingPackStatus: "selected",
+        status: "watching"
       })
     );
 
@@ -108,6 +111,7 @@ describe("prismaSignalRepository", () => {
     expect(call.create.humanStatus).toBe("confirmed");
     expect(call.create.finalPool).toBe("demo_replication");
     expect(call.create.readingPackStatus).toBe("selected");
+    expect(call.create.status).toBe("watching");
   });
 
   it("omits human-owned fields from signal update while refreshing content", async () => {
@@ -116,7 +120,8 @@ describe("prismaSignalRepository", () => {
         title: "Updated title",
         humanStatus: "confirmed",
         finalPool: "demo_replication",
-        readingPackStatus: "selected"
+        readingPackStatus: "selected",
+        status: "watching"
       })
     );
 
@@ -125,7 +130,8 @@ describe("prismaSignalRepository", () => {
       expect.not.objectContaining({
         humanStatus: expect.anything(),
         finalPool: expect.anything(),
-        readingPackStatus: expect.anything()
+        readingPackStatus: expect.anything(),
+        status: expect.anything()
       })
     );
     expect(call.update.title).toBe("Updated title");
@@ -136,7 +142,8 @@ describe("prismaSignalRepository", () => {
       baseCandidate({
         humanStatus: "changed",
         finalPool: "archive",
-        readingPackStatus: "not_selected"
+        readingPackStatus: "not_selected",
+        status: "confirmed"
       })
     );
 
@@ -144,6 +151,7 @@ describe("prismaSignalRepository", () => {
     expect(call.create.humanStatus).toBe("changed");
     expect(call.create.finalPool).toBe("archive");
     expect(call.create.readingPackStatus).toBe("not_selected");
+    expect(call.create.status).toBe("confirmed");
   });
 
   it("omits human-owned fields from candidate update while refreshing content", async () => {
@@ -152,7 +160,8 @@ describe("prismaSignalRepository", () => {
         title: "Updated pool title",
         humanStatus: "changed",
         finalPool: "archive",
-        readingPackStatus: "not_selected"
+        readingPackStatus: "not_selected",
+        status: "confirmed"
       })
     );
 
@@ -161,7 +170,8 @@ describe("prismaSignalRepository", () => {
       expect.not.objectContaining({
         humanStatus: expect.anything(),
         finalPool: expect.anything(),
-        readingPackStatus: expect.anything()
+        readingPackStatus: expect.anything(),
+        status: expect.anything()
       })
     );
     expect(call.update.title).toBe("Updated pool title");

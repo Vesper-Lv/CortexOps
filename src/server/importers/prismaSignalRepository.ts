@@ -9,19 +9,19 @@ export const prismaSignalRepository: SignalRepository = {
   },
 
   async upsertSignal(input: SignalInput & { importRunId: string }) {
-    const { recordKey, humanStatus, finalPool, readingPackStatus, ...rest } = input;
+    const { recordKey, humanStatus, finalPool, readingPackStatus, status, ...rest } = input;
     await prisma.signal.upsert({
       where: { recordKey },
-      create: { recordKey, humanStatus, finalPool, readingPackStatus, ...rest },
+      create: { recordKey, humanStatus, finalPool, readingPackStatus, status, ...rest },
       update: { ...rest }
     });
   },
 
   async upsertCandidate(input: CandidateInput & { importRunId: string }) {
-    const { recordKey, humanStatus, finalPool, readingPackStatus, ...rest } = input;
+    const { recordKey, humanStatus, finalPool, readingPackStatus, status, ...rest } = input;
     await prisma.candidate.upsert({
       where: { recordKey },
-      create: { recordKey, humanStatus, finalPool, readingPackStatus, ...rest },
+      create: { recordKey, humanStatus, finalPool, readingPackStatus, status, ...rest },
       update: { ...rest }
     });
   },

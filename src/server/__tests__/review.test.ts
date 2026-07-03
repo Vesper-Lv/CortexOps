@@ -4,6 +4,7 @@ import {
   computeHumanStatusOnFinalize,
   extractInitialFromRaw
 } from "@/server/services/review";
+import { computeStatusOnFinalize } from "@/shared/signalStatus";
 import { assertValidPool, isValidPool } from "@/shared/poolOptions";
 
 describe("applyDraftAction", () => {
@@ -88,6 +89,16 @@ describe("extractInitialFromRaw", () => {
       priority: "P1",
       readingPackStatus: "candidate"
     });
+  });
+});
+
+describe("computeStatusOnFinalize", () => {
+  it("maps drop pool to dropped lifecycle status", () => {
+    expect(computeStatusOnFinalize("drop")).toBe("dropped");
+  });
+
+  it("maps normal pools to confirmed lifecycle status", () => {
+    expect(computeStatusOnFinalize("demo_replication")).toBe("confirmed");
   });
 });
 

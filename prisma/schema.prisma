@@ -48,6 +48,7 @@ model Signal {
   suggestedPool     String?
   finalPool         String?
   humanStatus       String?
+  status            String? // inbox | confirmed | watching | scheduled | in_progress | done | archived | dropped
   readingPackStatus String?
   duplicateStatus   String?
   practiceFit       String?
@@ -66,6 +67,7 @@ model Signal {
 
   @@index([stream])
   @@index([canonicalKey])
+  @@index([status])
 }
 
 model Candidate {
@@ -83,6 +85,7 @@ model Candidate {
   suggestedPool     String?
   finalPool         String?
   humanStatus       String?
+  status            String? // inbox | confirmed | watching | scheduled | in_progress | done | archived | dropped
   readingPackStatus String?
   duplicateStatus   String?
   practiceFit       String?
@@ -102,6 +105,7 @@ model Candidate {
   @@index([poolName])
   @@index([canonicalKey])
   @@index([humanStatus])
+  @@index([status])
 }
 
 model AuditLog {
