@@ -355,6 +355,11 @@ practice_fit
 requires_manual_review
 next_action
 status
+display_summary
+read_reason
+focus_direction
+known_facts
+open_questions
 ```
 
 ### Field Values
@@ -487,10 +492,12 @@ carry_over
 manual_override
 ```
 
-Duplicate and carry-over explanations should be stored on the link object, such
-as in `duplicate_status`, `novelty_reason`, or `reason`. The daily report should
-show the explanation beside the affected link instead of creating a fixed
-7-day continuity-check section.
+`novelty_reason` is the single source of truth for any duplicate / carry-over /
+material-update retention explanation. When `duplicate_status` is
+`material_update`, `carry_over`, or `duplicate_suppressed`, write the reason ONLY
+in `novelty_reason`. Do not repeat that text in `reason`, and the daily report
+must render the retention note beside the affected link exactly once, instead of
+creating a fixed 7-day continuity-check section.
 
 `status`:
 
@@ -532,6 +539,24 @@ carry_over
 stale
 ```
 
+`display_summary`:
+
+Facts-only summary shown for every daily link (reading pack and remaining). For
+AIhot items, copy `aihot_summary` verbatim (do not rewrite). For non-AIhot items,
+extract a concise factual summary. No interpretation or recommendation.
+
+`read_reason` and `focus_direction`:
+
+Only for reading-pack items whose pool is not `knowledge_gap`. `read_reason` is
+one line on why it is worth reading. `focus_direction` is the angle to focus on
+while reading; it must not assert specifics the source may not contain.
+
+`known_facts` and `open_questions`:
+
+Only for `knowledge_gap` items. `known_facts` lists facts obtainable from the
+article itself. `open_questions` lists questions that still need extra research
+after reading. Do not fabricate conclusions the article does not support.
+
 ## 4.1 State File Contracts
 
 Daily AI PM radar runs should write state before producing or updating the
@@ -566,6 +591,12 @@ canonical_key
 duplicate_status
 practice_fit
 reason
+display_summary
+read_reason
+focus_direction
+known_facts
+open_questions
+novelty_reason
 ```
 
 The daily Markdown report at `state/daily/YYYY-MM-DD-report.md` is a view over
