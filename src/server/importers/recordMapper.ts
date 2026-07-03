@@ -37,6 +37,8 @@ export function computeRecordKey(args: {
   sourceFile: string;
   sourceLine: number;
 }): string {
+  // 注意：无 id 且无 canonical_key 时退回 sourceFile#line。此 key 依赖行位置，
+  // 若该文件后续在上方插入行会导致 key 漂移、重入产生重复行。当前数据无此类记录。
   const id = args.externalId ?? args.canonicalKey ?? `${args.sourceFile}#${args.sourceLine}`;
   return `${args.scope}:${id}`;
 }

@@ -37,7 +37,8 @@ export const prismaSignalRepository: SignalRepository = {
         importedSignals: counts.importedSignals,
         importedCandidates: counts.importedCandidates,
         skipped: counts.skipped,
-        errors: counts.errors
+        errors: counts.errors,
+        notes: counts.notes
       }
     });
   }

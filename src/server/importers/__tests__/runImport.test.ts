@@ -58,6 +58,7 @@ describe("runImport", () => {
     expect(summary.errors).toBe(1);
     expect(summary.filesScanned).toBe(3);
     expect(summary.status).toBe("partial");
+    expect(summary.notes).toContain("2026-07-02-links.jsonl#2");
     expect(finished).toHaveLength(1);
   });
 
@@ -76,5 +77,6 @@ describe("runImport", () => {
     expect(signalUpserts.map((u) => u.externalId)).toEqual(["x"]);
     expect(summary.errors).toBe(1);
     expect(summary.importedSignals).toBe(1);
+    expect(summary.notes).toContain("read failed: missing.jsonl");
   });
 });

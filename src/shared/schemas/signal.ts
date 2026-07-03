@@ -1,28 +1,29 @@
 import { z } from "zod";
 
-// 宽松：所有业务字段可空，未知字段透传（原始行另存 rawJson）。
-// daily / memory / pool 三种来源共用此 schema。
+// 宽松：只要求"顶层是对象"。已知字段用 z.unknown()（记录期望形状，但不强制类型），
+// 避免某字段类型不符时整行连同 rawJson 一起被丢弃——recoverability 优先。
+// 未知字段透传；真正的字段清洗在 recordMapper 的 s() 中完成（非字符串 → null）。
 export const signalObjectSchema = z
   .object({
-    id: z.string().optional(),
-    canonical_key: z.string().optional(),
-    date: z.string().optional(),
-    title: z.string().optional(),
-    source_name: z.string().optional(),
-    source_url: z.string().optional(),
-    original_url: z.string().optional(),
-    priority: z.string().optional(),
-    suggested_pool: z.string().optional(),
-    final_pool: z.string().optional(),
-    human_status: z.string().optional(),
-    reading_pack_status: z.string().optional(),
-    duplicate_status: z.string().optional(),
-    practice_fit: z.string().optional(),
-    category: z.string().optional(),
-    published_at: z.string().optional(),
-    reason: z.string().optional(),
-    aihot_summary: z.string().optional(),
-    codex_summary: z.string().optional()
+    id: z.unknown().optional(),
+    canonical_key: z.unknown().optional(),
+    date: z.unknown().optional(),
+    title: z.unknown().optional(),
+    source_name: z.unknown().optional(),
+    source_url: z.unknown().optional(),
+    original_url: z.unknown().optional(),
+    priority: z.unknown().optional(),
+    suggested_pool: z.unknown().optional(),
+    final_pool: z.unknown().optional(),
+    human_status: z.unknown().optional(),
+    reading_pack_status: z.unknown().optional(),
+    duplicate_status: z.unknown().optional(),
+    practice_fit: z.unknown().optional(),
+    category: z.unknown().optional(),
+    published_at: z.unknown().optional(),
+    reason: z.unknown().optional(),
+    aihot_summary: z.unknown().optional(),
+    codex_summary: z.unknown().optional()
   })
   .passthrough();
 

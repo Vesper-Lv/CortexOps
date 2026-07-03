@@ -27,4 +27,11 @@ describe("parseJsonlContent", () => {
     const r = parseJsonlContent('{"id":"a","title":"t"}\n');
     expect(r.parsed[0].raw).toBe('{"id":"a","title":"t"}');
   });
+
+  it("keeps a valid object with a non-string field (recoverable via rawJson)", () => {
+    const r = parseJsonlContent('{"id":"a","priority":3}\n');
+    expect(r.errors).toHaveLength(0);
+    expect(r.parsed).toHaveLength(1);
+    expect(r.parsed[0].raw).toContain('"priority":3');
+  });
 });

@@ -14,7 +14,10 @@ export type ImportRunCounts = {
   skipped: number;
   errors: number;
   status: "success" | "partial" | "failed";
+  notes: string | null;
 };
+
+const MAX_ERROR_NOTES = 50;
 
 export type SignalRepository = {
   createImportRun(): Promise<{ id: string }>;
@@ -44,6 +47,7 @@ export async function runImport(deps: ImportDeps, sources: ImportSource[]): Prom
   let importedSignals = 0;
   let importedCandidates = 0;
   let errors = 0;
+  const errorNotes: string[] = [];
 
   for (const source of sources) {
     for (const file of source.files) {
@@ -53,12 +57,16 @@ export async function runImport(deps: ImportDeps, sources: ImportSource[]): Prom
         content = await deps.readFile(file.path);
       } catch {
         errors += 1; // 缺失/不可读文件计为错误，但不中断
+        errorNotes.push(`read failed: ${file.path}`);
         continue;
       }
 
       const { parsed, errors: parseErrors } = parseJsonlContent(content);
       linesTotal += parsed.length + parseErrors.length;
       errors += parseErrors.length;
+      for (const pe of parseErrors) {
+        errorNotes.push(`${file.path}#${pe.line}: ${pe.message}`);
+      }
 
       for (const line of parsed) {
         if (source.stream === "pool") {
@@ -78,6 +86,11 @@ export async function runImport(deps: ImportDeps, sources: ImportSource[]): Prom
   }
 
   const status: ImportRunCounts["status"] = errors > 0 ? "partial" : "success";
+  const notes =
+    errorNotes.length > 0
+      ? errorNotes.slice(0, MAX_ERROR_NOTES).join("\n") +
+        (errorNotes.length > MAX_ERROR_NOTES ? `\n…(+${errorNotes.length - MAX_ERROR_NOTES} more)` : "")
+      : null;
   const counts: ImportRunCounts = {
     filesScanned,
     linesTotal,
@@ -85,7 +98,8 @@ export async function runImport(deps: ImportDeps, sources: ImportSource[]): Prom
     importedCandidates,
     skipped: 0,
     errors,
-    status
+    status,
+    notes
   };
   await deps.repo.finishImportRun(importRunId, counts);
 
