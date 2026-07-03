@@ -45,6 +45,7 @@
 | `src/app/inbox/layout.tsx` | **新增** SectionNav |
 | `src/app/inbox/today/page.tsx` | 由 `src/app/review/page.tsx` 迁移并重定位 |
 | `src/app/inbox/pools/page.tsx` | 由 `src/app/pools/page.tsx` 迁移 |
+| `src/app/inbox/memo/page.tsx` | **新增** 空状态：备忘 to-do 列表 |
 | `src/app/library/layout.tsx` | **新增** SectionNav |
 | `src/app/library/reports/page.tsx` | 由 `src/app/reports/page.tsx` 迁移 |
 | `src/app/library/artifacts/page.tsx` | 由 `src/app/artifacts/page.tsx` 迁移 |
@@ -82,6 +83,7 @@ import {
   Inbox,
   KanbanSquare,
   Library,
+  ListTodo,
   Settings,
   SlidersHorizontal,
   Sparkles
@@ -116,7 +118,8 @@ export const navigationSections: NavSection[] = [
     basePath: "/inbox",
     children: [
       { href: "/inbox/today", label: "Today", icon: CalendarDays },
-      { href: "/inbox/pools", label: "Candidate Pools", icon: Archive }
+      { href: "/inbox/pools", label: "Candidate Pools", icon: Archive },
+      { href: "/inbox/memo", label: "Memo", icon: ListTodo }
     ]
   },
   {
@@ -418,12 +421,13 @@ Expected: `/dashboard/today`, `/dashboard/weekly`, `/dashboard/monthly`, `/dashb
 
 ---
 
-## Task 7: 新增 Inbox 区 layout + 迁移 review→today、pools
+## Task 7: 新增 Inbox 区 layout + 迁移 review→today、pools + 新增 Memo
 
 **Files:**
 - Create: `src/app/inbox/layout.tsx`（内容同 Task 6 的 layout，`export default function InboxLayout`）
 - Move: `src/app/review/page.tsx` → `src/app/inbox/today/page.tsx`
 - Move: `src/app/pools/page.tsx` → `src/app/inbox/pools/page.tsx`
+- Create: `src/app/inbox/memo/page.tsx`（备忘 to-do 空状态）
 
 - [ ] **Step 1: layout**（复制 Task 6 Step 1，函数名改 `InboxLayout`）
 
@@ -438,6 +442,41 @@ git mv src/app/pools/page.tsx src/app/inbox/pools/page.tsx
 - [ ] **Step 3: 更新 Inbox/Today 文案（重定位为"今日分拣"）**
 
 将 `src/app/inbox/today/page.tsx` 的 `eyebrow`/`title`/`description` 调整为分拣语义，例如 `title="Today"`、`eyebrow="Daily triage"`、`description="Route today's 30 signals into candidate pools and toggle reading-pack membership. Changes flow to Dashboard."`（其余保持 `WorkbenchPage` 结构）。
+
+- [ ] **Step 4: 新增 Inbox/Memo 空状态页**
+
+`src/app/inbox/memo/page.tsx`：
+```tsx
+import { ListTodo, Plus } from "lucide-react";
+import { WorkbenchPage } from "@/components/layout/workbench-page";
+
+export default function MemoPage() {
+  return (
+    <WorkbenchPage
+      eyebrow="Quick capture"
+      title="Memo"
+      description="Jot down questions to confirm later while reading reports or building demos. Lightweight to-do list; convert to a task or knowledge-gap pool item when ready."
+      metrics={[
+        { label: "Open", value: "-", detail: "No memos yet" },
+        { label: "Done", value: "-", detail: "Nothing completed" },
+        { label: "Linked", value: "-", detail: "No source links" }
+      ]}
+      emptyState={{
+        icon: ListTodo,
+        title: "No memos yet",
+        description:
+          "Phase C will add a quick-add input, check-off, filter (All/Open/Done), and optional convert-to-task / knowledge-gap. Memo is decoupled from signal import and can ship early.",
+        actions: [{ icon: Plus, label: "Quick-add to-do planned", tone: "primary" }]
+      }}
+    />
+  );
+}
+```
+
+- [ ] **Step 5: 校验**
+
+Run: `npm run build`
+Expected: 路由表包含 `/inbox/today`、`/inbox/pools`、`/inbox/memo`。
 
 ---
 
@@ -543,7 +582,7 @@ Expected: PASS（typedRoutes 下所有 `Link href` 合法）。
 - [ ] **Step 4: Build**
 
 Run: `npm run build`
-Expected: 路由表包含 `/`、`/dashboard/{today,weekly,monthly,tasks}`、`/inbox/{today,pools}`、`/library/{reports,artifacts}`、`/settings`、`/settings/focus-rules`；不再包含旧路由。
+Expected: 路由表包含 `/`、`/dashboard/{today,weekly,monthly,tasks}`、`/inbox/{today,pools,memo}`、`/library/{reports,artifacts}`、`/settings`、`/settings/focus-rules`；不再包含旧路由。
 
 ---
 
@@ -552,7 +591,7 @@ Expected: 路由表包含 `/`、`/dashboard/{today,weekly,monthly,tasks}`、`/in
 - [ ] **Step 1: 启动 dev 并逐页点击**
 
 Run: `npm run dev`（`http://localhost:3000`）
-检查：`/` 重定向到 `/dashboard/today`；顶栏 4 区高亮正确；每区二级 tab 正确；无死链；空状态渲染正常；截图/录屏留证。
+检查：`/` 重定向到 `/dashboard/today`；顶栏 4 区高亮正确；每区二级 tab 正确（Inbox 含 Today/Candidate Pools/Memo 三个 tab）；无死链；空状态渲染正常；截图/录屏留证。
 
 ---
 
@@ -593,7 +632,9 @@ git commit -m "docs: align roadmap core pages with 4-section navigation"
 > 这些阶段依赖 roadmap Phase 2 的数据导入层（Prisma schema + JSONL importer + services），当前 Phase A 不实现。此处仅列范围，避免占位符污染可执行部分。
 
 - **Phase B — 数据导入 + Dashboard 读视图**：`prisma/schema.prisma`、`src/server/{db.ts,services,importers}`、`src/shared/schemas`；Dashboard/Today 从 `state/daily/*-links.jsonl` 渲染阅读包（`reading_pack_status=selected`）、五段摘要、练习三选一 + 顶部"待归类 N 条"提示条。
-- **Phase C — Inbox 分拣交互**：`src/app/inbox/*`、`src/components/{signals,pools}`、`src/server/services/{signals,candidates}`；归池（`final_pool`）、阅读包切换（candidate↔selected）、拖拽、confirm/change/reject、写回并联动 Dashboard；Dashboard/Today 底部"快速补充"条。
+- **Phase C — Inbox 分拣交互 + Memo 功能**：
+  - 分拣：`src/app/inbox/*`、`src/components/{signals,pools}`、`src/server/services/{signals,candidates}`；归池（`final_pool`）、阅读包切换（candidate↔selected）、拖拽、confirm/change/reject、写回并联动 Dashboard；Dashboard/Today 底部"快速补充"条。
+  - Memo（to-do）：`src/app/inbox/memo/*`、`src/components/memo/*`、`src/server/services/memos.ts`；快速新增（输入框回车）、勾选完成（open↔done）、删除、过滤（All/Open/Done），可选 memo→task（`origin=memo`）/ memo→knowledge_gap，与可选来源关联（`linked_signal_id`/`linked_url`）。数据：Prisma `Memo` model + `state/memo/memos.jsonl` 契约。**与信号导入解耦，可独立于 Phase B 前置实现。**
 - **Phase D — Library**：`src/app/library/{reports,artifacts}`、`src/server/services/{reports,artifacts}`；Reports 历史列表+检索框；Artifacts 覆盖矩阵（主题×成熟度）+ portfolio-ready 外链列表。
 - **Phase E — Settings**：`src/app/settings/*`、`src/server/services/{focusRules,automationRuns}`；Focus Rules 卡片弹窗新增/编辑（含 source types/tags/target pools/applies_to/weight/active period），导出回 `docs/focus-policy.md`；Automations 只读运行状态接入。
 
@@ -601,6 +642,6 @@ git commit -m "docs: align roadmap core pages with 4-section navigation"
 
 ## Self-Review 结论
 
-- **Spec 覆盖**：spec 各节（IA、路由映射、组件、Q1/Q2/Q3、验收）均有对应任务（Task 1–13 覆盖 Phase A；B–E 大纲对应 spec §8）。
+- **Spec 覆盖**：spec 各节（IA、路由映射、组件、Q1/Q2/Q3、§5bis Memo、验收）均有对应任务（Task 1–13 覆盖 Phase A，含 Inbox/Memo 空状态；B–E 大纲对应 spec §8，Memo 功能落在 Phase C）。
 - **占位符扫描**：Phase A 任务均给出实际代码/命令；B–E 明确标注为后续阶段大纲而非可执行步骤，无隐藏 TODO。
-- **类型一致**：`navigationSections`/`NavSection`/`NavChild`/`findSectionByPath`/`sectionLandingHref` 命名在 Task 1–3 定义与引用一致；`WorkbenchPage` props（eyebrow/title/description/metrics/emptyState）与现有组件签名一致。
+- **类型一致**：`navigationSections`/`NavSection`/`NavChild`/`findSectionByPath`/`sectionLandingHref` 命名在 Task 1–3 定义与引用一致；Inbox section 含 `today`/`pools`/`memo` 三个 child（Task 1 与 Task 7 一致）；`ListTodo` 图标在 Task 1 import 与 `src/app/inbox/memo/page.tsx` 使用一致；`WorkbenchPage` props（eyebrow/title/description/metrics/emptyState）与现有组件签名一致。
