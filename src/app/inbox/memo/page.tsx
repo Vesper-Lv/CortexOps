@@ -1,24 +1,37 @@
-import { ListTodo, Plus } from "lucide-react";
-import { WorkbenchPage } from "@/components/layout/workbench-page";
+import { ListTodo } from "lucide-react";
+import { MemoList } from "@/components/inbox/memo-list";
+import { countMemos, listMemos } from "@/server/services/memos";
 
-export default function MemoPage() {
+export const dynamic = "force-dynamic";
+
+export default async function MemoPage() {
+  const memos = await listMemos();
+  const counts = countMemos(memos);
+
   return (
-    <WorkbenchPage
-      eyebrow="Quick capture"
-      title="Memo"
-      description="Jot down questions to confirm later while reading reports or building demos. Lightweight to-do list; convert to a task or knowledge-gap pool item when ready."
-      metrics={[
-        { label: "Open", value: "-", detail: "No memos yet" },
-        { label: "Done", value: "-", detail: "Nothing completed" },
-        { label: "Linked", value: "-", detail: "No source links" }
-      ]}
-      emptyState={{
-        icon: ListTodo,
-        title: "No memos yet",
-        description:
-          "Phase C will add a quick-add input, check-off, filter (All/Open/Done), and optional convert-to-task / knowledge-gap. Memo is decoupled from signal import and can ship early.",
-        actions: [{ icon: Plus, label: "Quick-add to-do planned", tone: "primary" }]
-      }}
-    />
+    <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Quick capture</p>
+        <h2 className="mt-3 text-4xl font-semibold text-foreground">Memo</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Jot down questions to confirm later while reading reports or building demos.
+        </p>
+      </div>
+
+      {memos.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border bg-muted/30 p-6">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ListTodo className="h-5 w-5" />
+            <span className="text-sm">No memos yet — use the form below to add your first one.</span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Open {counts.open} · Done {counts.done} · Total {counts.total}
+        </p>
+      )}
+
+      <MemoList memos={memos} />
+    </section>
   );
 }
