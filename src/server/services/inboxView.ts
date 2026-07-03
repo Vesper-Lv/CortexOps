@@ -9,7 +9,7 @@ export async function getInboxToday(): Promise<{ date: string; signals: InboxSig
   const date = await getLatestDailyDate();
   if (!date) return null;
   const rows = await prisma.signal.findMany({
-    where: { stream: "daily", date },
+    where: { stream: "daily", date, humanStatus: "pending" },
     orderBy: [{ priority: "asc" }, { sourceLine: "asc" }]
   });
   const signals = rows.map((s) => ({

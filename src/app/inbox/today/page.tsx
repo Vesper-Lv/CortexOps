@@ -1,6 +1,7 @@
 import { Inbox } from "lucide-react";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
-import { SignalRow } from "@/components/inbox/signal-row";
+import { SignalCard } from "@/components/inbox/signal-card";
+import { FinalizeAllToolbar } from "@/components/inbox/finalize-all-toolbar";
 import { getInboxToday } from "@/server/services/inboxView";
 
 export const dynamic = "force-dynamic";
@@ -29,24 +30,32 @@ export default async function InboxTodayPage() {
     );
   }
 
-  const pending = data.signals.filter((s) => s.humanStatus === "pending").length;
   const inPack = data.signals.filter((s) => s.readingPackStatus === "selected").length;
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Daily triage</p>
-        <h2 className="mt-3 text-4xl font-semibold text-foreground">Today · {data.date}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          归池 / 确认 / 拒绝 / 切换阅读包；变更即时反映到 Dashboard。Pending {pending} · In pack{" "}
-          {inPack}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Daily triage</p>
+          <h2 className="mt-3 text-4xl font-semibold text-foreground">Today · {data.date}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            改池 / 优先级 / 阅读包为草稿编辑；点「确定」后进入 Pools。Pending {data.signals.length} · In
+            pack {inPack}
+          </p>
+        </div>
+        {data.signals.length > 0 && <FinalizeAllToolbar date={data.date} />}
       </div>
-      <ul className="flex flex-col gap-3">
-        {data.signals.map((s) => (
-          <SignalRow key={s.id} signal={s} />
-        ))}
-      </ul>
+      {data.signals.length === 0 ? (
+        <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          当日无待分拣信号。已全部确定或尚未导入。
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {data.signals.map((s) => (
+            <SignalCard key={s.id} signal={s} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

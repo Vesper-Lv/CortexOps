@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db";
 import { upsertDailySession } from "@/server/services/dailyReport";
-import { reviewSignal } from "@/server/services/review";
+import { draftSignalEdit } from "@/server/services/review";
 import { assertValidPool } from "@/shared/poolOptions";
 
 export async function confirmPractice(
@@ -48,7 +48,7 @@ export async function batchAddToReadingPack(signalIds: string[]) {
 
   for (const signal of signals) {
     if (signal.readingPackStatus !== "selected") {
-      await reviewSignal(signal.id, { type: "toggle_reading_pack" });
+      await draftSignalEdit(signal.id, { type: "toggle_reading_pack" });
     }
   }
 
