@@ -354,146 +354,71 @@ The protocol is defined in `docs/change-protocol.md`.
 
 ## 6. UI Navigation
 
-### Today
+Navigation is two-level: a top horizontal bar with four sections
+(Dashboard / Inbox / Library / Settings), and a secondary tab row per section.
+The root path `/` redirects to `/dashboard/today`. See
+`docs/superpowers/specs/2026-07-03-navigation-restructure-design.md` for the full
+rationale and route mapping.
 
-The daily command center.
+```text
+Dashboard (read)      Inbox (curate/triage)   Library (archive)   Settings
+  · Today               · Today                 · Reports           · General
+  · Weekly              · Candidate Pools       · Artifacts         · Focus Rules
+  · Monthly             · Memo
+  · Tasks
+```
 
-Shows:
+### Dashboard (read / consume)
 
-- five-part daily summary
-- today's 30-minute reading pack
-- remaining links not selected for the reading pack
-- AI suggested pool labels on each link
-- priority and reading-pack status for each link
-- three daily practice options
-- manual review count
-- active tasks
+The reading-oriented command center. AI-selected content is shown first; triage
+is never forced here.
 
-Primary question: What does today mean, what should I read, what should I add or
-choose, and which AI routing suggestions should I confirm or change?
+- `Today`: five-part daily summary, today's 30-minute reading pack
+  (`reading_pack_status=selected`), three daily practice options, active tasks,
+  and a non-blocking "N signals waiting to be triaged → Inbox" banner plus an
+  optional bottom "quick add" strip for borderline `candidate` links.
+- `Weekly`: weekly execution review, paper radar, demo recommendation, and
+  engineering-learning report.
+- `Monthly`: monthly direction review and how priorities should shift.
+- `Tasks`: the unified personal task board (manual + report/signal-derived).
 
-### Reports
+Primary question: What should I read and do today, this week, and this month?
 
-The report library.
+### Inbox (curate / triage)
 
-Shows:
+The place to sort raw inputs. Edits here flow to Dashboard.
 
-- daily radar
-- weekly execution review
-- weekly paper radar
-- weekly demo recommendation
-- weekly engineering learning task
-- monthly direction review
+- `Today`: today's 30 signals; route to `final_pool`, toggle reading-pack
+  membership, confirm / change / reject. Backlog (non-today) pending signals are
+  handled from Candidate Pools via a `human_status=pending` filter.
+- `Candidate Pools`: product inspiration, paper candidates, demo replication,
+  knowledge gaps, personal work, archive / drop; drag-drop management.
+- `Memo`: a lightweight to-do list for questions to confirm later while reading
+  reports or building demos (quick-add, check-off, filter; optionally convert to
+  a task or a knowledge-gap item). Decoupled from signal import.
 
-Primary question: What did the system generate on a given day or week?
+Primary question: What needs sorting, and what do I want to remember to look into?
 
-### Review Inbox
+### Library (archive / retrieve)
 
-The manual confirmation queue.
+- `Reports`: historical daily / weekly / monthly reports with a search box.
+- `Artifacts`: a high-level portfolio coverage map (topic × maturity) plus a
+  portfolio-ready list with external links. Detailed content stays in Obsidian.
 
-Shows signals that require human judgment:
+Primary question: What did the system generate before, and where is my portfolio
+coverage thin?
 
-- suggested priority
-- confidence
-- source tier
-- candidate pool suggestion
-- why it matters
-- next action
+### Settings (configure)
 
-Primary question: Should this signal be confirmed, changed, scheduled, watched,
-archived, or dropped?
+- `General`: source paths, policy references, import/export, and a **read-only**
+  automation runner status panel. Codex remains the runner in Phase 1; the app
+  does not call AI directly, so Automations is a reference panel here, not a
+  standalone page.
+- `Focus Rules`: view, add (via a card form), edit, pause, extend, and archive
+  attention rules that change how future automation runs prioritize signals.
 
-### Candidate Pools
-
-The option management area.
-
-Shows:
-
-- product inspiration pool
-- paper candidate pool
-- demo replication pool
-- knowledge gap pool
-- personal work pool
-- archive / drop
-
-Primary question: What is worth keeping for future action?
-
-### Tasks
-
-The unified personal task board.
-
-Shows:
-
-- manually added tasks
-- tasks generated from reports
-- tasks converted from signals
-- task status and deadlines
-- blocked and waiting items
-
-Primary question: What work should move forward now?
-
-### Artifacts
-
-The portfolio and output pipeline.
-
-Shows:
-
-- demos
-- README files
-- product memos
-- architecture diagrams
-- paper notes
-- retrospectives
-- recordings
-- portfolio page candidates
-
-Primary question: What have I produced, and what can become externally visible?
-
-### Automations
-
-The automation control room.
-
-Shows:
-
-- active automation configs
-- run schedule
-- last run status
-- referenced policy files
-- model / reasoning settings
-- failure or exception notes
-
-Primary question: What is running, when, and under which rules?
-
-### Focus Rules
-
-The user-controlled attention layer.
-
-Shows:
-
-- active focus rules
-- paused focus rules
-- source and tag boosts
-- affected automations
-- active period
-- expected impact
-
-Primary question: What should CortexOps pay more or less attention to next?
-
-### Settings
-
-The system configuration area.
-
-Shows:
-
-- source policy
-- ingestion rules
-- focus policy
-- candidate pool definitions
-- priority rules
-- import / export settings
-- local path and Git settings
-
-Primary question: How is the system configured?
+Primary question: How is the system configured, and what should it pay attention
+to next?
 
 ## 7. MVP Scope
 

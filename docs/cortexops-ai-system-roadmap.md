@@ -41,20 +41,20 @@ Why Web App first:
 - TanStack Table
 - TanStack Query can be added later when API state becomes complex.
 
-Core pages:
+Core pages (two-level nav: 4 top sections + per-section tabs; see
+`docs/superpowers/specs/2026-07-03-navigation-restructure-design.md`):
 
-- `Today`: daily report, 30-minute reading pack, remaining links, daily
-  practice, and candidate-pool confirmation.
-- `Reports`: daily radar, weekly review, paper radar, demo recommendation,
-  engineering learning, and monthly review.
-- `Review Inbox`: confirm, reroute, reject, watch, or convert signals to tasks.
-- `Candidate Pools`: product inspiration, paper candidates, demo replication,
-  knowledge gaps, personal work, and archive.
-- `Tasks`: unified task board.
-- `Artifacts`: demos, memos, README files, diagrams, and portfolio material.
-- `Focus Rules`: view, edit, pause, extend, and archive attention rules.
-- `Automations`: automation configs, run state, and referenced policy files.
-- `Settings`: paths, import/export, policy files, and prompt configuration.
+- `Dashboard` (read): `Today` (daily report, 30-minute reading pack, remaining
+  links, daily practice, candidate-pool confirmation), `Weekly`, `Monthly`, and
+  `Tasks` (unified task board).
+- `Inbox` (triage): `Today` (route today's signals, confirm/change/reject),
+  `Candidate Pools` (product inspiration, paper candidates, demo replication,
+  knowledge gaps, personal work, archive), and `Memo` (quick-capture to-do list).
+- `Library` (archive): `Reports` (daily/weekly/monthly with search) and
+  `Artifacts` (portfolio coverage map + external links).
+- `Settings`: `General` (paths, import/export, policy files, prompt config, and a
+  read-only automation runner status panel — Automations is not a standalone page)
+  and `Focus Rules` (view, add, edit, pause, extend, archive attention rules).
 
 ### Backend
 
