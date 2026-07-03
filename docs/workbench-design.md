@@ -389,8 +389,9 @@ Primary question: What should I read and do today, this week, and this month?
 The place to sort raw inputs. Edits here flow to Dashboard.
 
 - `Today`: today's 30 signals; route to `final_pool`, toggle reading-pack
-  membership, confirm / change / reject. Backlog (non-today) pending signals are
-  handled from Candidate Pools via a `human_status=pending` filter.
+  membership, confirm / change / drop (no standalone reject). Backlog (non-today)
+  pending signals are handled from Candidate Pools via a `human_status=pending`
+  filter. Post-triage lifecycle uses `status` (e.g. `watching`, `dropped`).
 - `Candidate Pools`: product inspiration, paper candidates, demo replication,
   knowledge gaps, personal work, archive / drop; drag-drop management.
 - `Memo`: a lightweight to-do list for questions to confirm later while reading

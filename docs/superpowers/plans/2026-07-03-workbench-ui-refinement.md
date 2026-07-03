@@ -30,7 +30,7 @@
 | 3d | 删除摘要「摘要：」 | 同 2d |
 | 4a | archive 放最后 | `POOL_DISPLAY_ORDER` 常量排序 |
 | 4b | 拖拽改池 | DnD + `moveCandidatePool` Server Action |
-| 4c | 删除 pending 筛选 | 移除 `?status=` 过滤 UI |
+| 4c | ~~删除 pending 筛选~~ **已撤销（Phase 3 收尾）** | 恢复 `?status=` 过滤；非今日 pending backlog 见 `/inbox/pools?status=pending` |
 | 5 | Memo 可升级为 Task | 升级后 **删除 Memo 行**、**写入 Task 表**、在 **Dashboard/Tasks** 展示（Inbox 内不嵌 Task 列表） |
 
 ---
@@ -555,9 +555,9 @@ npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
   - `archive` 列固定最右
   - 卡片可拖到另一列 → 触发 action → `revalidatePath("/inbox/pools")`
 
-- [ ] **Step 4: 删除 `StatusFilterBar` 与 `?status=` 逻辑**
+- [x] **Step 4: ~~删除 `StatusFilterBar`~~ → 已在 Phase 3 收尾计划中撤销；恢复 pending 筛选**
 
-- [ ] **Step 5: 构建 + Commit** `feat(pools): drag-and-drop pool reassignment, archive last`
+- [x] **Step 5: 构建 + Commit** `feat(pools): drag-and-drop pool reassignment, archive last`
 
 ---
 
@@ -660,8 +660,8 @@ git commit -m "feat(tasks): promote memo to dashboard task list and delete memo"
 - [ ] 无独立「拒绝」即时消失按钮（拒绝语义：pool 选 `drop` 后点「确定」）。
 
 ### Inbox/Candidate Pools
-- [ ] `archive` 列在最后；无 pending 筛选器。
-- [ ] 可拖拽条目到其他池并持久化。
+- [ ] `archive` 列在最后；可拖拽条目到其他池并持久化。
+- [ ] **Phase 3 收尾追加：** 恢复 `human_status` 筛选（含 pending backlog）；见 `2026-07-03-phase3-completion.md`。
 
 ### Inbox/Memo → Dashboard/Tasks
 - [ ] 每条 memo 可「升级为 Task」。
