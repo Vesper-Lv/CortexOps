@@ -4,11 +4,18 @@
 
 **Goal:** 让 Web App 能把当前文件系统状态（`state/daily/*-links.jsonl`、`state/memory/ai-pm-7d.jsonl`、`pools/*.jsonl`）以**容错、可审计、可重入**的方式导入 SQLite，并保留 `raw_json` 与来源文件/行号，为后续 UI 阶段提供数据。
 
-**Architecture:** 分层遵循 roadmap 的 Flexibility Rules——UI/路由不直接读写文件；解析与映射为**纯函数**（易测、无副作用）；`runImport` 编排通过依赖注入（`readFile` + `SignalRepository`）以便用 fake 单测；Prisma 仅在 `src/server/*` 落地。导入入口先做 **CLI 脚本**（`npm run import`），并附一个薄 Route Handler 供 Phase B UI 触发。
+**数据模型决策（B 方案：拆表）：** 发现流与候选池是不同的生命周期阶段，采用两张独立表：
+
+- `Signal` ← `state/daily/*` + `state/memory/*`（发现流，Review Inbox / Dashboard 用）
+- `Candidate` ← `pools/*.jsonl`（池成员，Candidate Pools 用）
+
+两表共享同一批"公共字段 + provenance + rawJson"，但各带角色专属列（`Signal.stream`、`Candidate.poolName`）。`pools/*.jsonl` 里的条目与 daily 常共享同一 `id`，未来可用 `externalId` 关联，本阶段不建强外键。
+
+**Architecture:** 遵循 roadmap Flexibility Rules——UI/路由不直接读写文件；解析与映射为**纯函数**（易测、无副作用）；`runImport` 编排通过依赖注入（`readFile` + `SignalRepository`），按 `stream` 路由到 `upsertSignal` / `upsertCandidate`，可用 fake 单测；Prisma 仅在 `src/server/*` 落地。导入入口先做 **CLI 脚本**（`npm run import`），并附一个薄 Route Handler 供 Phase B UI 触发。
 
 **Tech Stack:** TypeScript、Prisma 5 + SQLite、Zod 3（已在依赖中）、Vitest（新增）、tsx（新增，运行 TS 脚本）。
 
-**本阶段范围：** 数据模型（`ImportRun` + `ImportedSignal`）、Zod 校验、纯解析/映射、导入编排 + Prisma 落地、CLI + 薄 API、单测 + 一次真实数据集成验证。**不做**：Review/Pools 领域交互、Dashboard 读视图 UI（属 nav Phase B 后半 / Phase C）、in-app AI runner。
+**本阶段范围：** 数据模型（`ImportRun` + `Signal` + `Candidate`）、Zod 校验、纯解析/映射、导入编排 + Prisma 落地、CLI + 薄 API、单测 + 一次真实数据集成验证。**不做**：Review/Pools 领域交互与状态机、Dashboard 读视图 UI（属 nav Phase B 后半 / Phase C）、in-app AI runner。
 
 ---
 
@@ -17,7 +24,7 @@
 - `state/daily/*-links.jsonl`：完整字段，含外部 `id`（如 `2026-07-02-01`）、`title`、`priority`、`suggested_pool`、`final_pool`、`human_status`、`reading_pack_status`、`duplicate_status`、`practice_fit`、摘要字段等。
 - `pools/*.jsonl`：与 daily 基本同构，含 `id`、`final_pool`、`suggested_pool`、`human_status`。`personal-work.jsonl` **为空文件（0 行）**，`paper-candidates.jsonl` 仅 1 行——**必须容忍空文件**。
 - `state/memory/ai-pm-7d.jsonl`：**字段子集，且无 `id`**（以 `canonical_key` 为标识），无 `final_pool`/`source_name`。
-- 结论：schema 除 provenance 外**所有业务字段可空**；记录标识采用 `id → canonical_key → sourceFile#line` 回退；导入必须容忍空文件、坏行、缺字段，且可重入（按 `recordKey` upsert）。
+- 结论：两表除 provenance 外**业务字段全部可空**；记录标识采用 `id → canonical_key → sourceFile#line` 回退；导入必须容忍空文件、坏行、缺字段，且可重入（按 `recordKey` upsert）。`Signal` 与 `Candidate` 各自的 `recordKey` 独立唯一，daily 与 pool 即使共享 `id` 也不冲突（不同表）。
 
 ---
 
@@ -30,7 +37,7 @@
 | `package.json` | 新增 devDeps `vitest`、`vite-tsconfig-paths`、`tsx`；新增 scripts `test`、`test:watch`、`import`、`db:push` |
 | `package-lock.json` | 随安装更新 |
 | `vitest.config.ts` | **新增**：Vitest 配置 + tsconfig 路径别名 |
-| `prisma/schema.prisma` | 新增 `ImportRun`、`ImportedSignal` model（保留 `Job`） |
+| `prisma/schema.prisma` | 新增 `ImportRun`、`Signal`、`Candidate` model（保留 `Job`） |
 | `.env` / `.env.example` | 不改（`DATABASE_URL="file:./dev.db"` 已足够） |
 
 ### `src/` 与 `scripts/`
@@ -39,10 +46,10 @@
 |---|---|
 | `src/shared/schemas/signal.ts` | **新增**：宽松 Zod `signalObjectSchema` |
 | `src/server/importers/jsonlParser.ts` | **新增**：纯函数 `parseJsonlContent` |
-| `src/server/importers/recordMapper.ts` | **新增**：纯函数 `mapToRecord` + `computeRecordKey` |
-| `src/server/importers/runImport.ts` | **新增**：编排 + `SignalRepository` 接口 + 类型 |
+| `src/server/importers/recordMapper.ts` | **新增**：纯函数 `mapCommon` / `mapToSignal` / `mapToCandidate` / `computeRecordKey` |
+| `src/server/importers/runImport.ts` | **新增**：编排 + `SignalRepository` 接口（含 `upsertSignal`/`upsertCandidate`）+ 类型 |
 | `src/server/db.ts` | **新增**：Prisma client 单例 |
-| `src/server/importers/prismaSignalRepository.ts` | **新增**：Prisma 版仓储 |
+| `src/server/importers/prismaSignalRepository.ts` | **新增**：Prisma 版仓储（写 `Signal` 与 `Candidate`） |
 | `scripts/import.ts` | **新增**：CLI 入口，解析文件列表并调用 `runImport` |
 | `src/app/api/import/route.ts` | **新增**：薄 POST Route Handler（供 Phase B UI 触发） |
 | `src/server/importers/__tests__/jsonlParser.test.ts` | **新增**：解析单测 |
@@ -128,7 +135,7 @@ git commit -m "chore: add vitest toolchain for data-import phase"
 
 ---
 
-## Task 2: 扩展 Prisma schema（ImportRun + ImportedSignal）
+## Task 2: 扩展 Prisma schema（ImportRun + Signal + Candidate）
 
 **Files:**
 - Modify: `prisma/schema.prisma`
@@ -138,24 +145,25 @@ git commit -m "chore: add vitest toolchain for data-import phase"
 在 `prisma/schema.prisma` 末尾追加：
 ```prisma
 model ImportRun {
-  id           String           @id @default(cuid())
-  startedAt    DateTime         @default(now())
-  finishedAt   DateTime?
-  status       String           @default("running") // running | success | partial | failed
-  filesScanned Int              @default(0)
-  linesTotal   Int              @default(0)
-  imported     Int              @default(0)
-  skipped      Int              @default(0)
-  errors       Int              @default(0)
-  notes        String?
-  signals      ImportedSignal[]
+  id                 String      @id @default(cuid())
+  startedAt          DateTime    @default(now())
+  finishedAt         DateTime?
+  status             String      @default("running") // running | success | partial | failed
+  filesScanned       Int         @default(0)
+  linesTotal         Int         @default(0)
+  importedSignals    Int         @default(0)
+  importedCandidates Int         @default(0)
+  skipped            Int         @default(0)
+  errors             Int         @default(0)
+  notes              String?
+  signals            Signal[]
+  candidates         Candidate[]
 }
 
-model ImportedSignal {
+model Signal {
   id                String    @id @default(cuid())
   recordKey         String    @unique
-  stream            String // daily | memory | pool
-  poolName          String? // pool 文件来源标识（文件名，仅 provenance）
+  stream            String // daily | memory
   externalId        String?
   canonicalKey      String?
   date              String?
@@ -184,21 +192,56 @@ model ImportedSignal {
   updatedAt         DateTime  @updatedAt
 
   @@index([stream])
+  @@index([canonicalKey])
+}
+
+model Candidate {
+  id                String    @id @default(cuid())
+  recordKey         String    @unique
+  poolName          String // 池文件来源标识（文件名，如 product-inspiration）
+  externalId        String?
+  canonicalKey      String?
+  date              String?
+  title             String?
+  sourceName        String?
+  sourceUrl         String?
+  originalUrl       String?
+  priority          String?
+  suggestedPool     String?
+  finalPool         String?
+  humanStatus       String?
+  readingPackStatus String?
+  duplicateStatus   String?
+  practiceFit       String?
+  category          String?
+  publishedAt       String?
+  reason            String?
+  aihotSummary      String?
+  codexSummary      String?
+  rawJson           String
+  sourceFile        String
+  sourceLine        Int
+  importRunId       String
+  importRun         ImportRun @relation(fields: [importRunId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
   @@index([poolName])
   @@index([canonicalKey])
+  @@index([humanStatus])
 }
 ```
 
 - [ ] **Step 2: 同步数据库并生成 client**
 
 Run: `npm run db:push`
-Expected: `dev.db` 新增 `ImportRun`、`ImportedSignal` 表；Prisma Client 重新生成。
+Expected: `dev.db` 新增 `ImportRun`、`Signal`、`Candidate` 表；Prisma Client 重新生成。
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add prisma/schema.prisma
-git commit -m "feat(db): add ImportRun and ImportedSignal models"
+git commit -m "feat(db): add ImportRun, Signal, and Candidate models"
 ```
 
 ---
@@ -216,6 +259,7 @@ git commit -m "feat(db): add ImportRun and ImportedSignal models"
 import { z } from "zod";
 
 // 宽松：所有业务字段可空，未知字段透传（原始行另存 rawJson）。
+// daily / memory / pool 三种来源共用此 schema。
 export const signalObjectSchema = z
   .object({
     id: z.string().optional(),
@@ -383,7 +427,7 @@ git commit -m "feat(import): add tolerant jsonl parser"
 
 ---
 
-## Task 5: 记录映射 + recordKey
+## Task 5: 记录映射（Signal / Candidate）+ recordKey
 
 **Files:**
 - Create: `src/server/importers/recordMapper.ts`
@@ -393,7 +437,7 @@ git commit -m "feat(import): add tolerant jsonl parser"
 
 在 `recordMapper.test.ts` 顶部加入 import，并追加用例：
 ```ts
-import { mapToRecord, computeRecordKey } from "@/server/importers/recordMapper";
+import { mapToSignal, mapToCandidate, computeRecordKey } from "@/server/importers/recordMapper";
 import type { ParsedLine } from "@/server/importers/jsonlParser";
 
 const line = (value: Record<string, unknown>, raw?: string): ParsedLine => ({
@@ -402,41 +446,46 @@ const line = (value: Record<string, unknown>, raw?: string): ParsedLine => ({
   value
 });
 
-describe("mapToRecord", () => {
-  it("maps snake_case fields and preserves rawJson", () => {
-    const rec = mapToRecord(line({ id: "2026-07-02-01", final_pool: "knowledge_gap", title: "t" }), {
+describe("mapToSignal", () => {
+  it("maps snake_case fields, sets stream, preserves rawJson", () => {
+    const rec = mapToSignal(line({ id: "2026-07-02-01", final_pool: "knowledge_gap", title: "t" }), {
       stream: "daily",
       sourceFile: "state/daily/2026-07-02-links.jsonl"
     });
     expect(rec.externalId).toBe("2026-07-02-01");
     expect(rec.finalPool).toBe("knowledge_gap");
     expect(rec.stream).toBe("daily");
+    expect(rec.recordKey).toBe("daily:2026-07-02-01");
     expect(rec.rawJson).toContain('"title":"t"');
   });
 
   it("uses canonical_key when id is absent (memory stream)", () => {
-    const rec = mapToRecord(line({ canonical_key: "enterprise_ai_cost_control" }), {
+    const rec = mapToSignal(line({ canonical_key: "enterprise_ai_cost_control" }), {
       stream: "memory",
       sourceFile: "state/memory/ai-pm-7d.jsonl"
     });
     expect(rec.externalId).toBeNull();
-    expect(rec.recordKey).toBe("memory:-:enterprise_ai_cost_control");
+    expect(rec.recordKey).toBe("memory:enterprise_ai_cost_control");
   });
+});
 
-  it("sets poolName from context for pool stream", () => {
-    const rec = mapToRecord(line({ id: "2026-07-02-11" }), {
-      stream: "pool",
+describe("mapToCandidate", () => {
+  it("sets poolName and pool-scoped recordKey", () => {
+    const rec = mapToCandidate(line({ id: "2026-07-02-11", final_pool: "product_inspiration" }), {
       poolName: "product-inspiration",
       sourceFile: "pools/product-inspiration.jsonl"
     });
     expect(rec.poolName).toBe("product-inspiration");
-    expect(rec.recordKey).toBe("pool:product-inspiration:2026-07-02-11");
+    expect(rec.finalPool).toBe("product_inspiration");
+    expect(rec.recordKey).toBe("product-inspiration:2026-07-02-11");
   });
 });
 
 describe("computeRecordKey", () => {
   it("falls back to sourceFile#line when no id or canonical_key", () => {
-    expect(computeRecordKey({ stream: "daily", externalId: null, canonicalKey: null, sourceFile: "f", sourceLine: 3 })).toBe("daily:-:f#3");
+    expect(
+      computeRecordKey({ scope: "daily", externalId: null, canonicalKey: null, sourceFile: "f", sourceLine: 3 })
+    ).toBe("daily:f#3");
   });
 });
 ```
@@ -444,7 +493,7 @@ describe("computeRecordKey", () => {
 - [ ] **Step 2: 运行确认失败**
 
 Run: `npm test -- recordMapper`
-Expected: FAIL（模块不存在）。
+Expected: FAIL（映射函数不存在）。
 
 - [ ] **Step 3: 实现**
 
@@ -452,12 +501,7 @@ Expected: FAIL（模块不存在）。
 ```ts
 import type { ParsedLine } from "@/server/importers/jsonlParser";
 
-export type MapContext = { stream: string; poolName?: string; sourceFile: string };
-
-export type ImportedSignalInput = {
-  recordKey: string;
-  stream: string;
-  poolName: string | null;
+export type MappedCommon = {
   externalId: string | null;
   canonicalKey: string | null;
   date: string | null;
@@ -482,38 +526,27 @@ export type ImportedSignalInput = {
   sourceLine: number;
 };
 
+export type SignalInput = MappedCommon & { recordKey: string; stream: string };
+export type CandidateInput = MappedCommon & { recordKey: string; poolName: string };
+
+const s = (v: unknown): string | null => (typeof v === "string" ? v : null);
+
 export function computeRecordKey(args: {
-  stream: string;
-  poolName?: string | null;
+  scope: string; // stream（Signal）或 poolName（Candidate）
   externalId: string | null;
   canonicalKey: string | null;
   sourceFile: string;
   sourceLine: number;
 }): string {
-  const pool = args.poolName ?? "-";
   const id = args.externalId ?? args.canonicalKey ?? `${args.sourceFile}#${args.sourceLine}`;
-  return `${args.stream}:${pool}:${id}`;
+  return `${args.scope}:${id}`;
 }
 
-const s = (v: unknown): string | null => (typeof v === "string" ? v : null);
-
-export function mapToRecord(parsed: ParsedLine, ctx: MapContext): ImportedSignalInput {
+export function mapCommon(parsed: ParsedLine, sourceFile: string): MappedCommon {
   const v = parsed.value;
-  const externalId = s(v.id);
-  const canonicalKey = s(v.canonical_key);
   return {
-    recordKey: computeRecordKey({
-      stream: ctx.stream,
-      poolName: ctx.poolName ?? null,
-      externalId,
-      canonicalKey,
-      sourceFile: ctx.sourceFile,
-      sourceLine: parsed.line
-    }),
-    stream: ctx.stream,
-    poolName: ctx.poolName ?? null,
-    externalId,
-    canonicalKey,
+    externalId: s(v.id),
+    canonicalKey: s(v.canonical_key),
     date: s(v.date),
     title: s(v.title),
     sourceName: s(v.source_name),
@@ -532,8 +565,38 @@ export function mapToRecord(parsed: ParsedLine, ctx: MapContext): ImportedSignal
     aihotSummary: s(v.aihot_summary),
     codexSummary: s(v.codex_summary),
     rawJson: parsed.raw,
-    sourceFile: ctx.sourceFile,
+    sourceFile,
     sourceLine: parsed.line
+  };
+}
+
+export function mapToSignal(parsed: ParsedLine, ctx: { stream: string; sourceFile: string }): SignalInput {
+  const common = mapCommon(parsed, ctx.sourceFile);
+  return {
+    recordKey: computeRecordKey({
+      scope: ctx.stream,
+      externalId: common.externalId,
+      canonicalKey: common.canonicalKey,
+      sourceFile: ctx.sourceFile,
+      sourceLine: parsed.line
+    }),
+    stream: ctx.stream,
+    ...common
+  };
+}
+
+export function mapToCandidate(parsed: ParsedLine, ctx: { poolName: string; sourceFile: string }): CandidateInput {
+  const common = mapCommon(parsed, ctx.sourceFile);
+  return {
+    recordKey: computeRecordKey({
+      scope: ctx.poolName,
+      externalId: common.externalId,
+      canonicalKey: common.canonicalKey,
+      sourceFile: ctx.sourceFile,
+      sourceLine: parsed.line
+    }),
+    poolName: ctx.poolName,
+    ...common
   };
 }
 ```
@@ -547,12 +610,12 @@ Expected: PASS。
 
 ```bash
 git add src/server/importers/recordMapper.ts src/server/importers/__tests__/recordMapper.test.ts
-git commit -m "feat(import): add record mapper and recordKey"
+git commit -m "feat(import): add signal/candidate mappers and recordKey"
 ```
 
 ---
 
-## Task 6: 导入编排 runImport（依赖注入，可测）
+## Task 6: 导入编排 runImport（按 stream 路由，依赖注入可测）
 
 **Files:**
 - Create: `src/server/importers/runImport.ts`
@@ -564,52 +627,61 @@ git commit -m "feat(import): add record mapper and recordKey"
 ```ts
 import { describe, expect, it } from "vitest";
 import { runImport, type ImportDeps, type ImportSource, type SignalRepository } from "@/server/importers/runImport";
-import type { ImportedSignalInput } from "@/server/importers/recordMapper";
+import type { CandidateInput, SignalInput } from "@/server/importers/recordMapper";
 
 function makeRepo() {
-  const upserts: ImportedSignalInput[] = [];
+  const signalUpserts: SignalInput[] = [];
+  const candidateUpserts: CandidateInput[] = [];
   const finished: Array<Record<string, unknown>> = [];
   const repo: SignalRepository = {
     async createImportRun() {
       return { id: "run1" };
     },
-    async upsertByRecordKey(input) {
-      upserts.push(input);
+    async upsertSignal(input) {
+      signalUpserts.push(input);
+    },
+    async upsertCandidate(input) {
+      candidateUpserts.push(input);
     },
     async finishImportRun(id, counts) {
       finished.push({ id, ...counts });
     }
   };
-  return { repo, upserts, finished };
+  return { repo, signalUpserts, candidateUpserts, finished };
 }
 
 describe("runImport", () => {
-  it("imports good lines, tolerates empty files and bad lines, records a run", async () => {
+  it("routes by stream, tolerates empty files and bad lines, records a run", async () => {
     const files: Record<string, string> = {
       "state/daily/2026-07-02-links.jsonl": '{"id":"d1"}\n{bad}\n{"id":"d2"}\n',
       "pools/personal-work.jsonl": "", // 空文件
       "pools/product-inspiration.jsonl": '{"id":"p1"}\n'
     };
+    const { repo, signalUpserts, candidateUpserts, finished } = makeRepo();
     const deps: ImportDeps = {
       readFile: async (p) => {
         if (!(p in files)) throw new Error("missing " + p);
         return files[p];
       },
-      repo: makeRepo().repo
+      repo
     };
-    const { repo, upserts, finished } = makeRepo();
     const sources: ImportSource[] = [
       { stream: "daily", files: [{ path: "state/daily/2026-07-02-links.jsonl" }] },
-      { stream: "pool", files: [
-        { path: "pools/personal-work.jsonl", poolName: "personal-work" },
-        { path: "pools/product-inspiration.jsonl", poolName: "product-inspiration" }
-      ] }
+      {
+        stream: "pool",
+        files: [
+          { path: "pools/personal-work.jsonl", poolName: "personal-work" },
+          { path: "pools/product-inspiration.jsonl", poolName: "product-inspiration" }
+        ]
+      }
     ];
 
-    const summary = await runImport({ ...deps, repo }, sources);
+    const summary = await runImport(deps, sources);
 
-    expect(upserts.map((u) => u.externalId)).toEqual(["d1", "d2", "p1"]);
-    expect(summary.imported).toBe(3);
+    expect(signalUpserts.map((u) => u.externalId)).toEqual(["d1", "d2"]);
+    expect(candidateUpserts.map((u) => u.externalId)).toEqual(["p1"]);
+    expect(summary.importedSignals).toBe(2);
+    expect(summary.importedCandidates).toBe(1);
     expect(summary.errors).toBe(1);
     expect(summary.filesScanned).toBe(3);
     expect(summary.status).toBe("partial");
@@ -617,7 +689,7 @@ describe("runImport", () => {
   });
 
   it("counts a missing file as an error and continues", async () => {
-    const { repo, upserts } = makeRepo();
+    const { repo, signalUpserts } = makeRepo();
     const deps: ImportDeps = {
       readFile: async (p) => {
         if (p === "ok.jsonl") return '{"id":"x"}\n';
@@ -628,9 +700,9 @@ describe("runImport", () => {
     const summary = await runImport(deps, [
       { stream: "daily", files: [{ path: "missing.jsonl" }, { path: "ok.jsonl" }] }
     ]);
-    expect(upserts.map((u) => u.externalId)).toEqual(["x"]);
+    expect(signalUpserts.map((u) => u.externalId)).toEqual(["x"]);
     expect(summary.errors).toBe(1);
-    expect(summary.imported).toBe(1);
+    expect(summary.importedSignals).toBe(1);
   });
 });
 ```
@@ -645,12 +717,18 @@ Expected: FAIL（模块不存在）。
 `src/server/importers/runImport.ts`：
 ```ts
 import { parseJsonlContent } from "@/server/importers/jsonlParser";
-import { mapToRecord, type ImportedSignalInput } from "@/server/importers/recordMapper";
+import {
+  mapToCandidate,
+  mapToSignal,
+  type CandidateInput,
+  type SignalInput
+} from "@/server/importers/recordMapper";
 
 export type ImportRunCounts = {
   filesScanned: number;
   linesTotal: number;
-  imported: number;
+  importedSignals: number;
+  importedCandidates: number;
   skipped: number;
   errors: number;
   status: "success" | "partial" | "failed";
@@ -658,7 +736,8 @@ export type ImportRunCounts = {
 
 export type SignalRepository = {
   createImportRun(): Promise<{ id: string }>;
-  upsertByRecordKey(input: ImportedSignalInput & { importRunId: string }): Promise<void>;
+  upsertSignal(input: SignalInput & { importRunId: string }): Promise<void>;
+  upsertCandidate(input: CandidateInput & { importRunId: string }): Promise<void>;
   finishImportRun(id: string, counts: ImportRunCounts): Promise<void>;
 };
 
@@ -667,8 +746,9 @@ export type ImportDeps = {
   repo: SignalRepository;
 };
 
+// stream === "pool" 的源写入 Candidate（file.poolName 必填）；其余写入 Signal。
 export type ImportSource = {
-  stream: string;
+  stream: string; // daily | memory | pool
   files: { path: string; poolName?: string }[];
 };
 
@@ -679,7 +759,8 @@ export async function runImport(deps: ImportDeps, sources: ImportSource[]): Prom
 
   let filesScanned = 0;
   let linesTotal = 0;
-  let imported = 0;
+  let importedSignals = 0;
+  let importedCandidates = 0;
   let errors = 0;
 
   for (const source of sources) {
@@ -698,19 +779,32 @@ export async function runImport(deps: ImportDeps, sources: ImportSource[]): Prom
       errors += parseErrors.length;
 
       for (const line of parsed) {
-        const record = mapToRecord(line, {
-          stream: source.stream,
-          poolName: file.poolName,
-          sourceFile: file.path
-        });
-        await deps.repo.upsertByRecordKey({ ...record, importRunId });
-        imported += 1;
+        if (source.stream === "pool") {
+          const record = mapToCandidate(line, {
+            poolName: file.poolName ?? file.path,
+            sourceFile: file.path
+          });
+          await deps.repo.upsertCandidate({ ...record, importRunId });
+          importedCandidates += 1;
+        } else {
+          const record = mapToSignal(line, { stream: source.stream, sourceFile: file.path });
+          await deps.repo.upsertSignal({ ...record, importRunId });
+          importedSignals += 1;
+        }
       }
     }
   }
 
   const status: ImportRunCounts["status"] = errors > 0 ? "partial" : "success";
-  const counts: ImportRunCounts = { filesScanned, linesTotal, imported, skipped: 0, errors, status };
+  const counts: ImportRunCounts = {
+    filesScanned,
+    linesTotal,
+    importedSignals,
+    importedCandidates,
+    skipped: 0,
+    errors,
+    status
+  };
   await deps.repo.finishImportRun(importRunId, counts);
 
   return { importRunId, ...counts };
@@ -726,7 +820,7 @@ Expected: PASS。
 
 ```bash
 git add src/server/importers/runImport.ts src/server/importers/__tests__/runImport.test.ts
-git commit -m "feat(import): add runImport orchestrator with DI"
+git commit -m "feat(import): add runImport orchestrator routing signals vs candidates"
 ```
 
 ---
@@ -752,13 +846,13 @@ if (process.env.NODE_ENV !== "production") {
 }
 ```
 
-- [ ] **Step 2: Prisma 仓储**
+- [ ] **Step 2: Prisma 仓储（写 Signal 与 Candidate）**
 
 `src/server/importers/prismaSignalRepository.ts`：
 ```ts
 import { prisma } from "@/server/db";
 import type { ImportRunCounts, SignalRepository } from "@/server/importers/runImport";
-import type { ImportedSignalInput } from "@/server/importers/recordMapper";
+import type { CandidateInput, SignalInput } from "@/server/importers/recordMapper";
 
 export const prismaSignalRepository: SignalRepository = {
   async createImportRun() {
@@ -766,9 +860,18 @@ export const prismaSignalRepository: SignalRepository = {
     return { id: run.id };
   },
 
-  async upsertByRecordKey(input: ImportedSignalInput & { importRunId: string }) {
+  async upsertSignal(input: SignalInput & { importRunId: string }) {
     const { recordKey, ...rest } = input;
-    await prisma.importedSignal.upsert({
+    await prisma.signal.upsert({
+      where: { recordKey },
+      create: { recordKey, ...rest },
+      update: { ...rest }
+    });
+  },
+
+  async upsertCandidate(input: CandidateInput & { importRunId: string }) {
+    const { recordKey, ...rest } = input;
+    await prisma.candidate.upsert({
       where: { recordKey },
       create: { recordKey, ...rest },
       update: { ...rest }
@@ -783,7 +886,8 @@ export const prismaSignalRepository: SignalRepository = {
         status: counts.status,
         filesScanned: counts.filesScanned,
         linesTotal: counts.linesTotal,
-        imported: counts.imported,
+        importedSignals: counts.importedSignals,
+        importedCandidates: counts.importedCandidates,
         skipped: counts.skipped,
         errors: counts.errors
       }
@@ -795,13 +899,13 @@ export const prismaSignalRepository: SignalRepository = {
 - [ ] **Step 3: 类型校验**
 
 Run: `npx tsc --noEmit`
-Expected: PASS（确认 Prisma 生成类型与 upsert 字段匹配）。
+Expected: PASS（确认 Prisma 生成类型与 `Signal`/`Candidate` upsert 字段匹配）。
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add src/server/db.ts src/server/importers/prismaSignalRepository.ts
-git commit -m "feat(db): add prisma client and signal repository"
+git commit -m "feat(db): add prisma client and signal/candidate repository"
 ```
 
 ---
@@ -864,27 +968,21 @@ main().catch(async (e) => {
 - [ ] **Step 2: 运行真实导入**
 
 Run: `npm run import`
-Expected: 打印 summary，`imported` ≈ 30(daily) + 30(memory 有效行) + 30(pools 合计) 的实际总数；`errors: 0`；`status: "success"`。空文件 `pools/personal-work.jsonl` 不报错。
+Expected: 打印 summary，`importedSignals` ≈ daily(30) + memory(有效行) 的实际数；`importedCandidates` ≈ pools 合计（当前约 30）；`errors: 0`；`status: "success"`。空文件 `pools/personal-work.jsonl` 不报错。
 
 - [ ] **Step 3: 校验数据库计数（集成证据）**
 
-Run:
+Run（一次性脚本）：
 ```bash
-npx prisma db execute --stdin <<'SQL'
-SELECT stream, COUNT(*) FROM ImportedSignal GROUP BY stream;
-SQL
+npx tsx -e "import('@/server/db').then(async ({prisma})=>{console.log('signals',await prisma.signal.groupBy({by:['stream'],_count:true}));console.log('candidates',await prisma.candidate.groupBy({by:['poolName'],_count:true}));console.log('runs',await prisma.importRun.count());await prisma.\$disconnect();})"
 ```
-或用一次性脚本：
-```bash
-npx tsx -e "import('@/server/db').then(async ({prisma})=>{console.log(await prisma.importedSignal.groupBy({by:['stream'],_count:true}));console.log('runs',await prisma.importRun.count());await prisma.\$disconnect();})"
-```
-Expected: 三个 stream 均有记录；`ImportRun` 至少 1 条。
+Expected: `Signal` 按 stream（daily/memory）各有记录；`Candidate` 按 poolName 分组有记录；`ImportRun` ≥ 1。
 
 - [ ] **Step 4: 重入验证（幂等）**
 
 Run: `npm run import`（再跑一次）
-Then: 再次统计 `ImportedSignal` 总数。
-Expected: 总数**不翻倍**（按 `recordKey` upsert），仅新增一条 `ImportRun`。
+Then: 再次统计 `Signal` 与 `Candidate` 总数。
+Expected: 两表总数**均不翻倍**（各自按 `recordKey` upsert），仅新增一条 `ImportRun`。
 
 - [ ] **Step 5: Commit**
 
@@ -944,7 +1042,7 @@ Expected: 路由表出现 `ƒ /api/import`（动态）。
 - [ ] **Step 3: 运行时验证**
 
 Run（另一个终端已 `npm run dev`）：`curl -X POST http://localhost:3000/api/import`
-Expected: 返回 JSON summary（`imported`>0，`status`）。
+Expected: 返回 JSON summary（`importedSignals`/`importedCandidates`>0，`status`）。
 
 - [ ] **Step 4: Commit**
 
@@ -962,7 +1060,7 @@ git commit -m "feat(api): add POST /api/import route handler"
 
 - [ ] **Step 1: 全量校验**
 
-Run: `npm test` ；然后 `npm run lint` ；然后 `npm run build`（build 会重新生成 typedRoutes 后再 `npx tsc --noEmit` 亦可）。
+Run: `npm test` ；然后 `npm run lint` ；然后 `npm run build`。
 Expected: 测试全绿；lint 通过；build 通过。
 
 > 注意顺序：`typedRoutes` 类型由 `next build`/`next dev` 生成，若单独 `npm run typecheck` 报路由类型错误，先跑一次 `npm run build` 再 typecheck。
@@ -970,7 +1068,7 @@ Expected: 测试全绿；lint 通过；build 通过。
 - [ ] **Step 2: 标注 roadmap**
 
 在 `docs/cortexops-ai-system-roadmap.md` 的 `### Phase 2` 末尾追加一行：
-`> 已实现，见 docs/superpowers/plans/2026-07-03-roadmap-phase2-data-import.md。`
+`> 已实现（Signal/Candidate 拆表），见 docs/superpowers/plans/2026-07-03-roadmap-phase2-data-import.md。`
 
 - [ ] **Step 3: Commit**
 
@@ -987,10 +1085,10 @@ git commit -m "docs: mark roadmap phase 2 as implemented"
 - 坏 JSONL 行不中断整体导入（计入 `errors`，其余照常导入）。
 - 每条记录保留 `sourceFile` 与 `sourceLine`。
 - 每条记录保留 `rawJson`（完整原始行），未来 schema 变更可恢复。
-- 三个 stream（daily/memory/pool）均能导入；memory 无 `id` 时以 `canonical_key` 建键。
-- 重复导入按 `recordKey` upsert，不产生重复行。
-- 每次导入写入一条 `ImportRun`（含计数与状态）。
-- 单测覆盖：空/正常/坏行/缺字段/缺文件；映射键回退；编排计数。
+- 发现流写入 `Signal`（daily/memory），池成员写入 `Candidate`（poolName）；memory 无 `id` 时以 `canonical_key` 建键。
+- 重复导入按各表 `recordKey` upsert，不产生重复行。
+- 每次导入写入一条 `ImportRun`（含 `importedSignals`/`importedCandidates` 计数与状态）。
+- 单测覆盖：空/正常/坏行/缺字段/缺文件；映射键回退；按 stream 路由到 Signal/Candidate；编排计数。
 
 ## 风险与缓解
 
@@ -998,10 +1096,12 @@ git commit -m "docs: mark roadmap phase 2 as implemented"
 - **typedRoutes 与 /api 路由**：新增 Route Handler 后以 `npm run build` 校验。
 - **别名解析**：Vitest 通过 `vite-tsconfig-paths` 解析 `@/`；若测试报找不到模块，确认插件已装并在 `vitest.config.ts` 注册。
 - **schema 过死板**（roadmap 风险）：业务字段全部可空 + `rawJson` 透传，避免绑定单一日报格式。
-- **JSONL 与 DB 漂移**（roadmap 风险）：本阶段 DB 为导入结果快照；人工 review 状态的权威化在 Phase 3 处理，本阶段不写回文件。
+- **两表字段重复**：Signal 与 Candidate 共享 `MappedCommon` 映射逻辑（DRY），仅表定义各写一份；后续如需可提取 Prisma 复用视图。
+- **JSONL 与 DB 漂移**（roadmap 风险）：本阶段 DB 为导入结果快照；人工 review 状态权威化在 Phase 3 处理，本阶段不写回文件。
 
 ## Self-Review 结论
 
 - **Roadmap Phase 2 覆盖**：Deliverables（Prisma schema、SQLite、Zod、JSONL importer、import run 记录）与 Priority imports（daily/memory/pools）均有对应 Task；Acceptance（空文件/坏行/来源行号/raw_json）逐条对应验收标准与 Task 4/6/8 测试。
+- **B 方案落实**：`Signal` 与 `Candidate` 拆表（Task 2）；映射拆为 `mapToSignal`/`mapToCandidate` 且共享 `mapCommon`（Task 5）；`runImport` 按 `stream === "pool"` 路由（Task 6）；仓储含 `upsertSignal`/`upsertCandidate`（Task 7）；计数分 `importedSignals`/`importedCandidates`（Task 6/7）。
 - **占位符扫描**：每个代码步骤含完整代码与可执行命令，无 TODO/TBD。
-- **类型一致**：`SignalObject`（Task 3）→ `ParsedLine`（Task 4）→ `ImportedSignalInput`/`computeRecordKey`（Task 5）→ `SignalRepository`/`ImportDeps`/`ImportSource`/`ImportRunCounts`/`runImport`（Task 6）→ `prismaSignalRepository`（Task 7）→ `scripts/import.ts` 与 `route.ts`（Task 8/9）命名与签名前后一致；Prisma 字段名（camelCase）与 `ImportedSignalInput` 键一致，`upsert` 的 `create/update` 使用同一 `rest`。
+- **类型一致**：`SignalObject`（Task 3）→ `ParsedLine`（Task 4）→ `MappedCommon`/`SignalInput`/`CandidateInput`/`computeRecordKey`（Task 5）→ `ImportRunCounts`/`SignalRepository`/`ImportDeps`/`ImportSource`/`runImport`（Task 6）→ `prismaSignalRepository`（Task 7）→ `scripts/import.ts` 与 `route.ts`（Task 8/9）命名与签名前后一致；Prisma 字段名（camelCase）与 `SignalInput`/`CandidateInput` 键一致，`upsert` 的 `create/update` 使用同一 `rest`。
