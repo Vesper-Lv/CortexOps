@@ -1,24 +1,21 @@
-import { KanbanSquare, PlusCircle } from "lucide-react";
-import { WorkbenchPage } from "@/components/layout/workbench-page";
+import { TaskList } from "@/components/dashboard/task-list";
+import { listTasks } from "@/server/services/tasks";
 
-export default function TasksPage() {
+export const dynamic = "force-dynamic";
+
+export default async function TasksPage() {
+  const tasks = await listTasks();
+
   return (
-    <WorkbenchPage
-      eyebrow="Execution board"
-      title="Tasks"
-      description="Merge CortexOps-generated tasks with personal work and track them from inbox to done."
-      metrics={[
-        { label: "Inbox", value: "-", detail: "No tasks imported" },
-        { label: "This week", value: "-", detail: "No scheduled work" },
-        { label: "In progress", value: "-", detail: "Clear slate" }
-      ]}
-      emptyState={{
-        icon: KanbanSquare,
-        title: "Task board shell is ready",
-        description:
-          "Phase 4 will support signal-to-task conversion while preserving linked_signal_id and linked_report_id.",
-        actions: [{ icon: PlusCircle, label: "Manual task entry later", tone: "primary" }]
-      }}
-    />
+    <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Execution board</p>
+        <h2 className="mt-3 text-4xl font-semibold text-foreground">Tasks</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Tasks promoted from memos and future signal conversions appear here.
+        </p>
+      </div>
+      <TaskList tasks={tasks} />
+    </section>
   );
 }
