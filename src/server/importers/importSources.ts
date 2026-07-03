@@ -11,6 +11,10 @@ export async function listBySuffix(dir: string, suffix: string): Promise<string[
   }
 }
 
+export async function listDailyReportFiles(): Promise<string[]> {
+  return listBySuffix("state/daily", "-report.md");
+}
+
 // 单一事实来源：CLI 与 API 路由都用它构建优先导入的文件列表，避免逻辑漂移。
 export async function buildDefaultSources(): Promise<ImportSource[]> {
   const dailyFiles = await listBySuffix("state/daily", "-links.jsonl");

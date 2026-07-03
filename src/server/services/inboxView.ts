@@ -1,15 +1,25 @@
 import { prisma } from "@/server/db";
 import { getLatestDailyDate } from "@/server/services/dailyView";
+import { getCandidatePoolGroups } from "@/server/services/candidatePools";
 import { parseSignalRaw, pickSummary } from "@/server/signalRaw";
 import type { InboxSignal, PoolGroup } from "@/shared/inboxTypes";
 
 export type { InboxSignal, PoolGroup } from "@/shared/inboxTypes";
+export { getCandidatePoolGroups } from "@/server/services/candidatePools";
+
+export async function getCandidatePools(humanStatus?: string): Promise<PoolGroup[]> {
+  const groups = await getCandidatePoolGroups();
+  if (!humanStatus) return groups;
+  return groups
+    .map((g) => ({ poolName: g.poolName, items: g.items.filter((i) => i.humanStatus === humanStatus) }))
+    .filter((g) => g.items.length > 0);
+}
 
 export async function getInboxToday(): Promise<{ date: string; signals: InboxSignal[] } | null> {
   const date = await getLatestDailyDate();
   if (!date) return null;
   const rows = await prisma.signal.findMany({
-    where: { stream: "daily", date },
+    where: { stream: "daily", date, humanStatus: "pending" },
     orderBy: [{ priority: "asc" }, { sourceLine: "asc" }]
   });
   const signals = rows.map((s) => ({
@@ -24,24 +34,4 @@ export async function getInboxToday(): Promise<{ date: string; signals: InboxSig
     summary: pickSummary(parseSignalRaw(s.rawJson), s.aihotSummary, s.reason)
   }));
   return { date, signals };
-}
-
-export async function getCandidatePools(humanStatus?: string): Promise<PoolGroup[]> {
-  const rows = await prisma.candidate.findMany({
-    where: humanStatus ? { humanStatus } : undefined,
-    orderBy: [{ poolName: "asc" }, { priority: "asc" }]
-  });
-  const map = new Map<string, PoolGroup>();
-  for (const c of rows) {
-    const key = c.poolName;
-    if (!map.has(key)) map.set(key, { poolName: key, items: [] });
-    map.get(key)!.items.push({
-      id: c.id,
-      title: c.title ?? "(untitled)",
-      url: c.originalUrl ?? c.sourceUrl ?? "",
-      humanStatus: c.humanStatus ?? "pending",
-      priority: c.priority ?? ""
-    });
-  }
-  return [...map.values()];
 }

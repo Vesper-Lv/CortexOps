@@ -3,7 +3,7 @@ import { prisma } from "@/server/db";
 import { buildDefaultSources } from "@/server/importers/importSources";
 import { prismaSignalRepository } from "@/server/importers/prismaSignalRepository";
 import { runImport } from "@/server/importers/runImport";
-import { reviewSignal } from "@/server/services/review";
+import { draftSignalEdit, finalizeSignal } from "@/server/services/review";
 
 async function main() {
   const signal = await prisma.signal.findFirst({ where: { stream: "daily" } });
@@ -11,9 +11,9 @@ async function main() {
 
   const id = signal.id;
 
-  await reviewSignal(id, { type: "confirm" });
-  await reviewSignal(id, { type: "toggle_reading_pack" });
-  await reviewSignal(id, { type: "change_pool", pool: "demo_replication" });
+  await draftSignalEdit(id, { type: "toggle_reading_pack" });
+  await draftSignalEdit(id, { type: "set_pool", pool: "demo_replication" });
+  await finalizeSignal(id);
 
   const afterReview = await prisma.signal.findUnique({ where: { id } });
   const auditCount = await prisma.auditLog.count({ where: { entityId: id } });

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { addMemoAction, deleteMemoAction, toggleMemoAction } from "@/server/actions/memoActions";
+import { promoteMemoAction } from "@/server/actions/taskActions";
 import { countMemos, filterMemos, type MemoFilter, type MemoItem } from "@/shared/memos";
 
 type MemoListProps = {
@@ -75,6 +76,14 @@ export function MemoList({ memos }: MemoListProps) {
               >
                 {memo.text}
               </span>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => run(() => promoteMemoAction(memo.id))}
+                className="text-xs text-primary hover:opacity-80 disabled:opacity-50"
+              >
+                升级为 Task
+              </button>
               <button
                 type="button"
                 disabled={pending}

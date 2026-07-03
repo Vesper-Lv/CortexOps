@@ -129,3 +129,38 @@ model Memo {
 
   @@index([status])
 }
+
+model Task {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  origin         String   @default("manual")
+  linkedSignalId String?
+  status         String   @default("inbox")
+  priority       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
+
+model DailyReport {
+  id            String   @id @default(cuid())
+  date          String   @unique
+  fivePartJson  String
+  practicesJson String
+  sourceFile    String
+  importRunId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DailySession {
+  date                    String   @id
+  selectedPracticeIndex   Int?
+  practiceAlt0Disposition String?
+  practiceAlt1Disposition String?
+  practiceAlt2Disposition String?
+  candidatesDismissed     Boolean  @default(false)
+  updatedAt               DateTime @updatedAt
+}

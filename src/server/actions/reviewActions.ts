@@ -1,10 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { reviewSignal, type ReviewAction } from "@/server/services/review";
+import {
+  draftSignalEdit,
+  finalizeAllPending,
+  finalizeSignal,
+  type DraftAction
+} from "@/server/services/review";
 
-export async function submitReview(signalId: string, action: ReviewAction, rationale?: string) {
-  await reviewSignal(signalId, action, rationale);
+function revalidateInboxPaths() {
   revalidatePath("/inbox/today");
   revalidatePath("/dashboard/today");
+  revalidatePath("/inbox/pools");
+}
+
+export async function submitDraft(signalId: string, action: DraftAction) {
+  await draftSignalEdit(signalId, action);
+  revalidatePath("/inbox/today");
+  revalidatePath("/dashboard/today");
+}
+
+export async function finalizeSignalAction(signalId: string) {
+  await finalizeSignal(signalId);
+  revalidateInboxPaths();
+}
+
+export async function finalizeAllAction(date: string) {
+  await finalizeAllPending(date);
+  revalidateInboxPaths();
 }

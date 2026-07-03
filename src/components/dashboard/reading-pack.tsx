@@ -17,7 +17,7 @@ export function ReadingPack({ items }: { items: SignalView[] }) {
           >
             {item.title}
           </a>
-          {item.summary && <p className="mt-2 text-sm leading-6 text-muted-foreground">摘要：{item.summary}</p>}
+          {item.summary && <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.summary}</p>}
           {item.isKnowledgeGap ? (
             <>
               {item.knownFacts && (
