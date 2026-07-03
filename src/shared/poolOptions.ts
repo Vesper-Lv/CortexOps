@@ -19,3 +19,34 @@ export function assertValidPool(pool: string): asserts pool is PoolOption {
     throw new Error(`invalid pool: ${pool}`);
   }
 }
+
+export const POOL_DISPLAY_ORDER = [
+  "product_inspiration",
+  "paper_candidate",
+  "demo_replication",
+  "knowledge_gap",
+  "personal_work",
+  "drop",
+  "archive"
+] as const;
+
+function poolRankKey(poolName: string): string {
+  return poolName.replace(/-/g, "_");
+}
+
+export function sortPools<T extends { poolName: string }>(groups: T[]): T[] {
+  const rank = new Map<string, number>(POOL_DISPLAY_ORDER.map((p, i) => [p, i]));
+  return [...groups].sort(
+    (a, b) =>
+      (rank.get(poolRankKey(a.poolName)) ?? 99) - (rank.get(poolRankKey(b.poolName)) ?? 99)
+  );
+}
+
+export function poolOptionFromName(poolName: string): PoolOption | null {
+  const normalized = poolRankKey(poolName);
+  return isValidPool(normalized) ? normalized : null;
+}
+
+export function poolNameFromOption(option: PoolOption): string {
+  return option.replace(/_/g, "-");
+}
