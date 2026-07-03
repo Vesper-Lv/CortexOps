@@ -14,6 +14,8 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { moveCandidatePool, watchCandidateAction } from "@/server/actions/candidateActions";
+import { promoteCandidateToArtifactAction } from "@/server/actions/artifactActions";
+import { promoteCandidateToTaskAction } from "@/server/actions/taskActions";
 import {
   POOL_OPTIONS,
   poolOptionFromName,
@@ -35,13 +37,17 @@ function PoolCard({
   poolOption,
   pending,
   onMove,
-  onWatch
+  onWatch,
+  onTask,
+  onArtifact
 }: {
   item: PoolGroup["items"][number];
   poolOption: PoolOption | null;
   pending: boolean;
   onMove: (candidateId: string, toPool: string) => void;
   onWatch: (candidateId: string) => void;
+  onTask: (candidateId: string) => void;
+  onArtifact: (candidateId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
@@ -50,6 +56,7 @@ function PoolCard({
 
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
   const showWatch = canWatchCandidate({ humanStatus: item.humanStatus, status: item.status });
+  const showConvert = item.humanStatus !== "pending";
   const lifecycleStatus = item.status ?? "inbox";
 
   return (
@@ -109,6 +116,26 @@ function PoolCard({
               关注
             </button>
           )}
+          {showConvert && (
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => onTask(item.id)}
+                className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+              >
+                → Task
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => onArtifact(item.id)}
+                className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+              >
+                → Artifact
+              </button>
+            </>
+          )}
           <select
             disabled={pending}
             value={poolOption ?? ""}
@@ -138,12 +165,16 @@ function PoolColumn({
   group,
   pending,
   onMove,
-  onWatch
+  onWatch,
+  onTask,
+  onArtifact
 }: {
   group: PoolGroup;
   pending: boolean;
   onMove: (candidateId: string, toPool: string) => void;
   onWatch: (candidateId: string) => void;
+  onTask: (candidateId: string) => void;
+  onArtifact: (candidateId: string) => void;
 }) {
   const columnId = poolColumnId(group.poolName);
   const { setNodeRef, isOver } = useDroppable({ id: columnId });
@@ -170,6 +201,8 @@ function PoolColumn({
             pending={pending}
             onMove={onMove}
             onWatch={onWatch}
+            onTask={onTask}
+            onArtifact={onArtifact}
           />
         ))}
       </ul>
@@ -205,6 +238,18 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     });
   };
 
+  const runTask = (candidateId: string) => {
+    startTransition(() => {
+      void promoteCandidateToTaskAction(candidateId);
+    });
+  };
+
+  const runArtifact = (candidateId: string) => {
+    startTransition(() => {
+      void promoteCandidateToArtifactAction(candidateId);
+    });
+  };
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
   }
@@ -227,7 +272,15 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {groups.map((group) => (
-          <PoolColumn key={group.poolName} group={group} pending={pending} onMove={runMove} onWatch={runWatch} />
+          <PoolColumn
+            key={group.poolName}
+            group={group}
+            pending={pending}
+            onMove={runMove}
+            onWatch={runWatch}
+            onTask={runTask}
+            onArtifact={runArtifact}
+          />
         ))}
       </div>
       <DragOverlay>

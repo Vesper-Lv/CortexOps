@@ -68,6 +68,10 @@ export function buildReadingView(signals: SignalLike[]): DailyReadingView {
   };
 }
 
+export function getRemainingLinks(signals: SignalLike[]): SignalView[] {
+  return signals.filter((s) => s.readingPackStatus !== "selected").map(toView);
+}
+
 export async function getLatestDailyDate(): Promise<string | null> {
   const row = await prisma.signal.findFirst({
     where: { stream: "daily" },
@@ -85,4 +89,22 @@ export async function getDailyReadingView(date?: string): Promise<{ date: string
     orderBy: [{ priority: "asc" }, { sourceLine: "asc" }]
   });
   return { date: targetDate, view: buildReadingView(signals) };
+}
+
+export async function getDailyPageData(
+  date?: string
+): Promise<{ date: string; view: DailyReadingView; remaining: SignalView[]; routing: SignalView[] } | null> {
+  const targetDate = date ?? (await getLatestDailyDate());
+  if (!targetDate) return null;
+  const signals = await prisma.signal.findMany({
+    where: { stream: "daily", date: targetDate },
+    orderBy: [{ priority: "asc" }, { sourceLine: "asc" }]
+  });
+  const views = signals.map(toView);
+  return {
+    date: targetDate,
+    view: buildReadingView(signals),
+    remaining: getRemainingLinks(signals),
+    routing: views
+  };
 }

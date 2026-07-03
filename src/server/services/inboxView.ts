@@ -7,12 +7,29 @@ import type { InboxSignal, PoolGroup, PendingBacklogSignal } from "@/shared/inbo
 export type { InboxSignal, PoolGroup, PendingBacklogSignal } from "@/shared/inboxTypes";
 export { getCandidatePoolGroups } from "@/server/services/candidatePools";
 
-export async function getCandidatePools(humanStatus?: string): Promise<PoolGroup[]> {
+export async function getCandidatePools(filters?: {
+  humanStatus?: string;
+  pool?: string;
+  priority?: string;
+}): Promise<PoolGroup[]> {
   const groups = await getCandidatePoolGroups();
-  if (!humanStatus) return groups;
+  if (!filters?.humanStatus && !filters?.pool && !filters?.priority) return groups;
+
   return groups
-    .map((g) => ({ poolName: g.poolName, items: g.items.filter((i) => i.humanStatus === humanStatus) }))
-    .filter((g) => g.items.length > 0);
+    .filter((g) => {
+      if (!filters.pool) return true;
+      const normalized = g.poolName.replace(/-/g, "_");
+      return normalized === filters.pool || g.poolName === filters.pool;
+    })
+    .map((g) => ({
+      poolName: g.poolName,
+      items: g.items.filter((i) => {
+        if (filters.humanStatus && i.humanStatus !== filters.humanStatus) return false;
+        if (filters.priority && i.priority !== filters.priority) return false;
+        return true;
+      })
+    }))
+    .filter((g) => g.items.length > 0 || !filters.pool);
 }
 
 export async function getPendingSignalBacklog(): Promise<PendingBacklogSignal[]> {

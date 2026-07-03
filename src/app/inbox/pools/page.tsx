@@ -3,28 +3,32 @@ import Link from "next/link";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { PendingBacklogList } from "@/components/inbox/pending-backlog-list";
 import { PoolBoard } from "@/components/inbox/pool-board";
-import { StatusFilterBar } from "@/components/inbox/status-filter-bar";
+import { PoolFiltersBar } from "@/components/inbox/pool-filters-bar";
 import { getCandidatePools, getPendingSignalBacklog } from "@/server/services/inboxView";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; pool?: string; priority?: string }>;
 };
 
 export default async function PoolsPage({ searchParams }: PageProps) {
-  const { status: humanStatusFilter } = await searchParams;
+  const { status: humanStatusFilter, pool: poolFilter, priority: priorityFilter } = await searchParams;
   const [groups, backlog] = await Promise.all([
-    getCandidatePools(humanStatusFilter),
+    getCandidatePools({
+      humanStatus: humanStatusFilter,
+      pool: poolFilter,
+      priority: priorityFilter
+    }),
     humanStatusFilter === "pending" ? getPendingSignalBacklog() : Promise.resolve([])
   ]);
 
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0);
   const nonEmptyPools = groups.filter((g) => g.items.length > 0).length;
-  const showEmpty =
-    totalItems === 0 && (humanStatusFilter !== "pending" || backlog.length === 0);
+  const hasFilters = Boolean(humanStatusFilter || poolFilter || priorityFilter);
+  const showEmpty = totalItems === 0 && (humanStatusFilter !== "pending" || backlog.length === 0);
 
-  if (showEmpty && !humanStatusFilter) {
+  if (showEmpty && !hasFilters) {
     return (
       <WorkbenchPage
         eyebrow="Option management"
@@ -52,30 +56,28 @@ export default async function PoolsPage({ searchParams }: PageProps) {
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Option management</p>
         <h2 className="mt-3 text-4xl font-semibold text-foreground">Candidate Pools</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          {humanStatusFilter
-            ? `Filtered by human_status=${humanStatusFilter} · ${totalItems} pool items`
+          {hasFilters
+            ? `Filtered · ${totalItems} items`
             : `${totalItems} items across ${nonEmptyPools} pools · drag cards between columns or use the pool dropdown on mobile.`}
         </p>
       </div>
 
-      <StatusFilterBar active={humanStatusFilter} />
+      <PoolFiltersBar
+        activeStatus={humanStatusFilter}
+        activePool={poolFilter}
+        activePriority={priorityFilter}
+      />
 
       {humanStatusFilter === "pending" && <PendingBacklogList signals={backlog} />}
 
-      {totalItems === 0 && humanStatusFilter && humanStatusFilter !== "pending" ? (
+      {totalItems === 0 && hasFilters ? (
         <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          无 human_status={humanStatusFilter} 的池内条目。
+          无匹配条目。{" "}
+          <Link href="/inbox/today" className="font-medium text-primary hover:underline">
+            去 Inbox/Today
+          </Link>{" "}
+          分拣今日信号。
         </p>
-      ) : totalItems === 0 && humanStatusFilter === "pending" ? (
-        backlog.length > 0 ? null : (
-          <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-            无 pending 条目。去{" "}
-            <Link href="/inbox/today" className="font-medium text-primary hover:underline">
-              Inbox/Today
-            </Link>{" "}
-            分拣今日信号。
-          </p>
-        )
       ) : (
         <PoolBoard groups={groups} />
       )}

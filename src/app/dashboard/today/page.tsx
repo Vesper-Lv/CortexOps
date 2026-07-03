@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { BookOpen, CheckCircle2, ListChecks } from "lucide-react";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
-import { ReadingPack } from "@/components/dashboard/reading-pack";
-import { FivePartSummary } from "@/components/dashboard/five-part-summary";
-import { PracticePicker } from "@/components/dashboard/practice-picker";
+import { ActiveTasksStrip } from "@/components/dashboard/active-tasks-strip";
 import { CandidateSupplementPanel } from "@/components/dashboard/candidate-supplement-panel";
-import { getDailyReadingView } from "@/server/services/dailyView";
+import { FivePartSummary } from "@/components/dashboard/five-part-summary";
+import { PoolRoutingTable } from "@/components/dashboard/pool-routing-table";
+import { PracticePicker } from "@/components/dashboard/practice-picker";
+import { ReadingPack } from "@/components/dashboard/reading-pack";
+import { RemainingLinks } from "@/components/dashboard/remaining-links";
+import { getDailyPageData } from "@/server/services/dailyView";
 import { getDailyReport, getDailySession } from "@/server/services/dailyReport";
+import { listActiveTasks } from "@/server/services/tasks";
 
 export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
-  const data = await getDailyReadingView();
+  const data = await getDailyPageData();
 
   if (!data) {
     return (
@@ -38,8 +42,12 @@ export default async function TodayPage() {
     );
   }
 
-  const { date, view } = data;
-  const [report, session] = await Promise.all([getDailyReport(date), getDailySession(date)]);
+  const { date, view, remaining, routing } = data;
+  const [report, session, activeTasks] = await Promise.all([
+    getDailyReport(date),
+    getDailySession(date),
+    listActiveTasks()
+  ]);
 
   const candidatesWithId = view.candidates.filter(
     (c): c is typeof c & { id: string } => typeof c.id === "string"
@@ -52,6 +60,8 @@ export default async function TodayPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Daily command center</p>
         <h2 className="mt-3 text-4xl font-semibold text-foreground">Today · {date}</h2>
       </div>
+
+      <ActiveTasksStrip tasks={activeTasks} />
 
       <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         AI 已选 {view.selectedCount} 条进入阅读包 · 另有 {view.remainingCount} 条待归类 →{" "}
@@ -88,6 +98,9 @@ export default async function TodayPage() {
           </p>
         )}
       </div>
+
+      <RemainingLinks items={remaining} />
+      <PoolRoutingTable signals={routing} />
 
       {showCandidates && (
         <CandidateSupplementPanel date={date} candidates={candidatesWithId} />

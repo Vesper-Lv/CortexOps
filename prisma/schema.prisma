@@ -140,10 +140,66 @@ model Task {
   description    String?
   origin         String   @default("manual")
   linkedSignalId String?
+  linkedReportId String?
   status         String   @default("inbox")
   priority       String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Artifact {
+  id                  String   @id @default(cuid())
+  title               String
+  description         String?
+  status              String   @default("draft") // draft | polishing | portfolio_ready | published | archived
+  origin              String   @default("signal")
+  linkedSignalId      String?
+  linkedCandidateId   String?
+  linkedReportId      String?
+  proofArtifact       String?
+  interviewStoryAngle String?
+  portfolioPotential  String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([status])
+}
+
+model ArchiveReport {
+  id          String   @id @default(cuid())
+  reportType  String // weekly | monthly | paper_radar | demo_recommendation | engineering_learning
+  title       String
+  periodStart String?
+  periodEnd   String?
+  rawMarkdown String
+  sourceFile  String   @unique
+  importRunId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reportType])
+  @@index([periodStart])
+}
+
+model FocusRule {
+  id                     String   @id @default(cuid())
+  focusId                String   @unique
+  name                   String
+  description            String
+  status                 String // active | paused | expired | archived
+  priorityBoost          String
+  sourceTypesJson        String
+  contentTagsJson        String
+  candidatePoolBoostJson String
+  appliesToJson          String
+  startDate              String
+  endDate                String?
+  reviewCadence          String?
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@index([status])
 }
