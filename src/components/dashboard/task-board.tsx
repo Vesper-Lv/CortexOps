@@ -5,6 +5,12 @@ import { updateTaskStatusAction } from "@/server/actions/taskActions";
 import type { TaskItem } from "@/shared/tasks";
 import { TASK_STATUSES } from "@/shared/tasks";
 
+const QUICK_STATUS_OPTIONS = [
+  { label: "Today", status: "today" },
+  { label: "In progress", status: "in_progress" },
+  { label: "Done", status: "done" }
+] as const;
+
 type TaskBoardProps = {
   grouped: Record<string, TaskItem[]>;
 };
@@ -49,6 +55,19 @@ export function TaskBoard({ grouped }: TaskBoardProps) {
                     {task.priority ? (
                       <span className="rounded bg-muted px-2 py-0.5">{task.priority}</span>
                     ) : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {QUICK_STATUS_OPTIONS.map(({ label, status }) => (
+                      <button
+                        key={status}
+                        type="button"
+                        disabled={pending || task.status === status}
+                        onClick={() => runStatus(task.id, status)}
+                        className="rounded border border-border bg-muted/40 px-2 py-0.5 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                   <select
                     disabled={pending}

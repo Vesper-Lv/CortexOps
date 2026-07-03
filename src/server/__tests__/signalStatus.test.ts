@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canPromoteItem,
   canWatchCandidate,
+  isDownstreamEligible,
   isDroppedItem
 } from "@/shared/signalStatus";
 
@@ -47,5 +48,16 @@ describe("canPromoteItem", () => {
     expect(
       canPromoteItem({ humanStatus: "changed", status: "confirmed", finalPool: "demo_replication" })
     ).toBe(true);
+  });
+});
+
+describe("isDownstreamEligible", () => {
+  it("requires triaged non-drop lifecycle", () => {
+    expect(
+      isDownstreamEligible({ humanStatus: "confirmed", status: "confirmed", finalPool: "knowledge_gap" })
+    ).toBe(true);
+    expect(
+      isDownstreamEligible({ humanStatus: "pending", status: "inbox", finalPool: "knowledge_gap" })
+    ).toBe(false);
   });
 });
