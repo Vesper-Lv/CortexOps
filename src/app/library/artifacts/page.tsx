@@ -4,9 +4,9 @@ import { WorkbenchPage } from "@/components/layout/workbench-page";
 export default function ArtifactsPage() {
   return (
     <WorkbenchPage
-      eyebrow="Portfolio pipeline"
+      eyebrow="Portfolio coverage map"
       title="Artifacts"
-      description="Track demos, memos, README files, architecture diagrams, recordings, and portfolio-ready proof."
+      description="A high-level coverage map of your portfolio by topic and maturity. Detailed content stays in Obsidian; here you plan where to invest next."
       metrics={[
         { label: "Draft", value: "-", detail: "No artifacts imported" },
         { label: "Polishing", value: "-", detail: "No active polish" },
@@ -14,10 +14,10 @@ export default function ArtifactsPage() {
       ]}
       emptyState={{
         icon: Layers3,
-        title: "Artifact tracking will follow tasks",
+        title: "Coverage map will follow tasks",
         description:
-          "Phase 4 will let high-value signals become artifact candidates with proof_artifact and interview_story_angle fields.",
-        actions: [{ icon: BadgeCheck, label: "Portfolio-ready status planned", tone: "primary" }]
+          "Phase D will render a topic × maturity coverage matrix plus a portfolio-ready list with external links (Obsidian/GitHub). Details stay in Obsidian.",
+        actions: [{ icon: BadgeCheck, label: "Coverage matrix planned", tone: "primary" }]
       }}
     />
   );

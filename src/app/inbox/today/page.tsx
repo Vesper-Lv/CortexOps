@@ -4,9 +4,9 @@ import { WorkbenchPage } from "@/components/layout/workbench-page";
 export default function ReviewPage() {
   return (
     <WorkbenchPage
-      eyebrow="Human control loop"
-      title="Review Inbox"
-      description="Confirm AI suggestions, change candidate pools, reject weak signals, watch uncertain items, or convert signals into tasks."
+      eyebrow="Daily triage"
+      title="Today"
+      description="Route today's 30 signals into candidate pools and toggle reading-pack membership. Changes flow to Dashboard. Confirm AI suggestions, change pools, reject weak signals, or convert signals into tasks."
       metrics={[
         { label: "Pending", value: "-", detail: "After import" },
         { label: "Confirmed", value: "-", detail: "Human-owned" },
