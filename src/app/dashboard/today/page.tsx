@@ -2,7 +2,11 @@ import Link from "next/link";
 import { BookOpen, CheckCircle2, ListChecks } from "lucide-react";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { ReadingPack } from "@/components/dashboard/reading-pack";
+import { FivePartSummary } from "@/components/dashboard/five-part-summary";
+import { PracticePicker } from "@/components/dashboard/practice-picker";
+import { CandidateSupplementPanel } from "@/components/dashboard/candidate-supplement-panel";
 import { getDailyReadingView } from "@/server/services/dailyView";
+import { getDailyReport, getDailySession } from "@/server/services/dailyReport";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +39,13 @@ export default async function TodayPage() {
   }
 
   const { date, view } = data;
+  const [report, session] = await Promise.all([getDailyReport(date), getDailySession(date)]);
+
+  const candidatesWithId = view.candidates.filter(
+    (c): c is typeof c & { id: string } => typeof c.id === "string"
+  );
+  const showCandidates = !session?.candidatesDismissed && candidatesWithId.length > 0;
+
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="max-w-3xl">
@@ -48,6 +59,20 @@ export default async function TodayPage() {
           去 Inbox 分拣
         </Link>
       </div>
+
+      {report && report.fivePart.length > 0 && (
+        <div>
+          <h3 className="mb-3 text-xl font-semibold text-foreground">五段式日报</h3>
+          <FivePartSummary sections={report.fivePart} />
+        </div>
+      )}
+
+      {report && report.practices.length > 0 && (
+        <div>
+          <h3 className="mb-3 text-xl font-semibold text-foreground">今日练习三选一</h3>
+          <PracticePicker date={date} practices={report.practices} session={session} />
+        </div>
+      )}
 
       <div>
         <h3 className="mb-3 text-xl font-semibold text-foreground">今日 30 分钟阅读包</h3>
@@ -64,29 +89,8 @@ export default async function TodayPage() {
         )}
       </div>
 
-      {view.candidates.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-xl font-semibold text-foreground">
-            快速补充（候选 {view.candidateCount} 条）
-          </h3>
-          <ul className="flex flex-col gap-2">
-            {view.candidates.map((item, i) => (
-              <li key={i} className="rounded-md border border-dashed border-border bg-surface px-3 py-2 text-sm">
-                <a href={item.url} target="_blank" rel="noreferrer" className="font-medium text-foreground hover:underline">
-                  {item.title}
-                </a>
-                <span className="ml-2 text-muted-foreground">{item.pool}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted-foreground">
-            在{" "}
-            <Link href="/inbox/today" className="font-medium text-primary hover:underline">
-              Inbox/Today
-            </Link>{" "}
-            勾选加入阅读包。
-          </p>
-        </div>
+      {showCandidates && (
+        <CandidateSupplementPanel date={date} candidates={candidatesWithId} />
       )}
     </section>
   );

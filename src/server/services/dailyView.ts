@@ -2,6 +2,7 @@ import { prisma } from "@/server/db";
 import { parseSignalRaw, pickSummary } from "@/server/signalRaw";
 
 export type SignalLike = {
+  id?: string;
   title: string | null;
   originalUrl: string | null;
   sourceUrl: string | null;
@@ -15,6 +16,7 @@ export type SignalLike = {
 };
 
 export type SignalView = {
+  id?: string;
   title: string;
   url: string;
   priority: string;
@@ -39,6 +41,7 @@ function toView(s: SignalLike): SignalView {
   const raw = parseSignalRaw(s.rawJson);
   const pool = s.finalPool ?? s.suggestedPool ?? "";
   return {
+    ...(s.id ? { id: s.id } : {}),
     title: s.title ?? "(untitled)",
     url: s.originalUrl ?? s.sourceUrl ?? "",
     priority: s.priority ?? "",

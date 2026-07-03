@@ -129,3 +129,24 @@ model Memo {
 
   @@index([status])
 }
+
+model DailyReport {
+  id            String   @id @default(cuid())
+  date          String   @unique
+  fivePartJson  String
+  practicesJson String
+  sourceFile    String
+  importRunId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DailySession {
+  date                    String   @id
+  selectedPracticeIndex   Int?
+  practiceAlt0Disposition String?
+  practiceAlt1Disposition String?
+  practiceAlt2Disposition String?
+  candidatesDismissed     Boolean  @default(false)
+  updatedAt               DateTime @updatedAt
+}
