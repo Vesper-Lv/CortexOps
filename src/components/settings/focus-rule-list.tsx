@@ -25,6 +25,16 @@ export function FocusRuleList({ rules }: { rules: FocusRuleItem[] }) {
 
   const run = (fn: () => Promise<void>) => startTransition(() => void fn());
 
+  const downloadExport = (md: string) => {
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "focus-policy-export.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
@@ -41,6 +51,16 @@ export function FocusRuleList({ rules }: { rules: FocusRuleItem[] }) {
         >
           导出 Markdown 预览
         </button>
+        {exportText && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => downloadExport(exportText)}
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+          >
+            下载 .md
+          </button>
+        )}
       </div>
 
       {exportText && (

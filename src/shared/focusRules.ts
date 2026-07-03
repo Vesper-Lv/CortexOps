@@ -4,6 +4,24 @@ export type FocusRuleStatus = (typeof FOCUS_RULE_STATUSES)[number];
 
 export const PRIORITY_BOOSTS = ["low", "medium", "high"] as const;
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isValidFocusRuleStatus(value: string): value is FocusRuleStatus {
+  return (FOCUS_RULE_STATUSES as readonly string[]).includes(value);
+}
+
+export function assertValidFocusRuleStatus(value: string): asserts value is FocusRuleStatus {
+  if (!isValidFocusRuleStatus(value)) {
+    throw new Error(`invalid focus rule status: ${value}`);
+  }
+}
+
+export function assertValidIsoDate(value: string): void {
+  if (!ISO_DATE_RE.test(value)) {
+    throw new Error(`invalid date (expected YYYY-MM-DD): ${value}`);
+  }
+}
+
 export type FocusRuleItem = {
   id: string;
   focusId: string;

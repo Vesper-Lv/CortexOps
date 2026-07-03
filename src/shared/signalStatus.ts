@@ -45,11 +45,27 @@ export function isDownstreamEligible(input: DownstreamEligibilityInput): boolean
   return true;
 }
 
+export function isDroppedItem(input: {
+  status: string | null;
+  finalPool: string | null;
+}): boolean {
+  return input.finalPool === "drop" || input.status === "dropped";
+}
+
+export function canPromoteItem(input: {
+  humanStatus: string;
+  status: string | null;
+  finalPool: string | null;
+}): boolean {
+  if (input.humanStatus === "pending") return false;
+  return !isDroppedItem(input);
+}
+
 export function canWatchCandidate(input: {
   humanStatus: string;
   status: string | null;
+  finalPool: string | null;
 }): boolean {
   if (input.humanStatus === "pending") return false;
-  const lifecycle = input.status ?? "inbox";
-  return lifecycle !== "dropped";
+  return !isDroppedItem(input);
 }

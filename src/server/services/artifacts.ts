@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db";
 import type { ArtifactItem } from "@/shared/artifacts";
 import { assertValidArtifactStatus, isValidArtifactStatus } from "@/shared/artifacts";
+import { canPromoteItem } from "@/shared/signalStatus";
 
 export type { ArtifactItem } from "@/shared/artifacts";
 
@@ -89,9 +90,18 @@ function extractPortfolioFields(rawJson: string): {
 export async function promoteSignalToArtifact(signalId: string): Promise<string> {
   const signal = await prisma.signal.findUnique({ where: { id: signalId } });
   if (!signal) throw new Error("signal not found");
-  if ((signal.humanStatus ?? "pending") === "pending") {
-    throw new Error("finalize signal before converting to artifact");
+  if (
+    !canPromoteItem({
+      humanStatus: signal.humanStatus ?? "pending",
+      status: signal.status,
+      finalPool: signal.finalPool
+    })
+  ) {
+    throw new Error("cannot convert pending or dropped signal to artifact");
   }
+
+  const existing = await prisma.artifact.findFirst({ where: { linkedSignalId: signal.id } });
+  if (existing) return existing.id;
 
   const fields = extractPortfolioFields(signal.rawJson);
   const linkedReportId = signal.date
@@ -127,15 +137,30 @@ export async function promoteSignalToArtifact(signalId: string): Promise<string>
 export async function promoteCandidateToArtifact(candidateId: string): Promise<string> {
   const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
   if (!candidate) throw new Error("candidate not found");
-  if ((candidate.humanStatus ?? "pending") === "pending") {
-    throw new Error("candidate must be triaged before converting to artifact");
+  if (
+    !canPromoteItem({
+      humanStatus: candidate.humanStatus ?? "pending",
+      status: candidate.status,
+      finalPool: candidate.finalPool
+    })
+  ) {
+    throw new Error("cannot convert pending or dropped candidate to artifact");
   }
+
+  const existingByCandidate = await prisma.artifact.findFirst({
+    where: { linkedCandidateId: candidate.id }
+  });
+  if (existingByCandidate) return existingByCandidate.id;
 
   let linkedSignalId: string | null = null;
   if (candidate.recordKey.startsWith("signal-sync:")) {
     const signalKey = candidate.recordKey.slice("signal-sync:".length);
     const signal = await prisma.signal.findUnique({ where: { recordKey: signalKey } });
     linkedSignalId = signal?.id ?? null;
+    if (linkedSignalId) {
+      const existingBySignal = await prisma.artifact.findFirst({ where: { linkedSignalId } });
+      if (existingBySignal) return existingBySignal.id;
+    }
   }
 
   const fields = extractPortfolioFields(candidate.rawJson);

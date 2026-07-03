@@ -140,6 +140,7 @@ model Task {
   description    String?
   origin         String   @default("manual")
   linkedSignalId String?
+  linkedCandidateId String?
   linkedReportId String?
   status         String   @default("inbox")
   priority       String?

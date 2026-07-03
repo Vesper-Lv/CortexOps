@@ -8,7 +8,7 @@ import {
 } from "@/server/importers/importSources";
 import { importDailyReports } from "@/server/importers/importDailyReports";
 import { importArchiveReports } from "@/server/importers/importArchiveReports";
-import { importFocusPolicyFromMarkdown } from "@/server/services/focusRules";
+import { importFocusPolicyFromMarkdown, refreshExpiredFocusRules } from "@/server/services/focusRules";
 import { prismaSignalRepository } from "@/server/importers/prismaSignalRepository";
 import { prisma } from "@/server/db";
 
@@ -38,6 +38,7 @@ async function main() {
 
   let focusSummary = { imported: 0, skipped: 0 };
   try {
+    await refreshExpiredFocusRules();
     const policyMarkdown = await readFile("docs/focus-policy.md", "utf8");
     focusSummary = await importFocusPolicyFromMarkdown(policyMarkdown, { preserveUserEdits: true });
   } catch {

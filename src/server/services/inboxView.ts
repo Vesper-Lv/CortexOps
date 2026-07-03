@@ -54,11 +54,18 @@ export async function getPendingSignalBacklog(): Promise<PendingBacklogSignal[]>
   }));
 }
 
-export async function getInboxToday(): Promise<{ date: string; signals: InboxSignal[] } | null> {
-  const date = await getLatestDailyDate();
-  if (!date) return null;
+export async function getInboxToday(date?: string): Promise<{ date: string; signals: InboxSignal[] } | null> {
+  const targetDate = date ?? (await getLatestDailyDate());
+  if (!targetDate) return null;
+
+  const dateExists = await prisma.signal.findFirst({
+    where: { stream: "daily", date: targetDate },
+    select: { id: true }
+  });
+  if (!dateExists) return null;
+
   const rows = await prisma.signal.findMany({
-    where: { stream: "daily", date, humanStatus: "pending" },
+    where: { stream: "daily", date: targetDate, humanStatus: "pending" },
     orderBy: [{ priority: "asc" }, { sourceLine: "asc" }]
   });
   const signals = rows.map((s) => ({
@@ -72,5 +79,5 @@ export async function getInboxToday(): Promise<{ date: string; signals: InboxSig
     readingPackStatus: s.readingPackStatus ?? "not_selected",
     summary: pickSummary(parseSignalRaw(s.rawJson), s.aihotSummary, s.reason)
   }));
-  return { date, signals };
+  return { date: targetDate, signals };
 }

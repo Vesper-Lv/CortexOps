@@ -16,6 +16,8 @@ export type ParsedFocusRule = {
   notes?: string;
 };
 
+const FOLDED_SCALAR_KEYS = new Set(["description", "notes"]);
+
 function parseScalarValue(raw: string): string {
   return raw.trim().replace(/^["']|["']$/g, "");
 }
@@ -32,10 +34,32 @@ function parseListBlock(lines: string[], startIndex: number): { items: string[];
   return { items, nextIndex: i };
 }
 
+function collectFoldedScalar(lines: string[], startIndex: number, firstLine: string): {
+  value: string;
+  nextIndex: number;
+} {
+  const parts = firstLine ? [firstLine.trim()] : [];
+  let i = startIndex;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^[a-z_]+:\s/.test(line) && !line.startsWith("  ")) break;
+    if (line.trim() === "") {
+      i += 1;
+      continue;
+    }
+    if (line.startsWith("  ")) {
+      parts.push(line.trim());
+      i += 1;
+      continue;
+    }
+    break;
+  }
+  return { value: parts.join(" "), nextIndex: i };
+}
+
 export function parseFocusRuleYaml(yaml: string): ParsedFocusRule | null {
   const lines = yaml.split("\n");
   const result: Record<string, string | string[]> = {};
-  let descriptionLines: string[] | null = null;
   let i = 0;
 
   while (i < lines.length) {
@@ -59,20 +83,10 @@ export function parseFocusRuleYaml(yaml: string): ParsedFocusRule | null {
     const key = keyMatch[1];
     const inlineValue = keyMatch[2];
 
-    if (key === "description" && inlineValue === "") {
-      descriptionLines = [];
-      i += 1;
-      while (i < lines.length) {
-        const descLine = lines[i];
-        if (/^[a-z_]+:\s/.test(descLine) && !descLine.startsWith("  ")) break;
-        if (descLine.trim() === "") {
-          i += 1;
-          continue;
-        }
-        descriptionLines.push(descLine.trim());
-        i += 1;
-      }
-      result.description = descriptionLines.join(" ");
+    if (FOLDED_SCALAR_KEYS.has(key)) {
+      const folded = collectFoldedScalar(lines, i + 1, inlineValue);
+      result[key] = folded.value;
+      i = folded.nextIndex;
       continue;
     }
 
@@ -86,8 +100,12 @@ export function parseFocusRuleYaml(yaml: string): ParsedFocusRule | null {
     }
 
     if (inlineValue !== "") {
-      result[key] = parseScalarValue(inlineValue);
+      const folded = collectFoldedScalar(lines, i + 1, inlineValue);
+      result[key] = folded.value;
+      i = folded.nextIndex;
+      continue;
     }
+
     i += 1;
   }
 

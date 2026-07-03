@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import type { DailyReportListItem, ArchiveReportListItem } from "@/server/services/reports";
 
 export function ReportLibrary({
@@ -31,7 +32,10 @@ export function ReportLibrary({
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <Link href={`/dashboard/today`} className="text-xs font-medium text-primary hover:underline">
+                  <Link
+                    href={`/dashboard/today?date=${r.date}` as Route}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
                     打开 Today 视图
                   </Link>
                   <Link

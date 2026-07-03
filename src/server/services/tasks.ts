@@ -2,6 +2,7 @@ import { prisma } from "@/server/db";
 import { getLatestDailyDate } from "@/server/services/dailyView";
 import type { TaskItem } from "@/shared/tasks";
 import { ACTIVE_TASK_STATUSES, assertValidTaskStatus } from "@/shared/tasks";
+import { canPromoteItem } from "@/shared/signalStatus";
 
 export type { TaskItem } from "@/shared/tasks";
 
@@ -11,6 +12,7 @@ function mapTask(t: {
   description: string | null;
   origin: string;
   linkedSignalId: string | null;
+  linkedCandidateId: string | null;
   linkedReportId: string | null;
   status: string;
   priority: string | null;
@@ -22,11 +24,26 @@ function mapTask(t: {
     description: t.description,
     origin: t.origin,
     linkedSignalId: t.linkedSignalId,
+    linkedCandidateId: t.linkedCandidateId,
     linkedReportId: t.linkedReportId,
     status: t.status,
     priority: t.priority,
     createdAt: t.createdAt
   };
+}
+
+function assertPromotable(input: {
+  humanStatus: string | null;
+  status: string | null;
+  finalPool: string | null;
+}): void {
+  const humanStatus = input.humanStatus ?? "pending";
+  if (!canPromoteItem({ humanStatus, status: input.status, finalPool: input.finalPool })) {
+    if (humanStatus === "pending") {
+      throw new Error("item must be triaged before converting to task");
+    }
+    throw new Error("cannot convert dropped item to task");
+  }
 }
 
 export async function listTasks(): Promise<TaskItem[]> {
@@ -82,9 +99,14 @@ async function resolveLinkedReportId(signalDate: string | null): Promise<string 
 export async function promoteSignalToTask(signalId: string): Promise<string> {
   const signal = await prisma.signal.findUnique({ where: { id: signalId } });
   if (!signal) throw new Error("signal not found");
-  if ((signal.humanStatus ?? "pending") === "pending") {
-    throw new Error("finalize signal before converting to task");
-  }
+  assertPromotable({
+    humanStatus: signal.humanStatus,
+    status: signal.status,
+    finalPool: signal.finalPool
+  });
+
+  const existing = await prisma.task.findFirst({ where: { linkedSignalId: signal.id } });
+  if (existing) return existing.id;
 
   const linkedReportId = await resolveLinkedReportId(signal.date);
 
@@ -117,15 +139,26 @@ export async function promoteSignalToTask(signalId: string): Promise<string> {
 export async function promoteCandidateToTask(candidateId: string): Promise<string> {
   const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
   if (!candidate) throw new Error("candidate not found");
-  if ((candidate.humanStatus ?? "pending") === "pending") {
-    throw new Error("candidate must be triaged before converting to task");
-  }
+  assertPromotable({
+    humanStatus: candidate.humanStatus,
+    status: candidate.status,
+    finalPool: candidate.finalPool
+  });
+
+  const existingByCandidate = await prisma.task.findFirst({
+    where: { linkedCandidateId: candidate.id }
+  });
+  if (existingByCandidate) return existingByCandidate.id;
 
   let linkedSignalId: string | null = null;
   if (candidate.recordKey.startsWith("signal-sync:")) {
     const signalKey = candidate.recordKey.slice("signal-sync:".length);
     const signal = await prisma.signal.findUnique({ where: { recordKey: signalKey } });
     linkedSignalId = signal?.id ?? null;
+    if (linkedSignalId) {
+      const existingBySignal = await prisma.task.findFirst({ where: { linkedSignalId } });
+      if (existingBySignal) return existingBySignal.id;
+    }
   }
 
   const linkedReportId = await resolveLinkedReportId(candidate.date);
@@ -137,6 +170,7 @@ export async function promoteCandidateToTask(candidateId: string): Promise<strin
         description: candidate.reason,
         origin: "signal",
         linkedSignalId,
+        linkedCandidateId: candidate.id,
         linkedReportId,
         status: "inbox",
         priority: candidate.priority

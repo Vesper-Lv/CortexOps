@@ -14,8 +14,13 @@ import { listActiveTasks } from "@/server/services/tasks";
 
 export const dynamic = "force-dynamic";
 
-export default async function TodayPage() {
-  const data = await getDailyPageData();
+type PageProps = {
+  searchParams: Promise<{ date?: string }>;
+};
+
+export default async function TodayPage({ searchParams }: PageProps) {
+  const { date: dateParam } = await searchParams;
+  const data = await getDailyPageData(dateParam);
 
   if (!data) {
     return (

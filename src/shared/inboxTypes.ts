@@ -20,6 +20,8 @@ export type PoolGroup = {
     status: string | null;
     finalPool: string | null;
     priority: string;
+    hasLinkedTask: boolean;
+    hasLinkedArtifact: boolean;
   }[];
 };
 

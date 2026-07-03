@@ -1,13 +1,22 @@
+import Link from "next/link";
+import type { Route } from "next";
 import { Inbox } from "lucide-react";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { SignalCard } from "@/components/inbox/signal-card";
 import { FinalizeAllToolbar } from "@/components/inbox/finalize-all-toolbar";
 import { getInboxToday } from "@/server/services/inboxView";
+import { getLatestDailyDate } from "@/server/services/dailyView";
 
 export const dynamic = "force-dynamic";
 
-export default async function InboxTodayPage() {
-  const data = await getInboxToday();
+type PageProps = {
+  searchParams: Promise<{ date?: string }>;
+};
+
+export default async function InboxTodayPage({ searchParams }: PageProps) {
+  const { date: dateParam } = await searchParams;
+  const data = await getInboxToday(dateParam);
+  const latestDate = await getLatestDailyDate();
 
   if (!data) {
     return (
@@ -22,8 +31,10 @@ export default async function InboxTodayPage() {
         ]}
         emptyState={{
           icon: Inbox,
-          title: "No signals to triage",
-          description: "Import daily state (npm run import) to start triaging today's signals.",
+          title: dateParam ? `No signals for ${dateParam}` : "No signals to triage",
+          description: dateParam
+            ? "Try another date or import daily state (npm run import)."
+            : "Import daily state (npm run import) to start triaging today's signals.",
           actions: [{ icon: Inbox, label: "Import pipeline", tone: "primary" }]
         }}
       />
@@ -31,6 +42,7 @@ export default async function InboxTodayPage() {
   }
 
   const inPack = data.signals.filter((s) => s.readingPackStatus === "selected").length;
+  const isHistorical = latestDate && data.date !== latestDate;
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -41,6 +53,15 @@ export default async function InboxTodayPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             改池 / 优先级 / 阅读包为草稿编辑；点「确定」后进入 Pools。Pending {data.signals.length} · In
             pack {inPack}
+            {isHistorical && latestDate ? (
+              <>
+                {" "}
+                ·{" "}
+                <Link href="/inbox/today" className="font-medium text-primary hover:underline">
+                  回到最新 {latestDate}
+                </Link>
+              </>
+            ) : null}
           </p>
         </div>
         {data.signals.length > 0 && <FinalizeAllToolbar date={data.date} />}

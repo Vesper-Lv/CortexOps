@@ -21,7 +21,7 @@ import {
   poolOptionFromName,
   type PoolOption
 } from "@/shared/poolOptions";
-import { canWatchCandidate } from "@/shared/signalStatus";
+import { canPromoteItem, canWatchCandidate } from "@/shared/signalStatus";
 import type { PoolGroup } from "@/shared/inboxTypes";
 
 type PoolBoardProps = {
@@ -55,8 +55,23 @@ function PoolCard({
   });
 
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
-  const showWatch = canWatchCandidate({ humanStatus: item.humanStatus, status: item.status });
-  const showConvert = item.humanStatus !== "pending";
+  const showWatch = canWatchCandidate({
+    humanStatus: item.humanStatus,
+    status: item.status,
+    finalPool: item.finalPool
+  });
+  const showConvert =
+    canPromoteItem({
+      humanStatus: item.humanStatus,
+      status: item.status,
+      finalPool: item.finalPool
+    }) && !item.hasLinkedTask;
+  const showArtifact =
+    canPromoteItem({
+      humanStatus: item.humanStatus,
+      status: item.status,
+      finalPool: item.finalPool
+    }) && !item.hasLinkedArtifact;
   const lifecycleStatus = item.status ?? "inbox";
 
   return (
@@ -117,24 +132,24 @@ function PoolCard({
             </button>
           )}
           {showConvert && (
-            <>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => onTask(item.id)}
-                className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
-              >
-                → Task
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => onArtifact(item.id)}
-                className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
-              >
-                → Artifact
-              </button>
-            </>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onTask(item.id)}
+              className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+            >
+              → Task
+            </button>
+          )}
+          {showArtifact && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onArtifact(item.id)}
+              className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+            >
+              → Artifact
+            </button>
           )}
           <select
             disabled={pending}

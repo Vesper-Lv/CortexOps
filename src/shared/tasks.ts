@@ -26,6 +26,7 @@ export type TaskItem = {
   description: string | null;
   origin: string;
   linkedSignalId: string | null;
+  linkedCandidateId: string | null;
   linkedReportId: string | null;
   status: string;
   priority: string | null;

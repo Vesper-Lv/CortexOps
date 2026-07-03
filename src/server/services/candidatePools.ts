@@ -9,10 +9,37 @@ import {
 import type { PoolGroup } from "@/shared/inboxTypes";
 import { computeStatusOnFinalize } from "@/shared/signalStatus";
 
+async function loadPromoteFlags(candidateIds: string[]): Promise<{
+  taskIds: Set<string>;
+  artifactIds: Set<string>;
+}> {
+  if (candidateIds.length === 0) {
+    return { taskIds: new Set(), artifactIds: new Set() };
+  }
+
+  const [tasks, artifacts] = await Promise.all([
+    prisma.task.findMany({
+      where: { linkedCandidateId: { in: candidateIds } },
+      select: { linkedCandidateId: true }
+    }),
+    prisma.artifact.findMany({
+      where: { linkedCandidateId: { in: candidateIds } },
+      select: { linkedCandidateId: true }
+    })
+  ]);
+
+  return {
+    taskIds: new Set(tasks.map((t) => t.linkedCandidateId).filter(Boolean) as string[]),
+    artifactIds: new Set(artifacts.map((a) => a.linkedCandidateId).filter(Boolean) as string[])
+  };
+}
+
 export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
   const rows = await prisma.candidate.findMany({
     orderBy: [{ poolName: "asc" }, { priority: "asc" }]
   });
+  const promoteFlags = await loadPromoteFlags(rows.map((c) => c.id));
+
   const map = new Map<string, PoolGroup>();
   for (const c of rows) {
     const key = c.poolName;
@@ -24,7 +51,9 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
       humanStatus: c.humanStatus ?? "pending",
       status: c.status,
       finalPool: c.finalPool,
-      priority: c.priority ?? ""
+      priority: c.priority ?? "",
+      hasLinkedTask: promoteFlags.taskIds.has(c.id),
+      hasLinkedArtifact: promoteFlags.artifactIds.has(c.id)
     });
   }
 
@@ -48,22 +77,19 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
   if (candidate.poolName === newPoolName) return;
 
   const status = computeStatusOnFinalize(toPoolName);
+  const humanStatus = candidate.humanStatus === "rejected" ? "rejected" : "changed";
   const before = {
     poolName: candidate.poolName,
     finalPool: candidate.finalPool,
-    status: candidate.status
+    status: candidate.status,
+    humanStatus: candidate.humanStatus
   };
-  const after = { poolName: newPoolName, finalPool: toPoolName, status };
+  const after = { poolName: newPoolName, finalPool: toPoolName, status, humanStatus };
 
   await prisma.$transaction([
     prisma.candidate.update({
       where: { id: candidateId },
-      data: {
-        poolName: newPoolName,
-        finalPool: toPoolName,
-        humanStatus: candidate.humanStatus === "rejected" ? "rejected" : "changed",
-        status
-      }
+      data: { poolName: newPoolName, finalPool: toPoolName, humanStatus, status }
     }),
     prisma.auditLog.create({
       data: {
@@ -77,7 +103,11 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
     })
   ]);
 
-  await syncLinkedSignalStatus(candidate.recordKey, { finalPool: toPoolName, status });
+  await syncLinkedSignal(candidate.recordKey, {
+    finalPool: toPoolName,
+    status,
+    humanStatus
+  });
 }
 
 export async function watchCandidate(candidateId: string): Promise<void> {
@@ -110,12 +140,12 @@ export async function watchCandidate(candidateId: string): Promise<void> {
     })
   ]);
 
-  await syncLinkedSignalStatus(candidate.recordKey, { status: "watching" });
+  await syncLinkedSignal(candidate.recordKey, { status: "watching" });
 }
 
-async function syncLinkedSignalStatus(
+async function syncLinkedSignal(
   candidateRecordKey: string,
-  patch: { finalPool?: string; status?: string }
+  patch: { finalPool?: string; status?: string; humanStatus?: string }
 ): Promise<void> {
   if (!candidateRecordKey.startsWith("signal-sync:")) return;
   const signalRecordKey = candidateRecordKey.slice("signal-sync:".length);
@@ -126,7 +156,8 @@ async function syncLinkedSignalStatus(
     where: { id: signal.id },
     data: {
       ...(patch.finalPool !== undefined ? { finalPool: patch.finalPool } : {}),
-      ...(patch.status !== undefined ? { status: patch.status } : {})
+      ...(patch.status !== undefined ? { status: patch.status } : {}),
+      ...(patch.humanStatus !== undefined ? { humanStatus: patch.humanStatus } : {})
     }
   });
 }

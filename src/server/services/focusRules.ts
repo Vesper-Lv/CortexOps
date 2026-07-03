@@ -6,6 +6,8 @@ import {
 } from "@/server/importers/focusPolicyParser";
 import type { FocusRuleItem } from "@/shared/focusRules";
 import {
+  assertValidFocusRuleStatus,
+  assertValidIsoDate,
   buildImpactPreview,
   isFocusRuleEffective,
   parseJsonArray
@@ -128,6 +130,7 @@ export async function archiveFocusRule(focusId: string): Promise<void> {
 }
 
 export async function extendFocusRule(focusId: string, newEndDate: string): Promise<void> {
+  assertValidIsoDate(newEndDate);
   const rule = await prisma.focusRule.findUnique({ where: { focusId } });
   if (!rule) throw new Error("focus rule not found");
 
@@ -149,6 +152,7 @@ export async function extendFocusRule(focusId: string, newEndDate: string): Prom
 }
 
 async function updateFocusRuleStatus(focusId: string, status: string): Promise<void> {
+  assertValidFocusRuleStatus(status);
   const rule = await prisma.focusRule.findUnique({ where: { focusId } });
   if (!rule) throw new Error("focus rule not found");
 
