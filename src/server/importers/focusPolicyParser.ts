@@ -14,6 +14,8 @@ export type ParsedFocusRule = {
   end_date?: string;
   review_cadence?: string;
   notes?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 const FOLDED_SCALAR_KEYS = new Set(["description", "notes"]);
@@ -140,7 +142,9 @@ export function parseFocusRuleYaml(yaml: string): ParsedFocusRule | null {
     start_date: startDate,
     end_date: typeof result.end_date === "string" ? result.end_date : undefined,
     review_cadence: typeof result.review_cadence === "string" ? result.review_cadence : undefined,
-    notes: typeof result.notes === "string" ? result.notes : undefined
+    notes: typeof result.notes === "string" ? result.notes : undefined,
+    created_at: typeof result.created_at === "string" ? result.created_at : undefined,
+    updated_at: typeof result.updated_at === "string" ? result.updated_at : undefined
   };
 }
 
@@ -182,7 +186,9 @@ export function serializeFocusRuleToYaml(rule: ParsedFocusRule): string {
     `start_date: ${rule.start_date}`,
     ...(rule.end_date ? [`end_date: ${rule.end_date}`] : []),
     ...(rule.review_cadence ? [`review_cadence: ${rule.review_cadence}`] : []),
-    ...(rule.notes ? [`notes: ${rule.notes}`] : [])
+    ...(rule.notes ? [`notes: ${rule.notes}`] : []),
+    ...(rule.created_at ? [`created_at: ${rule.created_at}`] : []),
+    ...(rule.updated_at ? [`updated_at: ${rule.updated_at}`] : [])
   ];
   return lines.join("\n");
 }

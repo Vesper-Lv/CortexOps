@@ -71,7 +71,12 @@ export function patchFocusPolicyMarkdown(
     }
 
     seen.add(parsed.focus_id);
-    const nextYaml = serializeFocusRuleToYaml(dbRule);
+    const nextRule: ParsedFocusRule = {
+      ...dbRule,
+      ...(parsed.created_at ? { created_at: parsed.created_at } : {}),
+      ...(parsed.updated_at ? { updated_at: parsed.updated_at } : {})
+    };
+    const nextYaml = serializeFocusRuleToYaml(nextRule);
     if (nextYaml.trim() === inner.trim()) {
       unchanged += 1;
       return full;

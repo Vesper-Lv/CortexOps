@@ -22,7 +22,7 @@
 
 | 项 | 说明 | 何时提醒 |
 |----|------|----------|
-| [ ] **Pools JSONL 写回** | `npm run export -- --pools --write` 已实现 CLI 开关，但未经生产数据验证；Candidate 与 Signal 双写一致性需回归 | 用户完成一轮 Pools 分拣并准备跑 automation 前 |
+| [x] **Pools JSONL 写回** | 通过 `id`/`canonical_key` 关联 triaged Signal；pool 文件内 stale Candidate 不再优先 | 大批量 pools 分拣后仍建议 dry-run 审查 |
 | [ ] **Export ↔ Import 往返测试** | export 后 re-import 不应覆盖人工字段（已有 importer 保护，缺 E2E） | 首次 `--write` 写回真实 repo 前 |
 | [ ] **memory JSONL 写回** | `state/memory/ai-pm-7d.jsonl` 未纳入默认 export 范围 | 若 memory 流也支持 Inbox 分拣 |
 

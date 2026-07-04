@@ -46,6 +46,7 @@ describe("syncSignalToCandidate", () => {
       suggestedPool: "knowledge_gap",
       finalPool: "demo_replication",
       status: "confirmed",
+      readingPackStatus: "selected",
       rawJson: "{}",
       sourceFile: "state/daily/links.jsonl",
       sourceLine: 1,
@@ -60,12 +61,14 @@ describe("syncSignalToCandidate", () => {
         create: expect.objectContaining({
           poolName: "demo-replication",
           humanStatus: "confirmed",
-          status: "confirmed"
+          status: "confirmed",
+          readingPackStatus: "selected"
         }),
         update: expect.objectContaining({
           poolName: "demo-replication",
           humanStatus: "confirmed",
-          status: "confirmed"
+          status: "confirmed",
+          readingPackStatus: "selected"
         })
       })
     );

@@ -19,6 +19,7 @@ export type JsonlExportFileResult = {
   linesTotal: number;
   matched: number;
   changed: number;
+  parseErrors: number;
   changes: JsonlExportLineChange[];
   output: string | null;
 };
@@ -36,8 +37,44 @@ type DbRecord = DbHumanFields & {
   sourceLine: number;
 };
 
+export type DbLookups = {
+  byLine: Map<string, DbRecord>;
+  byRecordKey: Map<string, DbRecord>;
+  byExternalId: Map<string, DbRecord>;
+  byCanonicalKey: Map<string, DbRecord>;
+};
+
 function lineKey(sourceFile: string, sourceLine: number): string {
   return `${sourceFile}#${sourceLine}`;
+}
+
+function isTriaged(record: DbHumanFields): boolean {
+  const human = record.humanStatus ?? "pending";
+  return human === "confirmed" || human === "changed";
+}
+
+/** Signals win over pool candidates; signal-sync shadows never win over a Signal on the same line. */
+export function registerByLine(
+  byLine: Map<string, DbRecord>,
+  row: DbRecord,
+  kind: "signal" | "candidate"
+): void {
+  const key = lineKey(row.sourceFile, row.sourceLine);
+  const existing = byLine.get(key);
+
+  if (!existing) {
+    byLine.set(key, row);
+    return;
+  }
+
+  if (kind === "signal") {
+    byLine.set(key, row);
+    return;
+  }
+
+  if (existing.recordKey.startsWith("signal-sync:")) {
+    byLine.set(key, row);
+  }
 }
 
 function diffHumanFields(
@@ -53,68 +90,85 @@ function diffHumanFields(
   return fields;
 }
 
-type DbLookups = {
-  byLine: Map<string, DbRecord>;
-  byRecordKey: Map<string, DbRecord>;
-};
-
 export type JsonlExportDeps = {
   readFile: (path: string) => Promise<string>;
   writeFile?: (path: string, content: string) => Promise<void>;
   loadRecords?: (sourceFiles: string[]) => Promise<DbLookups>;
 };
 
+const dbRecordSelect = {
+  recordKey: true,
+  sourceFile: true,
+  sourceLine: true,
+  humanStatus: true,
+  finalPool: true,
+  status: true,
+  readingPackStatus: true,
+  externalId: true,
+  canonicalKey: true
+} as const;
+
 async function defaultLoadDbRecords(sourceFiles: string[]): Promise<DbLookups> {
   const byLine = new Map<string, DbRecord>();
   const byRecordKey = new Map<string, DbRecord>();
+  const byExternalId = new Map<string, DbRecord>();
+  const byCanonicalKey = new Map<string, DbRecord>();
 
-  const [signals, candidates] = await Promise.all([
+  const [allSignals, fileSignals, candidates] = await Promise.all([
+    prisma.signal.findMany({ select: dbRecordSelect }),
     prisma.signal.findMany({
       where: { sourceFile: { in: sourceFiles } },
-      select: {
-        recordKey: true,
-        sourceFile: true,
-        sourceLine: true,
-        humanStatus: true,
-        finalPool: true,
-        status: true,
-        readingPackStatus: true
-      }
+      select: dbRecordSelect
     }),
     prisma.candidate.findMany({
       where: { sourceFile: { in: sourceFiles } },
-      select: {
-        recordKey: true,
-        sourceFile: true,
-        sourceLine: true,
-        humanStatus: true,
-        finalPool: true,
-        status: true,
-        readingPackStatus: true
-      }
+      select: dbRecordSelect
     })
   ]);
 
-  for (const row of [...signals, ...candidates]) {
-    byLine.set(lineKey(row.sourceFile, row.sourceLine), row);
+  for (const row of allSignals) {
+    if (row.externalId) byExternalId.set(row.externalId, row);
+    if (row.canonicalKey) byCanonicalKey.set(row.canonicalKey, row);
+  }
+
+  for (const row of candidates) {
+    if (!row.recordKey.startsWith("signal-sync:")) {
+      registerByLine(byLine, row, "candidate");
+    }
     byRecordKey.set(row.recordKey, row);
   }
 
-  return { byLine, byRecordKey };
+  for (const row of fileSignals) {
+    registerByLine(byLine, row, "signal");
+    byRecordKey.set(row.recordKey, row);
+  }
+
+  return { byLine, byRecordKey, byExternalId, byCanonicalKey };
 }
 
-function resolveDbRecord(
+export function resolveDbRecord(
   parsed: { line: number; value: Record<string, unknown> },
   sourceFile: string,
   scope: string,
-  lookups: { byLine: Map<string, DbRecord>; byRecordKey: Map<string, DbRecord> }
+  lookups: DbLookups,
+  exportKind: "daily" | "pool"
 ): DbRecord | undefined {
-  const byLine = lookups.byLine.get(lineKey(sourceFile, parsed.line));
-  if (byLine) return byLine;
-
   const externalId = typeof parsed.value.id === "string" ? parsed.value.id : null;
   const canonicalKey =
     typeof parsed.value.canonical_key === "string" ? parsed.value.canonical_key : null;
+
+  if (exportKind === "pool") {
+    const fromSignal =
+      (externalId ? lookups.byExternalId.get(externalId) : undefined) ??
+      (canonicalKey ? lookups.byCanonicalKey.get(canonicalKey) : undefined);
+    if (fromSignal && isTriaged(fromSignal)) {
+      return fromSignal;
+    }
+  }
+
+  const lineHit = lookups.byLine.get(lineKey(sourceFile, parsed.line));
+  if (lineHit) return lineHit;
+
   const recordKey = computeRecordKey({
     scope,
     externalId,
@@ -124,6 +178,10 @@ function resolveDbRecord(
   });
 
   return lookups.byRecordKey.get(recordKey);
+}
+
+function exportKindForPath(path: string): "daily" | "pool" {
+  return path.startsWith("pools/") ? "pool" : "daily";
 }
 
 export async function exportJsonlFiles(
@@ -146,6 +204,7 @@ export async function exportJsonlFiles(
         linesTotal: 0,
         matched: 0,
         changed: 0,
+        parseErrors: 0,
         changes: [],
         output: null
       });
@@ -158,9 +217,10 @@ export async function exportJsonlFiles(
     const changes: JsonlExportLineChange[] = [];
     let matched = 0;
     let changed = 0;
+    const exportKind = exportKindForPath(file.path);
 
     for (const line of parsed) {
-      const dbRecord = resolveDbRecord(line, file.path, file.scope, lookups);
+      const dbRecord = resolveDbRecord(line, file.path, file.scope, lookups, exportKind);
       if (!dbRecord) continue;
 
       matched += 1;
@@ -189,15 +249,12 @@ export async function exportJsonlFiles(
       await deps.writeFile(file.path, output.endsWith("\n") ? output : `${output}\n`);
     }
 
-    if (errors.length > 0) {
-      // Preserve parse errors in summary via path note — file not rewritten partially.
-    }
-
     results.push({
       path: file.path,
       linesTotal: parsed.length,
       matched,
       changed,
+      parseErrors: errors.length,
       changes,
       output
     });
@@ -213,16 +270,21 @@ export async function exportJsonlFiles(
 
 /** Pretty-print a dry-run summary for CLI output. */
 export function formatJsonlExportSummary(summary: JsonlExportSummary): string {
+  const parseErrors = summary.files.reduce((n, f) => n + f.parseErrors, 0);
   const lines: string[] = [
     summary.dryRun ? "export (dry-run)" : "export (write)",
     `files scanned: ${summary.files.length}`,
     `files with changes: ${summary.filesChanged}`,
-    `lines changed: ${summary.linesChanged}`
+    `lines changed: ${summary.linesChanged}`,
+    `parse errors: ${parseErrors}`
   ];
 
   for (const file of summary.files) {
-    if (file.changed === 0) continue;
+    if (file.changed === 0 && file.parseErrors === 0) continue;
     lines.push(`\n${file.path} (${file.changed}/${file.matched} matched lines changed)`);
+    if (file.parseErrors > 0) {
+      lines.push(`  parse errors: ${file.parseErrors} (file not partially rewritten)`);
+    }
     for (const change of file.changes.slice(0, 20)) {
       const fieldSummary = Object.entries(change.fields)
         .map(([k, v]) => `${k}: ${JSON.stringify(v.from)} → ${JSON.stringify(v.to)}`)

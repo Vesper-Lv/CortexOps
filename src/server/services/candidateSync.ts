@@ -23,6 +23,7 @@ export async function syncSignalToCandidate(signalId: string): Promise<void> {
       finalPool: s.finalPool,
       humanStatus: s.humanStatus,
       status,
+      readingPackStatus: s.readingPackStatus,
       rawJson: s.rawJson,
       sourceFile: s.sourceFile,
       sourceLine: s.sourceLine,
@@ -34,7 +35,8 @@ export async function syncSignalToCandidate(signalId: string): Promise<void> {
       priority: s.priority,
       finalPool: s.finalPool,
       humanStatus: s.humanStatus,
-      status
+      status,
+      readingPackStatus: s.readingPackStatus
     }
   });
 }
