@@ -1,22 +1,22 @@
 import Link from "next/link";
 import { CalendarRange } from "lucide-react";
-import { WeeklyEligibleSignals } from "@/components/dashboard/weekly-eligible-signals";
+import { DownstreamEligibleSignals } from "@/components/dashboard/downstream-eligible-signals";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { getLatestArchiveReport } from "@/server/services/reports";
-import { listSignalsForWeeklyReview } from "@/server/services/weeklyReview";
+import { listDownstreamEligibleSignals } from "@/server/services/downstreamReview";
 
 export const dynamic = "force-dynamic";
 
 export default async function WeeklyPage() {
   const [report, eligibleSignals] = await Promise.all([
     getLatestArchiveReport("weekly"),
-    listSignalsForWeeklyReview()
+    listDownstreamEligibleSignals()
   ]);
 
   if (!report || report.kind !== "archive") {
     return (
       <section className="mx-auto flex max-w-4xl flex-col gap-6">
-        <WeeklyEligibleSignals signals={eligibleSignals} />
+        <DownstreamEligibleSignals signals={eligibleSignals} variant="weekly" />
         <WorkbenchPage
           eyebrow="Weekly digest"
           title="Weekly"
@@ -40,7 +40,7 @@ export default async function WeeklyPage() {
 
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6">
-      <WeeklyEligibleSignals signals={eligibleSignals} />
+      <DownstreamEligibleSignals signals={eligibleSignals} variant="weekly" />
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Weekly digest</p>
         <h2 className="mt-3 text-4xl font-semibold text-foreground">{report.title}</h2>

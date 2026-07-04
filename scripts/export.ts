@@ -29,11 +29,19 @@ async function buildPoolExportFiles() {
   }));
 }
 
+async function buildMemoryExportFiles() {
+  return [{ path: "state/memory/ai-pm-7d.jsonl", scope: "memory" }];
+}
+
 async function runJsonlExport(args: string[]) {
   const dryRun = !hasFlag(args, "--write");
   const includePools = hasFlag(args, "--pools");
+  const skipMemory = hasFlag(args, "--no-memory");
 
   const files = await buildDailyExportFiles();
+  if (!skipMemory) {
+    files.push(...(await buildMemoryExportFiles()));
+  }
   if (includePools) {
     files.push(...(await buildPoolExportFiles()));
   }
@@ -76,7 +84,7 @@ async function main() {
       break;
     default:
       console.error(`Unknown export command: ${cmd}`);
-      console.error("Usage: npm run export [-- --write] [-- --pools]");
+      console.error("Usage: npm run export [-- --write] [-- --pools] [-- --no-memory]");
       console.error("       npm run export:focus-policy [-- --write]");
       process.exitCode = 1;
   }
