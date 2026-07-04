@@ -51,3 +51,18 @@ python3 -c 'import tomllib, pathlib; [tomllib.loads(p.read_text()) for p in path
 
 For focus-rule changes, also verify the affected automations reference
 `focus-policy.md`.
+
+## Worktree and branch sync
+
+- Automation kernel (`docs/`, `automations/`, `state/`, `pools/`) is maintained on branch `codex/source-layering-policy` in the main worktree.
+- Web App code lives on `codex/web-workbench` in a separate worktree.
+- Do not change daily report format or automation prompts only on `web-workbench`. Merge from `source-layering-policy` instead.
+- After editing `automations/*.toml`, sync: (1) git push, (2) Cursor Automation prompt, (3) `~/.codex/automations` live copy.
+- Cursor Automation should bind repository `Vesper-Lv/CortexOps` on branch `codex/source-layering-policy`.
+- Prompt paths in `automations/*.toml` are repo-relative for Cloud Agent; `cwds` remains the local macOS path for Codex Desktop.
+
+## AIhot collection
+
+Daily radar collects AIhot items via Public API (`docs/aihot-api.md`), not HTML
+scraping. Requires Codex sandbox `network_access = true` and browser User-Agent
+on `/api/public/*` requests.
