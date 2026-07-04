@@ -330,6 +330,32 @@ The daily AI PM radar should:
 15. Apply the 7-day no-repeat rule to links, repos, papers, product/model
     announcements, candidate-pool items, reading-pack items, and practice
     recommendations.
+16. Every daily link must carry a facts-only `display_summary`. For AIhot items,
+    reuse `aihot_summary` verbatim; for non-AIhot items, extract a concise factual
+    summary. The report shows this summary for every link so the user can judge
+    without opening each source.
+17. Only reading-pack items get `read_reason` and `focus_direction`. Remaining
+    (non-selected) links show summary + state only; do not over-interpret them.
+18. For `knowledge_gap` items, do not output generic "what to look for / what you
+    conclude" lines. Output two parts instead: `known_facts` (facts obtainable
+    from the article) and `open_questions` (questions needing extra research).
+19. Put any duplicate / carry-over / material-update retention explanation only in
+    `novelty_reason`, and render it once in the report. `reason` must not repeat
+    the dedup text.
+20. Reserve "P0 detailed reading" for sources with genuine depth. If a source is a
+    thin feature/announcement page, prefer "P1 skim" and let the summary carry the
+    facts; do not over-claim depth or over-interpret.
+21. Collect AIhot daily_discovery items via the Public API documented in
+    `docs/aihot-api.md`, not by scraping HTML list pages. Use
+    `GET /api/public/items?mode=selected&since=<24h>&take=50` with browser UA.
+22. `aihot_summary` is only for verbatim AIhot API `summary`. If the API cannot
+    be reached, do not backfill with agent text or third-party aggregators into
+    `aihot_summary`. Disclose API failure in the report.
+23. Never label ai-bot.cn or other aggregators as AIhot. Do not reuse one list
+    page URL as `source_url` for multiple items.
+24. Non-AIhot `display_summary` must include at least two verifiable fact points
+    or ~120+ characters of factual content; do not substitute a one-line codex
+    judgment.
 
 The daily radar is the entry point, not the final output.
 
@@ -374,6 +400,14 @@ Manual review is part of the control loop.
   by a structured longlist with AI suggestions for manual review.
 - Keep weekly outputs actionable.
 - Keep monthly outputs strategic.
+- Attach a facts-only summary to every daily link; reuse `aihot_summary` for
+  AIhot items without rewriting.
+- Keep remaining links summary-first and restrained; reserve reasoning for
+  reading-pack items.
+- Render any dedup / retention explanation exactly once, sourced from
+  `novelty_reason`.
+- Verify AIhot provenance before writing JSONL: `aihot_id` + `verified` status
+  for AIhot rows; empty `aihot_summary` otherwise.
 
 ## 13. Maintenance Rule
 
