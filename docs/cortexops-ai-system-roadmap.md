@@ -436,6 +436,8 @@ Acceptance criteria:
 Goal: prepare migration from Codex automations to an in-app AI runner without
 forcing that migration into the MVP.
 
+Implementation plan: [`docs/superpowers/plans/2026-07-04-phase7-ai-runner-prep.md`](superpowers/plans/2026-07-04-phase7-ai-runner-prep.md)
+
 Deliverables:
 
 - `prompts/` directory.

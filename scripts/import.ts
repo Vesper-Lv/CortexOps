@@ -4,12 +4,15 @@ import {
   buildDefaultSources,
   listDailyReportFiles,
   listMonthlyReportFiles,
-  listWeeklyReportFiles
+  listWeeklyReportFiles,
+  listBySuffix
 } from "@/server/importers/importSources";
 import { importDailyReports } from "@/server/importers/importDailyReports";
 import { importArchiveReports } from "@/server/importers/importArchiveReports";
 import { importFocusPolicyFromMarkdown, refreshExpiredFocusRules } from "@/server/services/focusRules";
 import { prismaSignalRepository } from "@/server/importers/prismaSignalRepository";
+import { getOrCreatePolicySnapshot } from "@/server/services/policySnapshotStore";
+import { detectAutomationRunsFromImport } from "@/server/services/automationRuns";
 import { prisma } from "@/server/db";
 
 async function main() {
@@ -45,10 +48,30 @@ async function main() {
     // focus-policy optional during early setup
   }
 
+  const { id: policySnapshotId } = await getOrCreatePolicySnapshot({
+    readFile: (p) => readFile(p, "utf8")
+  });
+
+  await prisma.importRun.update({
+    where: { id: summary.importRunId },
+    data: { policySnapshotId }
+  });
+
+  const dailyLinkFiles = await listBySuffix("state/daily", "-links.jsonl");
+  const automationRegistered = await detectAutomationRunsFromImport({
+    policySnapshotId,
+    dailyLinkFiles: summary.importedSignals > 0 ? dailyLinkFiles : [],
+    weeklyFiles: archiveSummary.importedTypes.includes("weekly") ? weeklyFiles : [],
+    monthlyFiles: archiveSummary.importedTypes.includes("monthly") ? monthlyFiles : [],
+    archiveReportTypes: archiveSummary.importedTypes
+  });
+
   console.log("import summary:", summary);
   console.log("daily reports:", reportSummary);
   console.log("archive reports:", archiveSummary);
   console.log("focus rules:", focusSummary);
+  console.log("policy snapshot:", policySnapshotId);
+  console.log("automation runs registered:", automationRegistered);
   await prisma.$disconnect();
 }
 

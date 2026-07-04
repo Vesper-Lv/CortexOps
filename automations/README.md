@@ -22,6 +22,26 @@ Live daily state and candidate pools live outside this snapshot folder:
 - `../pools/*.jsonl`: candidate pools for weekly, monthly, demo, and learning
   automations
 
+## Prompt templates (`prompts/`)
+
+Workbench keeps a versioned copy of each automation prompt under `../prompts/`.
+TOML files in this folder remain snapshots for Codex; `prompts/` is the workbench
+canonical copy for registry sync.
+
+Workflow when changing a prompt:
+
+1. Edit the matching file in `../prompts/<slug>.md`
+2. Run `npm run prompts:sync` to upsert `PromptTemplate` rows (hash + metadata)
+3. Optionally update the TOML snapshot here for Codex parity
+
+CLI helpers:
+
+- `npm run prompts:sync` — extract missing prompt files from TOML and sync DB registry
+- `npm run automation:register -- --id ai-pm --outputs state/daily/YYYY-MM-DD-links.jsonl` — manually record an external Codex run
+- `npm run import` — attaches a `PolicySnapshot` to each import and heuristically registers `AutomationRun` rows
+
+View read-only status at **Settings → Automations** in the workbench.
+
 ## Convention
 
 All meaningful automation changes should start from

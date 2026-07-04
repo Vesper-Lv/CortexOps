@@ -3,7 +3,7 @@
 > 跟踪 Phase 3–6 及 code review 后仍待完成的能力。完成项打 `[x]`，未完成打 `[ ]`。
 > **提醒触发**：见各条「何时提醒」。
 
-最后更新：2026-07-03
+最后更新：2026-07-04
 
 ---
 
@@ -39,7 +39,7 @@
 
 | 项 | 说明 | 何时提醒 |
 |----|------|----------|
-| [ ] **Automation Runner UI** | Settings 只读占位，Phase 7+ | 开始 Phase 7 / AI runner 集成 |
+| [x] **Automation Runner UI** | Settings `/settings/automations` 只读 registry（Phase 7） | 开始 Phase 7 / AI runner 集成 |
 | [ ] **Job queue worker** | `Job` 表为占位 | 需要后台定时 import/export/automation |
 | [ ] **多用户 / 鉴权** | 单用户本地 workbench | 部署到共享环境前 |
 

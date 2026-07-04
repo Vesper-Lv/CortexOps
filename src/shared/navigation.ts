@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Archive,
   BookOpen,
+  Bot,
   CalendarClock,
   CalendarDays,
   CalendarRange,
@@ -66,6 +67,7 @@ export const navigationSections: NavSection[] = [
     basePath: "/settings",
     children: [
       { href: "/settings", label: "General", icon: Settings },
+      { href: "/settings/automations", label: "Automations", icon: Bot },
       { href: "/settings/focus-rules", label: "Focus Rules", icon: SlidersHorizontal }
     ]
   }

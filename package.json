@@ -13,6 +13,8 @@
     "import": "tsx scripts/import.ts",
     "export": "tsx scripts/export.ts jsonl",
     "export:focus-policy": "tsx scripts/export.ts focus-policy",
+    "prompts:sync": "tsx scripts/prompts-sync.ts",
+    "automation:register": "tsx scripts/automation-register.ts",
     "db:push": "prisma db push"
   },
   "dependencies": {
@@ -26,6 +28,7 @@
     "next": "^16.2.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "smol-toml": "^1.3.0",
     "tailwind-merge": "^2.5.4",
     "zod": "^3.23.8"
   },
