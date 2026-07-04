@@ -109,6 +109,11 @@ Rules:
 - Copy AIhot's summary into `aihot_summary` after the original source URL has
   been identified. Keep `aihot_summary` separate from `codex_summary`, `reason`,
   and recommendation fields.
+- `aihot_summary` MUST come only from AIhot Public API field `summary` or the
+  AIhot item page summary block when API is unavailable. Never store agent-
+  compressed one-liners, ai-bot.cn text, or codex judgment in `aihot_summary`.
+- If `aihot_id` is absent, `aihot_summary` MUST be empty and
+  `aihot_summary_status` MUST be `not_applicable`.
 - If the original URL cannot be confirmed, keep the item as pending manual
   review or archive it; do not present the AIhot summary as verified original
   evidence.
@@ -333,6 +338,8 @@ source_origin
 source_mix_note
 original_format
 aihot_summary
+aihot_summary_status
+discovery_summary
 codex_summary
 url_status
 url_checked_at
@@ -557,6 +564,19 @@ Only for `knowledge_gap` items. `known_facts` lists facts obtainable from the
 article itself. `open_questions` lists questions that still need extra research
 after reading. Do not fabricate conclusions the article does not support.
 
+`aihot_summary_status`:
+
+- `verified`: `aihot_id` present, `source_url` is AIhot item page, and
+  `aihot_summary` was copied verbatim from AIhot API `summary`.
+- `missing`: AIhot-sourced item expected but API summary unavailable; keep
+  `aihot_summary` empty.
+- `not_applicable`: non-AIhot item; `aihot_summary` must remain empty.
+
+`discovery_summary`:
+
+Verbatim or extracted summary from a non-AIhot discovery source (e.g. GitHub
+changelog entry, arXiv abstract). Never store this in `aihot_summary`.
+
 ## 4.1 State File Contracts
 
 Daily AI PM radar runs should write state before producing or updating the
@@ -580,7 +600,11 @@ original_url
 source_url
 source_origin
 source_name
+aihot_id
 aihot_summary
+aihot_summary_status
+discovery_summary
+published_at
 codex_summary
 priority
 reading_pack_status
@@ -691,6 +715,18 @@ practice.
      or manual review by default.
    - Require practice fit and recent activity before a background-source project
      enters demo replication or personal work pools.
+
+6. AIhot Summary Provenance Gate
+   - For any row with `aihot_id` or AIhot item `source_url`:
+     - `aihot_summary_status` must be `verified`
+     - `aihot_summary` must be verbatim API `summary`
+     - `display_summary` must equal `aihot_summary`
+   - For rows without `aihot_id`:
+     - `aihot_summary` must be empty
+     - `aihot_summary_status` must be `not_applicable`
+   - Reject rows where `aihot_summary` is non-empty but `aihot_id` is missing.
+   - Reject rows where `source_url` is a list page (e.g. ai-bot.cn/daily-ai-news/)
+     shared by multiple items.
 
 ## 5. Deduplication Rules
 

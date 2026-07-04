@@ -10,6 +10,7 @@ prompt = """
 - 优先遵循 docs/source-policy.md。
 - 采集、字段标准化、JSONL 状态、候选池路由、去重和人工确认规则优先遵循 docs/ingestion-normalization.md。
 - 用户当前注意力、GitHub 实践适配度和求职面试证明力规则优先遵循 docs/focus-policy.md。
+- AIhot 采集契约优先遵循 docs/aihot-api.md（Public API + UA + 字段映射）。
 - 先读取 state/memory/ai-pm-7d.jsonl 做 7 天去重；再用最近日报 Markdown 作为补充复核。
 
 总目标：
@@ -26,6 +27,32 @@ prompt = """
 - pools/personal-work.jsonl
 - pools/archive.jsonl
 
+AIhot API 采集（强制，优先于任何 Web 抓取）：
+0. 预检：带浏览器 UA 请求 AIhot API（见 docs/aihot-api.md）。预检失败则进入 fallback 模式并在 report 披露，禁止伪造 AIhot 条目。
+1. 拉取精选池（默认路径，不是 /api/public/daily）：
+   UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+   since=$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)   # Asia/Shanghai 过去 24h 对应 UTC
+   curl -sS -H "User-Agent: $UA" \
+     "https://aihot.virxact.com/api/public/items?mode=selected&since=${since}&take=50"
+2. 可选：将原始 JSON 保存到 state/daily/YYYY-MM-DD-aihot-raw.json 便于审计。
+3. 字段映射（每条 AIhot item）：
+   - aihot_id ← item.id
+   - source_url ← https://aihot.virxact.com/items/{item.id}
+   - original_url ← item.url
+   - title ← item.title
+   - aihot_summary ← item.summary（verbatim，禁止改写/压缩）
+   - display_summary ← item.summary（同 aihot_summary）
+   - aihot_summary_status ← verified
+   - source_origin ← aggregator；source_role ← daily_discovery
+4. 硬门禁（写入 JSONL 前自检）：
+   - 无 aihot_id → aihot_summary 必须为空，aihot_summary_status=not_applicable
+   - 有 aihot_id → aihot_summary 非空且来自 API summary；禁止自写一句压缩
+   - 禁止用 ai-bot.cn 内容填入 aihot_summary；禁止 10 条共用同一列表 source_url
+5. API 不可用 fallback：
+   - report 必须写「AIhot API 不可用」及失败原因
+   - 仅允许 GitHub/arXiv/官方等补充源；aihot_summary 全空
+   - 目标 longlist 可低于 25，不得伪造 AIhot 凑数
+
 采集与长清单规则：
 1. AIhot 是 daily_discovery 主入口，但不是唯一填充来源。每日 longlist 不能默认 30 条全部来自 AIhot；必须评估官方/一手来源、产品案例、产品 teardown、优秀产品实践、GitHub/release/changelog、研究/报告是否需要补充进入 25-30 条清单。
 2. 建议配比：AIhot 约 18-24 条；官方/一手来源 2-5 条；产品案例/产品 teardown/优秀产品实践 1-3 条；GitHub/release/changelog 2-4 条。若最终全部来自 AIhot，必须在 daily state 或 report 中说明其他来源未补充的原因。
@@ -36,8 +63,8 @@ prompt = """
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
 每条 JSONL link object 至少包含：
-id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_summary, codex_summary, display_summary, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, read_reason, focus_direction, known_facts, open_questions。
-其中：display_summary 为每条必填的事实摘要（AIhot 直接复用 aihot_summary，不改写）；read_reason/focus_direction 仅阅读包非 knowledge_gap 条目填写；known_facts/open_questions 仅 knowledge_gap 条目填写；去重/保留说明只写入 novelty_reason，reason 不得复述。
+id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, read_reason, focus_direction, known_facts, open_questions。
+其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary；非 AIhot 从 discovery_summary 或原文事实提取。read_reason/focus_direction 仅阅读包非 knowledge_gap 条目填写；known_facts/open_questions 仅 knowledge_gap 条目填写；去重/保留说明只写入 novelty_reason，reason 不得复述。
 
 写入规则：
 - 所有采集链接先写入 state/daily/YYYY-MM-DD-links.jsonl。
@@ -51,6 +78,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 # 今日 AI PM 行业雷达
 
 ## 1. 五段式日报
+§1 开头必须包含一行采集状态：AIhot API 成功/失败、入库条数、Web 补充条数。
 用五段判断今天的大方向：产品/行业动态、GitHub/工程信号、论文/研究信号、工具/工作流信号、风险/限制/反例。
 
 ## 2. 今日 30mins 阅读包

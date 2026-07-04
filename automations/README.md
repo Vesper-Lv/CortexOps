@@ -60,3 +60,9 @@ For focus-rule changes, also verify the affected automations reference
 - After editing `automations/*.toml`, sync: (1) git push, (2) Cursor Automation prompt, (3) `~/.codex/automations` live copy.
 - Cursor Automation should bind repository `Vesper-Lv/CortexOps` on branch `codex/source-layering-policy`.
 - Prompt paths in `automations/*.toml` are repo-relative for Cloud Agent; `cwds` remains the local macOS path for Codex Desktop.
+
+## AIhot collection
+
+Daily radar collects AIhot items via Public API (`docs/aihot-api.md`), not HTML
+scraping. Requires Codex sandbox `network_access = true` and browser User-Agent
+on `/api/public/*` requests.

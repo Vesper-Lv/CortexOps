@@ -345,6 +345,17 @@ The daily AI PM radar should:
 20. Reserve "P0 detailed reading" for sources with genuine depth. If a source is a
     thin feature/announcement page, prefer "P1 skim" and let the summary carry the
     facts; do not over-claim depth or over-interpret.
+21. Collect AIhot daily_discovery items via the Public API documented in
+    `docs/aihot-api.md`, not by scraping HTML list pages. Use
+    `GET /api/public/items?mode=selected&since=<24h>&take=50` with browser UA.
+22. `aihot_summary` is only for verbatim AIhot API `summary`. If the API cannot
+    be reached, do not backfill with agent text or third-party aggregators into
+    `aihot_summary`. Disclose API failure in the report.
+23. Never label ai-bot.cn or other aggregators as AIhot. Do not reuse one list
+    page URL as `source_url` for multiple items.
+24. Non-AIhot `display_summary` must include at least two verifiable fact points
+    or ~120+ characters of factual content; do not substitute a one-line codex
+    judgment.
 
 The daily radar is the entry point, not the final output.
 
@@ -395,6 +406,8 @@ Manual review is part of the control loop.
   reading-pack items.
 - Render any dedup / retention explanation exactly once, sourced from
   `novelty_reason`.
+- Verify AIhot provenance before writing JSONL: `aihot_id` + `verified` status
+  for AIhot rows; empty `aihot_summary` otherwise.
 
 ## 13. Maintenance Rule
 

@@ -12,6 +12,11 @@ Daily radar runs should create:
 The JSONL file is the source of truth for link state. The Markdown report is a
 reading view generated from that state.
 
+Optionally, daily radar runs may also write `daily/YYYY-MM-DD-aihot-raw.json`
+with the raw AIhot Public API response for provenance auditing. This file is
+not read by downstream automations; it exists so operators can verify that
+`aihot_summary` values were copied verbatim from the API.
+
 ## Memory Files
 
 - `memory/ai-pm-7d.jsonl`: rolling 7-day deduplication index for the daily AI PM
