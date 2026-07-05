@@ -356,6 +356,11 @@ The daily AI PM radar should:
 24. Non-AIhot `display_summary` must include at least two verifiable fact points
     or ~120+ characters of factual content; do not substitute a one-line codex
     judgment.
+25. Daily radar strict ingest: run `scripts/ai-pm-ingest-prefetch.sh` in Terminal
+    before Codex automation when sandbox DNS is unreliable. Do not generate daily
+    outputs unless manifest `ready=true`.
+26. In strict mode, forbid Web/HTML fallback for AIhot discovery. On ingest
+    failure, emit ingest-error and stop; do not partially publish report.
 
 The daily radar is the entry point, not the final output.
 

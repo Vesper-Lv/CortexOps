@@ -47,12 +47,35 @@ curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=s
 - 禁止无 `aihot_id` 时填写 `aihot_summary`
 - 禁止在摘要中写「AIhot 摘要称…」除非 `aihot_summary_status=verified`
 
-## API 不可用时的 fallback
+## Terminal 预拉（Codex 沙箱 DNS 不稳定时）
+
+当 Codex automation 内 curl/DNS 失败时，**不要**在 agent 内 Web 抓取冒充 API。先在 macOS Terminal 执行：
+
+```bash
+cd /path/to/CortexOps
+./scripts/ai-pm-ingest-prefetch.sh
+./scripts/verify-daily-ingest.py $(TZ=Asia/Shanghai date +%Y-%m-%d)
+```
+
+成功产物：
+
+- `state/daily/YYYY-MM-DD-aihot-raw.json` — API 原文（strict 模式下必需）
+- `state/daily/YYYY-MM-DD-ingest-manifest.json` — 采集门禁（`ready: true` 才可生成日报）
+
+Automation 必须从 raw JSON 映射字段；strict 模式下禁止绕过 manifest 直接 curl 或 Web fallback。
+
+## API 不可用时的 fallback（仅 resilient 模式）
+
+`state/daily/.ingest-mode` 为 `resilient` 时适用。默认测试阶段为 `strict`：预拉失败则 **停止日报**，见 `ingest-error` 文件。
+
+resilient 模式下：
 
 1. report 必须披露：「AIhot API 不可用，今日未生成 AIhot 长清单」
 2. 可用 Web/Chrome 或 GitHub/arXiv 补充，但不得伪造 AIhot 字段
 3. 补充条目标 `source_origin: primary` 或 `community_index`，`aihot_summary` 为空
 
-## 可选审计文件
+## 审计与门禁文件
 
-`state/daily/YYYY-MM-DD-aihot-raw.json` — 保存 API 响应原文，便于 provenance 审计。
+- `state/daily/YYYY-MM-DD-aihot-raw.json` — API 响应原文（strict 下由 Terminal 预拉写入）
+- `state/daily/YYYY-MM-DD-ingest-manifest.json` — 采集门禁（`ready: true` 才可生成日报）
+- `state/daily/YYYY-MM-DD-ingest-error.json` / `.md` — strict 预拉失败时的错误记录
