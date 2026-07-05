@@ -102,13 +102,22 @@ Rules:
 
 - Treat AIhot as a `daily_discovery` aggregator and discovery source, not as
   final proof.
+- Daily AIhot fetch order (mandatory):
+  1. `mode=selected` + `since=last_run_finished_at` (rolling 24h primary path).
+  2. If selected count < 12: supplement with new keys only—AIhot daily/48h,
+     then GitHub/Anthropic/OpenAI/arXiv; narrow carry-over max 3–5 items
+     (`candidate`, `material_update`, high practice_fit skipped for pack size).
+     Never bulk carry yesterday's generic remaining links.
+  3. If longlist < 25: report `fresh signals thin, supplements dominated`; do
+     not pad to 30.
 - Use the AIhot title as the daily title candidate when it is clearer than the
   original title.
 - Confirm the original source link before promoting an item into P0, P1, the
   30-minute reading pack, a GitHub recommendation, or a formal daily practice.
-- Copy AIhot's summary into `aihot_summary` after the original source URL has
-  been identified. Keep `aihot_summary` separate from `codex_summary`, `reason`,
-  and recommendation fields.
+- Copy AIhot's summary into `aihot_summary` and `display_summary` after the
+  original source URL has been identified. Use the API summary verbatim; do not
+  rewrite. Keep `aihot_summary` separate from `codex_summary`, `reason`, and
+  recommendation fields.
 - If the original URL cannot be confirmed, keep the item as pending manual
   review or archive it; do not present the AIhot summary as verified original
   evidence.

@@ -42,6 +42,21 @@ CLI helpers:
 
 View read-only status at **Settings → Automations** in the workbench.
 
+## Daily AI PM — AIhot collection contract
+
+The daily `ai-pm` automation must follow this order (also in `docs/source-policy.md`
+and `prompts/daily-ai-pm.md`):
+
+1. **Primary:** `mode=selected` + `since=last_run_finished_at` (rolling 24h).
+2. **If selected < 12:** expand with new `canonical_key` only — AIhot daily/48h
+   supplement, then GitHub/Anthropic/OpenAI/arXiv, then narrow carry-over
+   (max 3–5; no bulk yesterday remaining).
+3. **If still < 25:** note in the report that fresh signals were thin; do not pad
+   to 30 with duplicates.
+
+After prompt changes, run `npm run prompts:sync` and update the live Codex copy in
+`~/.codex/automations` when ready.
+
 ## Convention
 
 All meaningful automation changes should start from

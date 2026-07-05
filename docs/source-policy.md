@@ -101,6 +101,20 @@ Rules:
   reachable, and relevant.
 - AIhot is a discovery feed, not a final proof source. P0 / P1 items should
   still be checked against the original source URL when possible.
+- AIhot API contract (daily radar, execute in order):
+  1. Primary: `GET /api/public/items?mode=selected&since=<last_run_finished_at>&take=50`.
+     Do not use `/api/public/daily/{UTC-date}` counts to validate selected counts.
+     For AIhot items, set `display_summary` equal to the API summary verbatim.
+  2. If `selected.count < 12`, expand with **new** `canonical_key` values only:
+     a. AIhot supplement: Shanghai-day `/daily` or `since` widened to 36–48h;
+        exclude keys already in yesterday's `state/daily/*-links.jsonl`.
+     b. Primary-source supplements: GitHub changelog/release, Anthropic/OpenAI
+        official posts, arXiv.
+     c. Narrow carry-over (max 3–5): `candidate`, `material_update`, or
+        `practice_fit=high` items skipped yesterday for reading-pack capacity only.
+        Do **not** bulk carry yesterday's generic `not_selected` remaining links.
+  3. If longlist is still below 25, state in the report that fresh signals were
+     thin and supplements dominated; do not pad to 30 with duplicates or stale links.
 - GitHub Trending should be treated as a fresh project radar. Do not recommend a
   repo only because it is trending; apply practice fit, entry barrier, and
   portfolio potential checks.
@@ -283,15 +297,21 @@ The daily AI PM radar should:
 0. Prefer sources published or materially updated within the last 24 hours.
    Older sources may appear only as carry-over context, not as fresh daily
    signals.
+0b. Resolve `since` from the last successful daily links write
+   (`state/daily/*-links.jsonl` finished_at), compare `published_at` in UTC, and
+   use Asia/Shanghai only for report date / filename boundaries—not for API
+   `/daily/{date}` unless the date is the Shanghai calendar day.
 1. Read `state/memory/ai-pm-7d.jsonl` before selecting P0/P1, reading-pack,
    GitHub, practice, or candidate-pool items.
 2. Build and write the structured daily longlist first:
    `state/daily/YYYY-MM-DD-links.jsonl`.
-3. Aim for 25-30 links in the daily longlist. AIhot is the main discovery
-   source, but the longlist should not default to 30 AIhot-only links. Evaluate
-   official / primary sources, product cases, product teardowns, strong product
-   practice examples, GitHub / release / changelog sources, and research or
-   report sources as supplements.
+3. Aim for 25-30 links in the daily longlist when fresh signals allow. If fresh
+   signals are thin after steps 1–2 of the AIhot contract, prefer an honest
+   shorter longlist plus a source-mix note over padding to 30. AIhot is the main
+   discovery source, but the longlist should not default to 30 AIhot-only links.
+   Evaluate official / primary sources, product cases, product teardowns, strong
+   product practice examples, GitHub / release / changelog sources, and research
+   or report sources as supplements.
 4. Use this daily source-mix target unless the day clearly argues otherwise:
    AIhot about 18-24 links; official / primary sources 2-5 links; product cases,
    product teardowns, or strong product practice examples 1-3 links; GitHub /

@@ -25,6 +25,42 @@ source_toml: automations/ai-pm.toml
 - /Users/jiexinlv/Documents/CortexOps/pools/personal-work.jsonl
 - /Users/jiexinlv/Documents/CortexOps/pools/archive.jsonl
 
+AIhot 采集契约（强制，按顺序执行）：
+
+时区与窗口：
+- 用户时区 Asia/Shanghai；report date 与文件名用 Shanghai 的 YYYY-MM-DD。
+- published_at 一律按 UTC ISO 比较；禁止用 /api/public/daily/{UTC-date} 条数替代 mode=selected 条数做验收。
+- since = 上次日报成功写入 state/daily/*-links.jsonl 的 finished_at（优先）；若无记录，则用 rolling 24h 锚点（上次计划运行时刻）。
+
+步骤 1 — 主路径（fresh discovery）：
+- GET /api/public/items?mode=selected&since=<since>&take=50
+- 禁止将 /api/public/daily 作为主路径替代 mode=selected。
+- 对每条 API 返回项：确认 original_url；aihot_summary 与 display_summary 必须直接等于 API summary，不改写。
+- 经 canonical_key 与 state/memory/ai-pm-7d.jsonl 去重后写入 longlist。
+
+步骤 2 — selected 偏少（count < 12）时，按优先级扩「新信息」：
+- 禁止 bulk carry 昨日全部 remaining（普通 not_selected 且摘要已消费的链接不得整包重播）。
+
+  2a. AIhot 补充（优先新 canonical_key）：
+      - 可选 A：mode=selected，since 扩至 36–48h；或
+      - 可选 B：/api/public/daily/<date>，date 用 Shanghai 日界（非 UTC calendar date）。
+      - 只纳入 canonical_key ∉ 昨日 state/daily/*-links.jsonl 的新条目。
+      - source_mix_note: aihot_48h_supplement 或 aihot_daily_supplement。
+
+  2b. 固定一手源（多样性，新 canonical_key）：
+      - GitHub Changelog / Release、Anthropic / OpenAI 官方博客或 changelog、arXiv。
+      - source_mix_note 说明为何补充进入 longlist。
+
+  2c. 窄 carry_over（上限 3–5 条，不是整包 remaining）：
+      - 仅允许：reading_pack_status=candidate；或 practice_fit=high 且昨日因阅读包容量未选；或 duplicate_status=material_update。
+      - 写入 duplicate_status=carry_over，novelty_reason 说明未闭环原因。
+
+步骤 3 — longlist 仍不足 25 条：
+- 在五段式日报末尾或「来源说明」段落如实写：「今日 fresh 信号偏少，longlist 以补充源为主」。
+- 报告必须记录：aihot_selected_count、aihot_supplement_count、web_supplement_count、narrow_carry_count、since_iso。
+- 禁止为凑满 30 条而重复内容、硬凑低质量链接或整包重播昨日 remaining。
+- 目标仍为 25–30 条，但质量优先于数量。
+
 采集与长清单规则：
 1. AIhot 是 daily_discovery 主入口，但不是唯一填充来源。每日 longlist 不能默认 30 条全部来自 AIhot；必须评估官方/一手来源、产品案例、产品 teardown、优秀产品实践、GitHub/release/changelog、研究/报告是否需要补充进入 25-30 条清单。
 2. 建议配比：AIhot 约 18-24 条；官方/一手来源 2-5 条；产品案例/产品 teardown/优秀产品实践 1-3 条；GitHub/release/changelog 2-4 条。若最终全部来自 AIhot，必须在 daily state 或 report 中说明其他来源未补充的原因。
