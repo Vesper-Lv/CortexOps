@@ -27,15 +27,22 @@ prompt = """
 - pools/personal-work.jsonl
 - pools/archive.jsonl
 
-AIhot API 采集（强制，优先于任何 Web 抓取）：
-0. 预检：带浏览器 UA 请求 AIhot API（见 docs/aihot-api.md）。预检失败则进入 fallback 模式并在 report 披露，禁止伪造 AIhot 条目。
-1. 拉取精选池（默认路径，不是 /api/public/daily）：
-   UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-   since=$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)   # Asia/Shanghai 过去 24h 对应 UTC
-   curl -sS -H "User-Agent: $UA" \
-     "https://aihot.virxact.com/api/public/items?mode=selected&since=${since}&take=50"
-2. 可选：将原始 JSON 保存到 state/daily/YYYY-MM-DD-aihot-raw.json 便于审计。
-3. 字段映射（每条 AIhot item）：
+AIhot 采集（两阶段，strict 默认）：
+
+Phase 0 — Ingest 门禁（必须先于任何采集/写入）：
+0. 读取 state/daily/.ingest-mode（默认 strict）。
+1. 运行：python3 scripts/verify-daily-ingest.py <今日 YYYY-MM-DD>
+   - exit 0 → 继续 Phase 1
+   - exit 非 0 → **立即停止**：
+     a. 若 manifest 不存在或 ready=false，读取 state/daily/YYYY-MM-DD-ingest-error.json（若存在）总结原因
+     b. 写入/更新 state/daily/YYYY-MM-DD-ingest-error.md（人可读，说明需在 Terminal 运行 ./scripts/ai-pm-ingest-prefetch.sh）
+     c. **不得**创建或覆盖 state/daily/YYYY-MM-DD-links.jsonl、state/daily/YYYY-MM-DD-report.md、pools 写入
+     d. 向用户返回明确错误并 exit
+2. strict 模式下 **禁止**在 Codex 内 curl AIhot 作为替代；不得 Web fallback 凑 longlist。
+
+Phase 1 — 从预拉 raw 映射 AIhot（禁止 sandbox curl）：
+1. 读取 state/daily/YYYY-MM-DD-ingest-manifest.json 与 state/daily/YYYY-MM-DD-aihot-raw.json（manifest 已验证）。
+2. 对 raw.items[] 逐条映射（见 docs/aihot-api.md）：
    - aihot_id ← item.id
    - source_url ← https://aihot.virxact.com/items/{item.id}
    - original_url ← item.url
@@ -44,14 +51,13 @@ AIhot API 采集（强制，优先于任何 Web 抓取）：
    - display_summary ← item.summary（同 aihot_summary）
    - aihot_summary_status ← verified
    - source_origin ← aggregator；source_role ← daily_discovery
-4. 硬门禁（写入 JSONL 前自检）：
+3. 硬门禁（写入 JSONL 前自检）：
    - 无 aihot_id → aihot_summary 必须为空，aihot_summary_status=not_applicable
-   - 有 aihot_id → aihot_summary 非空且来自 API summary；禁止自写一句压缩
+   - 有 aihot_id → aihot_summary 非空且来自 raw item.summary；禁止自写一句压缩
    - 禁止用 ai-bot.cn 内容填入 aihot_summary；禁止 10 条共用同一列表 source_url
-5. API 不可用 fallback：
-   - report 必须写「AIhot API 不可用」及失败原因
-   - 仅允许 GitHub/arXiv/官方等补充源；aihot_summary 全空
-   - 目标 longlist 可低于 25，不得伪造 AIhot 凑数
+4. §1 采集状态行必须写：ingest_mode=strict, prefetch_host=terminal, aihot_items=N, manifest_ready=true。
+5. GitHub/arXiv 补充：仅当 manifest.sources.github/arxiv 为 ok 时允许 curl 或 Web；若 Codex 内 curl 仍 DNS 失败，可仅用 AIhot longlist 继续，但须在 report 披露「GitHub/arXiv 沙箱补充 skipped」——不得伪造链接。
+6. resilient 模式（ingest_mode=resilient 时）：才允许原 fallback——report 披露 API 失败、aihot_summary 全空、GitHub/arXiv 补充；strict 下不适用。
 
 采集与长清单规则：
 1. AIhot 是 daily_discovery 主入口，但不是唯一填充来源。每日 longlist 不能默认 30 条全部来自 AIhot；必须评估官方/一手来源、产品案例、产品 teardown、优秀产品实践、GitHub/release/changelog、研究/报告是否需要补充进入 25-30 条清单。
@@ -78,7 +84,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 # 今日 AI PM 行业雷达
 
 ## 1. 五段式日报
-§1 开头必须包含一行采集状态：AIhot API 成功/失败、入库条数、Web 补充条数。
+§1 开头必须包含一行采集状态：ingest_mode、manifest_ready、aihot_items、GitHub/arXiv 补充状态。
 用五段判断今天的大方向：产品/行业动态、GitHub/工程信号、论文/研究信号、工具/工作流信号、风险/限制/反例。
 
 ## 2. 今日 30mins 阅读包

@@ -728,6 +728,14 @@ practice.
    - Reject rows where `source_url` is a list page (e.g. ai-bot.cn/daily-ai-news/)
      shared by multiple items.
 
+7. Ingest Manifest Gate（strict 模式强制）
+   - 生成 `YYYY-MM-DD-links.jsonl` 或 `YYYY-MM-DD-report.md` 前必须存在：
+     - `state/daily/YYYY-MM-DD-ingest-manifest.json` 且 `ready=true`
+     - `state/daily/YYYY-MM-DD-aihot-raw.json` 且 `items.length >= min_aihot_items`
+   - 运行 `scripts/verify-daily-ingest.py YYYY-MM-DD` 必须 exit 0
+   - strict 下校验失败：只写 ingest-error，**禁止**写 links/report
+   - AIhot 字段映射 **仅允许**来自 raw JSON 的 `items[]`，不得 agent 重写
+
 ## 5. Deduplication Rules
 
 Deduplicate before daily output.

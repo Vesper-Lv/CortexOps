@@ -8,14 +8,16 @@ Daily radar runs should create:
 
 - `daily/YYYY-MM-DD-links.jsonl`: one JSON object per collected link
 - `daily/YYYY-MM-DD-report.md`: the human-readable daily report
+- `daily/YYYY-MM-DD-ingest-manifest.json`: prefetch gate (`ready` must be true before report in strict mode)
+- `daily/YYYY-MM-DD-aihot-raw.json`: raw AIhot API response (written by Terminal prefetch in strict mode)
+- `daily/YYYY-MM-DD-ingest-error.json` / `.md`: written when strict prefetch fails
+- `daily/.ingest-mode`: `strict` (default) or `resilient`
 
 The JSONL file is the source of truth for link state. The Markdown report is a
 reading view generated from that state.
 
-Optionally, daily radar runs may also write `daily/YYYY-MM-DD-aihot-raw.json`
-with the raw AIhot Public API response for provenance auditing. This file is
-not read by downstream automations; it exists so operators can verify that
-`aihot_summary` values were copied verbatim from the API.
+The ingest manifest and aihot raw files support provenance auditing and the
+strict ingest gate. Downstream automations read links.jsonl, not aihot-raw.json.
 
 ## Memory Files
 
