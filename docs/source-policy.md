@@ -375,6 +375,9 @@ The daily radar is the entry point, not the final output.
 - Weekly outputs should select and schedule.
 - They should choose what to read, what to build, and what to investigate next.
 - Weekly outputs should not simply restate the daily radar.
+- Persist weekly AI PM execution reports as Markdown at
+  `state/weekly/YYYY-MM-DD-report.md`. Do not create a JSONL companion unless
+  structured weekly selection state is needed later.
 
 ### Monthly
 

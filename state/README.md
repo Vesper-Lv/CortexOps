@@ -1,6 +1,7 @@
 # CortexOps State Files
 
-This directory stores machine-readable daily state for CortexOps automations.
+This directory stores machine-readable daily and weekly state for CortexOps
+automations.
 
 ## Daily Files
 
@@ -16,6 +17,16 @@ Optionally, daily radar runs may also write `daily/YYYY-MM-DD-aihot-raw.json`
 with the raw AIhot Public API response for provenance auditing. This file is
 not read by downstream automations; it exists so operators can verify that
 `aihot_summary` values were copied verbatim from the API.
+
+## Weekly Files
+
+Weekly AI PM execution review runs should create:
+
+- `weekly/YYYY-MM-DD-report.md`: the human-readable weekly execution report
+
+Weekly reports are scheduling and decision views over candidate pools, daily
+JSONL state, and 7-day memory. They are Markdown-only for now; do not create a
+JSONL companion unless structured weekly selection state is needed later.
 
 ## Memory Files
 

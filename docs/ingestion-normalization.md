@@ -668,6 +668,22 @@ Weekly, monthly, demo, and engineering-learning automations must prefer
 `confirmed` and `changed` entries. They may use `pending` entries only when they
 need fresh candidates and should clearly label them as unconfirmed.
 
+### Weekly Report Record
+
+Weekly AI PM execution review runs should write:
+
+```text
+state/weekly/YYYY-MM-DD-report.md
+```
+
+Use the report date (Asia/Shanghai) as `YYYY-MM-DD`. The weekly report is a
+human-readable scheduling view over candidate pools, daily link JSONL, and
+7-day memory. It is not a duplicate of daily news output.
+
+Weekly reports are Markdown-only for now. Do not create a JSONL companion unless
+structured weekly selection state (for example per-pool confirmed picks) is
+needed later.
+
 ## 4.2 Pre-Inclusion Gates
 
 Run these gates before a candidate enters the daily link list, P0/P1 selection,
