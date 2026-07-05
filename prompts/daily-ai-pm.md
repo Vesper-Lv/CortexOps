@@ -1,8 +1,8 @@
-version = 1
-id = "ai-pm"
-kind = "cron"
-name = "每日 AI PM 行业雷达"
-prompt = """
+---
+automation_id: ai-pm
+kind: daily
+source_toml: automations/ai-pm.toml
+---
 请生成今日“AI PM 行业雷达”，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 
 基础规则：
@@ -112,12 +112,3 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 事实、AIhot 摘要、Codex 判断分离；剩余链接以事实摘要为主，克制解读。
 - 去重/保留原因只写入 novelty_reason，并在报告中只呈现一次，reason 不复述。
 - knowledge_gap 用“可获得的事实 + 需要额外研究的问题”呈现，不假装给出文章未包含的判断。
-"""
-status = "ACTIVE"
-rrule = "FREQ=DAILY;BYHOUR=8;BYMINUTE=30;BYSECOND=0"
-model = "gpt-5.5"
-reasoning_effort = "high"
-execution_environment = "local"
-cwds = ["/Users/jiexinlv/Documents/CortexOps"]
-created_at = 1782991123914
-updated_at = 1782991123914
