@@ -22,6 +22,41 @@ Live daily state and candidate pools live outside this snapshot folder:
 - `../pools/*.jsonl`: candidate pools for weekly, monthly, demo, and learning
   automations
 
+## Prompt templates (`prompts/`)
+
+Workbench keeps a versioned copy of each automation prompt under `../prompts/`.
+TOML files in this folder remain snapshots for Codex; `prompts/` is the workbench
+canonical copy for registry sync.
+
+Workflow when changing a prompt:
+
+1. Edit the matching file in `../prompts/<slug>.md`
+2. Run `npm run prompts:sync` to upsert `PromptTemplate` rows (hash + metadata)
+3. Optionally update the TOML snapshot here for Codex parity
+
+CLI helpers:
+
+- `npm run prompts:sync` — extract missing prompt files from TOML and sync DB registry
+- `npm run automation:register -- --id ai-pm --outputs state/daily/YYYY-MM-DD-links.jsonl` — manually record an external Codex run
+- `npm run import` — attaches a `PolicySnapshot` to each import and heuristically registers `AutomationRun` rows
+
+View read-only status at **Settings → Automations** in the workbench.
+
+## Daily AI PM — AIhot collection contract
+
+The daily `ai-pm` automation must follow this order (also in `docs/source-policy.md`
+and `prompts/daily-ai-pm.md`):
+
+1. **Primary:** `mode=selected` + `since=last_run_finished_at` (rolling 24h).
+2. **If selected < 12:** expand with new `canonical_key` only — AIhot daily/48h
+   supplement, then GitHub/Anthropic/OpenAI/arXiv, then narrow carry-over
+   (max 3–5; no bulk yesterday remaining).
+3. **If still < 25:** note in the report that fresh signals were thin; do not pad
+   to 30 with duplicates.
+
+After prompt changes, run `npm run prompts:sync` and update the live Codex copy in
+`~/.codex/automations` when ready.
+
 ## Convention
 
 All meaningful automation changes should start from
@@ -51,18 +86,3 @@ python3 -c 'import tomllib, pathlib; [tomllib.loads(p.read_text()) for p in path
 
 For focus-rule changes, also verify the affected automations reference
 `focus-policy.md`.
-
-## Worktree and branch sync
-
-- Automation kernel (`docs/`, `automations/`, `state/`, `pools/`) is maintained on branch `codex/source-layering-policy` in the main worktree.
-- Web App code lives on `codex/web-workbench` in a separate worktree.
-- Do not change daily report format or automation prompts only on `web-workbench`. Merge from `source-layering-policy` instead.
-- After editing `automations/*.toml`, sync: (1) git push, (2) Cursor Automation prompt, (3) `~/.codex/automations` live copy.
-- Cursor Automation should bind repository `Vesper-Lv/CortexOps` on branch `codex/source-layering-policy`.
-- Prompt paths in `automations/*.toml` are repo-relative for Cloud Agent; `cwds` remains the local macOS path for Codex Desktop.
-
-## AIhot collection
-
-Daily radar collects AIhot items via Public API (`docs/aihot-api.md`), not HTML
-scraping. Requires Codex sandbox `network_access = true` and browser User-Agent
-on `/api/public/*` requests.
