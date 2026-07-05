@@ -18,19 +18,71 @@ model Job {
 }
 
 model ImportRun {
-  id                 String      @id @default(cuid())
-  startedAt          DateTime    @default(now())
+  id                 String           @id @default(cuid())
+  startedAt          DateTime         @default(now())
   finishedAt         DateTime?
-  status             String      @default("running") // running | success | partial | failed
-  filesScanned       Int         @default(0)
-  linesTotal         Int         @default(0)
-  importedSignals    Int         @default(0)
-  importedCandidates Int         @default(0)
-  skipped            Int         @default(0)
-  errors             Int         @default(0)
+  status             String           @default("running") // running | success | partial | failed
+  filesScanned       Int              @default(0)
+  linesTotal         Int              @default(0)
+  importedSignals    Int              @default(0)
+  importedCandidates Int              @default(0)
+  skipped            Int              @default(0)
+  errors             Int              @default(0)
   notes              String?
+  policySnapshotId   String?
+  policySnapshot     PolicySnapshot?  @relation(fields: [policySnapshotId], references: [id])
   signals            Signal[]
   candidates         Candidate[]
+}
+
+model PromptTemplate {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  automationId  String          @unique
+  name          String
+  kind          String
+  sourcePath    String
+  contentHash   String
+  model         String?
+  scheduleRrule String?
+  status        String          @default("active")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  runs          AutomationRun[]
+}
+
+model PolicySnapshot {
+  id               String          @id @default(cuid())
+  snapshotKey      String          @unique
+  sourcePolicyHash String
+  ingestionHash    String
+  focusPolicyHash  String
+  sourcePathsJson  String
+  createdAt        DateTime        @default(now())
+  importRuns       ImportRun[]
+  automationRuns   AutomationRun[]
+}
+
+model AutomationRun {
+  id               String          @id @default(cuid())
+  automationId     String
+  promptTemplateId String?
+  policySnapshotId String?
+  status           String          @default("external")
+  trigger          String
+  model            String?
+  inputFilesJson   String?
+  outputFilesJson  String?
+  error            String?
+  notes            String?
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  promptTemplate   PromptTemplate? @relation(fields: [promptTemplateId], references: [id])
+  policySnapshot   PolicySnapshot? @relation(fields: [policySnapshotId], references: [id])
+
+  @@index([automationId])
+  @@index([createdAt])
 }
 
 model Signal {

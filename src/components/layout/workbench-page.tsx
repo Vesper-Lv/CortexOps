@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 type Metric = {
@@ -10,6 +12,7 @@ type EmptyAction = {
   icon: LucideIcon;
   label: string;
   tone?: "primary" | "neutral";
+  href?: Route;
 };
 
 type WorkbenchPageProps = {
@@ -71,19 +74,28 @@ export function WorkbenchPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {emptyState.actions.map((action) => (
-              <span
-                key={action.label}
-                className={
-                  action.tone === "primary"
-                    ? "inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                    : "inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-muted-foreground"
-                }
-              >
-                <action.icon className="h-4 w-4" />
-                {action.label}
-              </span>
-            ))}
+            {emptyState.actions.map((action) => {
+              const className =
+                action.tone === "primary"
+                  ? "inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+                  : "inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-muted-foreground";
+              const content = (
+                <>
+                  <action.icon className="h-4 w-4" />
+                  {action.label}
+                </>
+              );
+
+              return action.href ? (
+                <Link key={action.label} href={action.href} className={className}>
+                  {content}
+                </Link>
+              ) : (
+                <span key={action.label} className={className}>
+                  {content}
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -16,9 +16,10 @@ export async function importArchiveReports(
   readFile: (path: string) => Promise<string>,
   files: { path: string; reportType: string }[],
   importRunId?: string
-): Promise<{ imported: number; errors: number }> {
+): Promise<{ imported: number; errors: number; importedTypes: string[] }> {
   let imported = 0;
   let errors = 0;
+  const importedTypes: string[] = [];
 
   for (const file of files) {
     let content: string;
@@ -53,7 +54,8 @@ export async function importArchiveReports(
       }
     });
     imported += 1;
+    importedTypes.push(file.reportType);
   }
 
-  return { imported, errors };
+  return { imported, errors, importedTypes };
 }
