@@ -1,1 +1,7 @@
 .DS_Store
+state/daily/*-ingest-manifest.json
+state/daily/*-ingest-error.json
+state/daily/*-ingest-error.md
+state/daily/*-aihot-raw.json
+state/daily/*-links.jsonl
+state/daily/*-report.md
