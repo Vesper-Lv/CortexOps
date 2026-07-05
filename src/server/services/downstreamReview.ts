@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db";
 import { isDownstreamEligible } from "@/shared/signalStatus";
 
-export type WeeklyEligibleSignal = {
+export type DownstreamEligibleSignal = {
   id: string;
   title: string | null;
   url: string | null;
@@ -12,7 +12,7 @@ export type WeeklyEligibleSignal = {
   status: string | null;
 };
 
-export async function listSignalsForWeeklyReview(): Promise<WeeklyEligibleSignal[]> {
+export async function listDownstreamEligibleSignals(): Promise<DownstreamEligibleSignal[]> {
   const rows = await prisma.signal.findMany({
     orderBy: [{ date: "desc" }, { priority: "asc" }],
     select: {
@@ -47,3 +47,8 @@ export async function listSignalsForWeeklyReview(): Promise<WeeklyEligibleSignal
       status: row.status
     }));
 }
+
+/** @deprecated Use listDownstreamEligibleSignals */
+export const listSignalsForWeeklyReview = listDownstreamEligibleSignals;
+
+export type WeeklyEligibleSignal = DownstreamEligibleSignal;

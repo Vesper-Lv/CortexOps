@@ -11,6 +11,7 @@ import {
   KanbanSquare,
   Library,
   ListTodo,
+  ScrollText,
   Settings,
   SlidersHorizontal,
   Sparkles
@@ -66,7 +67,8 @@ export const navigationSections: NavSection[] = [
     basePath: "/settings",
     children: [
       { href: "/settings", label: "General", icon: Settings },
-      { href: "/settings/focus-rules", label: "Focus Rules", icon: SlidersHorizontal }
+      { href: "/settings/focus-rules", label: "Focus Rules", icon: SlidersHorizontal },
+      { href: "/settings/audit", label: "Audit", icon: ScrollText }
     ]
   }
 ];
