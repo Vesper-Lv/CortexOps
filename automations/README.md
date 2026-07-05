@@ -64,5 +64,10 @@ For focus-rule changes, also verify the affected automations reference
 ## AIhot collection
 
 Daily radar collects AIhot items via Public API (`docs/aihot-api.md`), not HTML
-scraping. Requires Codex sandbox `network_access = true` and browser User-Agent
-on `/api/public/*` requests.
+scraping. In strict mode (default), run Terminal prefetch before Codex:
+
+1. `./scripts/ai-pm-ingest-prefetch.sh` → manifest + aihot-raw
+2. Codex automation reads manifest/raw only; fails closed if not ready
+
+See `docs/aihot-api.md` and `state/daily/.ingest-mode`. Codex sandbox may still
+need `network_access = true` for GitHub/arXiv supplements inside the agent.

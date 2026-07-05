@@ -14,7 +14,19 @@ git show codex/source-layering-policy:automations/ai-pm.toml | \
 
 Copy the full printed prompt.
 
-## 2. AIhot API precheck
+## 1.5 Terminal ingest prefetch (required in strict mode)
+
+From main worktree, **before** Codex Run:
+
+```bash
+cd /Users/jiexinlv/Documents/CortexOps
+./scripts/ai-pm-ingest-prefetch.sh
+./scripts/verify-daily-ingest.py $(TZ=Asia/Shanghai date +%Y-%m-%d)
+```
+
+Expected: `INGEST PREFETCH OK` and verifier `OK: ingest ready`. If exit non-zero, **do not run** Codex automation.
+
+## 2. AIhot API precheck (optional sanity check)
 
 Verify the Public API responds before syncing the prompt:
 
@@ -23,7 +35,7 @@ UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, l
 curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=selected&take=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok', len(d.get('items',[])))"
 ```
 
-Expected: `ok 1` (or similar non-zero item count). If this fails, the automation may enter AIhot API fallback mode; still complete steps 3–6.
+Expected: `ok 1` (or similar non-zero item count). In strict mode, prefetch (§1.5) is the gate; this curl is an optional extra check.
 
 ## 3. Paste into Cursor Automation UI
 
