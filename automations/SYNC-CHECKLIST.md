@@ -14,7 +14,20 @@ git show codex/source-layering-policy:automations/ai-pm.toml | \
 
 Copy the full printed prompt.
 
-## 2. AIhot API precheck
+## 2. Terminal prefetch (Codex daily — required when Codex shell has no DNS)
+
+From the main CortexOps worktree:
+
+```bash
+cd /Users/jiexinlv/Documents/CortexOps
+./scripts/codex-daily-prefetch.sh
+```
+
+Expected: `INGEST PREFETCH OK` and `OK: ingest ready for YYYY-MM-DD`.
+
+See `docs/codex-terminal-prefetch.md` for A/B test steps.
+
+## 3. AIhot API precheck (optional if prefetch already passed)
 
 Verify the Public API responds before syncing the prompt:
 
@@ -25,7 +38,7 @@ curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=s
 
 Expected: `ok 1` (or similar non-zero item count). If this fails, the automation may enter AIhot API fallback mode; still complete steps 3–6.
 
-## 3. Paste into Cursor Automation UI
+## 4. Paste into Cursor Automation UI
 
 1. Open Cursor → Automations → AI 日报 → Settings → Prompt.
 2. Paste the exported prompt from step 1.
@@ -36,13 +49,13 @@ Repository: Vesper-Lv/CortexOps
 Branch: codex/source-layering-policy
 ```
 
-## 4. Copy ai-pm.toml to ~/.codex/automations/
+## 5. Copy ai-pm.toml to ~/.codex/automations/
 
 ```bash
 cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
 ```
 
-## 5. Verify diff is empty
+## 6. Verify diff is empty
 
 ```bash
 diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
@@ -50,7 +63,7 @@ diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
 
 Expected: `in sync` (no diff output).
 
-## 6. Run Test
+## 7. Run Test
 
 In Cursor → Automations → AI 日报, click **Run Test** (avoid the 08:00 peak window if possible).
 
