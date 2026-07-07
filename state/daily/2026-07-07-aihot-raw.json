@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "error": "SSL connection reset by peer",
+  "attempted_at": "2026-07-07T08:25:57.000Z",
+  "endpoint": "https://aihot.virxact.com/api/public/items?mode=selected&since=2026-07-02T15:00:00.000Z&take=50"
+}
