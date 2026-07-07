@@ -41,7 +41,88 @@ strict 门禁不变：Automation 禁止 curl AIhot，只读 manifest + raw
   仍须 verify；失败则 fail closed
 ```
 
-**结论：** Cursor 不应默认「云端自己拉 AIhot」；应 **优先消费 Mac 已 prefetch 的 raw**（git 或同机），云端拉取仅作 **修好网络后的备选**。
+**结论：** Cursor 不应默认「云端自己拉 AIhot」。应与 Codex 一样：**Terminal prefetch 成功后再触发云端执行**。
+
+### 修订后的 Cursor 策略（与 Codex 对齐）— **可行**
+
+Cursor Automation 支持 **Webhook** 与 **Push to branch** 触发（[官方文档](https://cursor.com/docs/cloud-agent/automations)），**不要**再用「仅 9:00 cron + 云端自己 curl」作为主路径。
+
+```text
+推荐主路径（信号驱动，与 Codex 同构）
+
+  Mac Terminal
+    → daily-prefetch.sh（拉 AIhot raw + manifest ready）
+    → verify-daily-ingest.py
+    → cursor-trigger-daily.sh（POST Webhook）
+         ↓
+  Cursor Cloud Automation（Webhook 触发）
+    → Phase 0 verify（双保险）
+    → 只读 raw → links.jsonl + report.md
+    → 禁止 curl AIhot
+
+  ❌ 去掉：09:00 cron 单独触发且云端自己 fetch
+  ✅ 保留：可选 cron 仅作「无 prefetch 则 fail closed」的告警（见下）
+```
+
+#### 触发方式对比
+
+| 方式 | 可行性 | 说明 |
+|------|--------|------|
+| **Webhook（推荐）** | ✅ | prefetch 成功后 `curl POST`；与 Codex `codex exec` 等价 |
+| **Git push 触发** | ✅ | prefetch 后 `git push` manifest+raw；Automation 绑「Push to branch」 |
+| **9:00 cron 单独跑** | ⚠️ 不推荐 | 无 prefetch 时会云端拉 AIhot → 你已验证会失败 |
+| **Cloud setup 自己 fetch** | ⚠️ 备选 | 仅修好 egress 白名单后启用 |
+
+#### Webhook 配置步骤
+
+1. [cursor.com/automations](https://cursor.com/automations) → 日报 Automation
+2. **Triggers**：删除或禁用纯 Schedule；添加 **Webhook**
+3. 绑定 repo：`Vesper-Lv/CortexOps` / `codex/source-layering-policy`
+4. Prompt 与 `automations/ai-pm.toml` 一致（Phase 0 strict，禁止 curl AIhot）
+5. 保存后复制 Webhook URL + Generate auth header
+6. 本机：
+
+```bash
+mkdir -p ~/.cortexops
+cp scripts/cursor-webhook.env.example ~/.cortexops/cursor-webhook.env
+chmod 600 ~/.cortexops/cursor-webhook.env
+# 编辑填入 URL 和 token
+
+# prefetch 成功后触发云端
+./scripts/codex-daily-prefetch.sh
+./scripts/cursor-trigger-daily.sh
+```
+
+或使用统一编排：
+
+```bash
+RUNNER=cursor ./scripts/daily-ingest-pipeline.sh
+```
+
+7. **launchd 9:00**：`RUNNER=cursor ./scripts/daily-ingest-pipeline.sh`（与 Codex 共用 prefetch）
+
+#### Git push 触发（Webhook 不稳定时的备选）
+
+社区有 Webhook 401 间歇问题；可改用：
+
+```text
+prefetch 成功
+  → git add state/daily/YYYY-MM-DD-{ingest-manifest,aihot-raw}.json
+  → git commit -m "chore(ingest): daily prefetch YYYY-MM-DD"
+  → git push origin codex/source-layering-policy
+  → Cursor Automation「Push to branch」触发
+```
+
+需在 `.gitignore` 中 **不再忽略** 这两类文件，或单独 `state/daily/ingest/` 目录跟踪。
+
+#### 9 点没开电脑时
+
+| 配置 | 9:00 行为 |
+|------|-----------|
+| **仅 Webhook，无 cron** | 云端 **不跑**；开机后 launchd `RunAtLoad` → prefetch → webhook → 云端跑 |
+| cron + strict prompt | 9:00 可能空跑并 **verify 失败**（浪费额度，但不造假） |
+
+**推荐：禁用 Schedule cron，只用 Webhook + launchd RunAtLoad。**
 
 ---
 
@@ -61,7 +142,9 @@ prefetch → verify → 写 signal 文件 → codex exec（headless）
 
 | 文件 | 作用 |
 |------|------|
-| `scripts/codex-daily-run.sh` | 编排：prefetch → verify → `codex exec` |
+| `scripts/codex-daily-run.sh` | Codex 编排：prefetch → `codex exec` |
+| `scripts/cursor-trigger-daily.sh` | prefetch 成功后 POST Cursor Webhook |
+| `scripts/daily-ingest-pipeline.sh` | 统一入口（RUNNER=cursor/codex/both） |
 | `scripts/codex-daily-prefetch.sh` | 仅 prefetch（已有） |
 | `state/daily/YYYY-MM-DD-ingest-ready.signal` | Terminal 成功后的「提示文件」 |
 | `launchd/com.cortexops.daily-ai-pm.plist.example` | 09:00 + 登录时补跑 |
@@ -144,9 +227,9 @@ Codex App 若仍手动 Run，prompt 里 Phase 0 会先跑 verify；无 manifest 
 | | Cursor | Codex |
 |--|--------|-------|
 | Fetch | Mac Terminal 或（修好网络后）Cloud setup | **仅 Mac Terminal** |
-| Analyze | Cloud Automation | **`codex exec` 或 App** |
-| 9 点关机 | 云端跑但可能 **无 raw → 失败** | launchd **不跑**；开机后 `RunAtLoad` 补跑 |
-| 自动触发 | Cursor 平台 cron | **launchd → codex-daily-run.sh** |
+| Analyze | Cloud Automation（**Webhook 触发**） | **`codex exec` 或 App** |
+| 9 点关机 | **不跑**（无 Webhook 信号） | launchd **不跑**；开机后 `RunAtLoad` 补跑 |
+| 自动触发 | **Terminal → Webhook POST** | **launchd → codex exec** |
 
 ---
 

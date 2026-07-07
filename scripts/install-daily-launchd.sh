@@ -16,7 +16,8 @@ fi
 # Patch paths for this machine
 sed "s|/Users/jiexinlv/Documents/CortexOps|${ROOT}|g" "$PLIST_SRC" >"$PLIST_DST"
 
-chmod +x "${ROOT}/scripts/codex-daily-run.sh"
+chmod +x "${ROOT}/scripts/daily-ingest-pipeline.sh"
+chmod +x "${ROOT}/scripts/cursor-trigger-daily.sh"
 chmod +x "${ROOT}/scripts/codex-daily-prefetch.sh"
 chmod +x "${ROOT}/scripts/ai-pm-ingest-prefetch.sh"
 
@@ -29,4 +30,4 @@ echo "Installed: $PLIST_DST"
 echo "Logs: state/daily/codex-daily-run.log"
 echo ""
 echo "Important: disable Codex App built-in cron for the same automation to avoid double runs."
-echo "Test now: ${ROOT}/scripts/codex-daily-run.sh"
+echo "Test now: RUNNER=both ${ROOT}/scripts/daily-ingest-pipeline.sh"
