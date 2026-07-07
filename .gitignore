@@ -1,1 +1,16 @@
 .DS_Store
+node_modules/
+
+# Daily ingest runtime (Terminal prefetch writes these; do not commit)
+state/daily/*-ingest-manifest.json
+state/daily/*-aihot-raw.json
+state/daily/*-ingest-error.json
+state/daily/*-ingest-error.md
+state/daily/*-links.a.jsonl
+state/daily/*-links.b.jsonl
+state/daily/*-report.a.md
+state/daily/*-report.b.md
+state/daily/*-ingest-ready.signal
+state/daily/codex-daily-run.log
+state/daily/launchd.stdout.log
+state/daily/launchd.stderr.log
