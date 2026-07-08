@@ -36,7 +36,19 @@ UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, l
 curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=selected&take=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok', len(d.get('items',[])))"
 ```
 
-Expected: `ok 1` (or similar non-zero item count). If this fails, the automation may enter AIhot API fallback mode; still complete steps 3–6.
+Expected: `ok 1` (or similar non-zero item count). **Automation must not curl AIhot** in strict mode; this precheck is for operators only.
+
+## 3b. PR-A prompt gate (forbid sandbox curl)
+
+After syncing prompt, confirm strict supplemental rules are present:
+
+```bash
+cd /Users/jiexinlv/Documents/CortexOps
+python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read())['prompt']; assert '禁止' in p and 'curl' in p; assert 'skipped_no_prefetch' in p; print('PR-A prompt ok')"
+rg '允许 curl' automations/ai-pm.toml && exit 1 || echo "no forbidden 允许 curl phrase"
+```
+
+Expected: `PR-A prompt ok` and `no forbidden 允许 curl phrase`.
 
 ## 4. Paste into Cursor Automation UI
 
