@@ -155,21 +155,24 @@ for u in urls:
     print(u)
 PY
 
-GITHUB_AUTH=()
-if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  GITHUB_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-fi
-
 GITHUB_HTTP="000"
 github_curl_exit=1
 while IFS= read -r GITHUB_URL; do
   [[ -z "$GITHUB_URL" ]] && continue
   set +e
-  GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
-    -H "Accept: application/vnd.github+json" \
-    -H "User-Agent: CortexOps-prefetch" \
-    "${GITHUB_AUTH[@]}" \
-    "$GITHUB_URL" 2>/dev/null)
+  # macOS /bin/bash 3.2 + set -u: expanding empty GITHUB_AUTH[@] raises "unbound variable"
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: CortexOps-prefetch" \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      "$GITHUB_URL" 2>/dev/null)
+  else
+    GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: CortexOps-prefetch" \
+      "$GITHUB_URL" 2>/dev/null)
+  fi
   github_curl_exit=$?
   set -e
   if [[ $github_curl_exit -ne 0 ]]; then
