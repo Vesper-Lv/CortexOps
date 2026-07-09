@@ -14,18 +14,18 @@ git show codex/source-layering-policy:automations/ai-pm.toml | \
 
 Copy the full printed prompt.
 
-## 2. Terminal prefetch (Codex daily — required when Codex shell has no DNS)
-
-From the main CortexOps worktree:
+## 2. Terminal prefetch (required — AIhot + supplemental raw)
 
 ```bash
 cd /Users/jiexinlv/Documents/CortexOps
 ./scripts/codex-daily-prefetch.sh
 ```
 
-Expected: `INGEST PREFETCH OK` and `OK: ingest ready for YYYY-MM-DD`.
+Expected: `INGEST PREFETCH OK` with `aihot_items=N`; `arxiv_items` / `github_items` as `ok` or `skipped`.
 
-See `docs/codex-terminal-prefetch.md` for A/B test steps.
+Optional: `~/.cortexops/github-prefetch.env` with `GITHUB_TOKEN` for higher GitHub rate limits.
+
+See `docs/codex-terminal-prefetch.md` and `docs/supplemental-prefetch-api.md`.
 
 ## 3. AIhot API precheck (optional if prefetch already passed)
 

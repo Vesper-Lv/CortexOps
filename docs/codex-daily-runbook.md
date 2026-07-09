@@ -73,7 +73,7 @@ python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read(
 ## 四、验收 / 检查产物
 
 ```bash
-ls -la state/daily/${DATE}-{aihot-raw.json,ingest-manifest.json}
+ls -la state/daily/${DATE}-{aihot-raw.json,arxiv-raw.xml,github-raw.json,ingest-manifest.json}
 ls -la state/daily/${DATE}-{links.jsonl,report.md}
 open state/daily/${DATE}-report.md
 

@@ -1,11 +1,35 @@
 #!/usr/bin/env python3
-"""Verify daily ingest manifest + aihot raw before Codex report generation."""
+"""Verify daily ingest manifest + prefetch raw files before report generation."""
 
 from __future__ import annotations
 
 import json
 import sys
 from pathlib import Path
+
+
+def check_supplemental(
+    manifest: dict,
+    daily: Path,
+    date: str,
+    name: str,
+    raw_suffix: str,
+) -> tuple[int, str]:
+    src = manifest.get("sources", {}).get(name, {})
+    status = src.get("status", "skipped")
+    count = int(src.get("item_count") or 0)
+
+    if status == "ok":
+        raw_path = daily / f"{date}-{raw_suffix}"
+        if not raw_path.exists() or raw_path.stat().st_size == 0:
+            print(f"FAIL: {name} status=ok but missing raw {raw_path}", file=sys.stderr)
+            sys.exit(1)
+        return count, "ok"
+    if status == "skipped":
+        print(f"WARN: supplemental {name} skipped ({src.get('error') or 'no raw'})", file=sys.stderr)
+        return 0, "skipped_no_prefetch"
+    print(f"WARN: supplemental {name} status={status}", file=sys.stderr)
+    return 0, "skipped_no_prefetch"
 
 
 def main() -> int:
@@ -59,15 +83,13 @@ def main() -> int:
         print(f"FAIL: aihot items {len(items)} < min {min_items}", file=sys.stderr)
         return 1
 
-    for src in ("github", "arxiv"):
-        s = manifest.get("sources", {}).get(src, {})
-        if s.get("required") and s.get("status") not in ("ok", "warn"):
-            print(f"FAIL: required {src} status={s.get('status')}", file=sys.stderr)
-            return 1
-        if s.get("status") == "warn":
-            print(f"WARN: supplemental {src} probe failed (HTTP {s.get('http_code')})", file=sys.stderr)
+    arxiv_n, arxiv_tag = check_supplemental(manifest, daily, date, "arxiv", "arxiv-raw.xml")
+    github_n, github_tag = check_supplemental(manifest, daily, date, "github", "github-raw.json")
 
-    print(f"OK: ingest ready for {date} (aihot={len(items)} items, mode={mode})")
+    print(
+        f"OK: ingest ready for {date} (aihot={len(items)} items, "
+        f"arxiv={arxiv_n}/{arxiv_tag}, github={github_n}/{github_tag}, mode={mode})"
+    )
     return 0
 
 

@@ -10,7 +10,7 @@ source_toml: automations/ai-pm.toml
 - 优先遵循 docs/source-policy.md。
 - 采集、字段标准化、JSONL 状态、候选池路由、去重和人工确认规则优先遵循 docs/ingestion-normalization.md。
 - 用户当前注意力、GitHub 实践适配度和求职面试证明力规则优先遵循 docs/focus-policy.md。
-- AIhot 采集契约优先遵循 docs/aihot-api.md（Public API + UA + 字段映射）。
+- AIhot 采集契约优先遵循 docs/aihot-api.md；GitHub/arXiv 补充契约遵循 docs/supplemental-prefetch-api.md。
 - 先读取 state/memory/ai-pm-7d.jsonl 做 7 天去重；再用最近日报 Markdown 作为补充复核。
 
 总目标：
@@ -55,12 +55,23 @@ Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
    - 无 aihot_id → aihot_summary 必须为空，aihot_summary_status=not_applicable
    - 有 aihot_id → aihot_summary 非空且来自 raw item.summary；禁止自写一句压缩
    - 禁止用 ai-bot.cn 内容填入 aihot_summary；禁止 10 条共用同一列表 source_url
-4. GitHub / arXiv 补充 — **仅读 prefetch raw，禁止 sandbox curl**：
-   a. arXiv：仅当 manifest.sources.arxiv.status==ok **且** state/daily/YYYY-MM-DD-arxiv-raw.xml 存在 → 解析 Atom 补充 longlist（source_mix_note: arxiv_export_supplement）。
-   b. GitHub：仅当 manifest.sources.github.status==ok **且** state/daily/YYYY-MM-DD-github-raw.json 存在 → 读取 items[] 补充（source_mix_note: github_search_supplement）。
-   c. manifest 里 github/arxiv 的 HTTP probe ok **不等于**可在 sandbox 内 curl；**无 raw 文件 → 必须 skip**，不得伪造链接。
-   d. supplemental 全部跳过时：允许仅用 AIhot longlist 完成日报；须在 report 说明 longlist 以 AIhot 为主、其他来源未补充的原因（例如「GitHub/arXiv prefetch raw 尚未落地」）。
-5. §1 采集状态行必须写：ingest_mode、manifest_ready、prefetch_host、aihot_items、arxiv_supplement=ok|skipped_no_prefetch、github_supplement=ok|skipped_no_prefetch。
+4. GitHub / arXiv 补充 — **仅读 prefetch raw，禁止 sandbox curl**（映射见 docs/supplemental-prefetch-api.md）：
+   a. arXiv：仅当 manifest.sources.arxiv.status==ok **且** state/daily/YYYY-MM-DD-arxiv-raw.xml 存在 → 解析 Atom `<entry>` 补充 longlist：
+      - original_url ← https://arxiv.org/abs/{id}
+      - title ← `<title>`（去换行）
+      - discovery_summary ← `<summary>` verbatim
+      - source_origin ← primary；source_mix_note ← arxiv_export_supplement
+      - aihot_id 空；aihot_summary 空；aihot_summary_status ← not_applicable
+   b. GitHub：仅当 manifest.sources.github.status==ok **且** state/daily/YYYY-MM-DD-github-raw.json 存在 → 读取 items[] 补充：
+      - original_url ← html_url
+      - title ← full_name（或 description 首句作副标题）
+      - discovery_summary ← description（非空则 verbatim）
+      - source_origin ← primary；source_mix_note ← github_search_supplement
+      - aihot_id 空；aihot_summary 空；aihot_summary_status ← not_applicable
+   c. manifest status==skipped 或 raw 缺失 → 该源 **必须 skip**；§1 写 arxiv_supplement=skipped_no_prefetch 或 github_supplement=skipped_no_prefetch。
+   d. supplemental 与 AIhot 经 canonical_key 去重后并入 longlist；不得伪造链接。
+   e. supplemental 全部跳过时：允许 AIhot-only longlist；须在 report 说明原因。
+5. §1 采集状态行必须写：ingest_mode、manifest_ready、prefetch_host、aihot_items、arxiv_items、github_items、arxiv_supplement=ok|skipped_no_prefetch、github_supplement=ok|skipped_no_prefetch。
 6. resilient 模式（ingest_mode=resilient 时）：才允许原 fallback——report 披露 API 失败、aihot_summary 全空、外网补充；strict 下不适用。
 
 采集与长清单规则：

@@ -4,6 +4,8 @@ node_modules/
 # Daily ingest runtime (Terminal prefetch writes these; do not commit)
 state/daily/*-ingest-manifest.json
 state/daily/*-aihot-raw.json
+state/daily/*-arxiv-raw.xml
+state/daily/*-github-raw.json
 state/daily/*-ingest-error.json
 state/daily/*-ingest-error.md
 state/daily/*-links.a.jsonl
