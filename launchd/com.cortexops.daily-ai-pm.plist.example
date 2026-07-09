@@ -9,7 +9,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>RUNNER=both /Users/jiexinlv/Documents/CortexOps/scripts/daily-ingest-pipeline.sh</string>
+    <string>RUNNER=codex /Users/jiexinlv/Documents/CortexOps/scripts/daily-ingest-pipeline.sh</string>
   </array>
 
   <!-- 09:00 Asia/Shanghai — adjust if Mac system TZ is not Shanghai -->

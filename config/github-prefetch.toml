@@ -1,0 +1,8 @@
+# GitHub supplemental prefetch for daily ingest (Terminal only).
+# See docs/supplemental-prefetch-api.md
+
+[search]
+query = "topic:mcp stars:>50"
+per_page = 15
+since_days = 7
+# Appends pushed:>DATE when since_days > 0; retries without pushed if 0 results.

@@ -69,24 +69,160 @@ else
   rm -f "$AIHOT_RAW"
 fi
 
-# --- Supplemental probes (optional; do not block ready) ---
-set +e
-GITHUB_HTTP=$(curl -4 -sS -o /dev/null -w "%{http_code}" \
-  "https://api.github.com/zen" 2>/dev/null)
-[[ $? -eq 0 ]] || GITHUB_HTTP="000"
-set -e
-GITHUB_STATUS="ok"
-[[ "$GITHUB_HTTP" == "200" ]] || GITHUB_STATUS="warn"
+# --- arXiv supplemental raw (optional; do not block ready) ---
+ARXIV_RAW="state/daily/${DATE}-arxiv-raw.xml"
+ARXIV_STATUS="skipped"
+ARXIV_HTTP="000"
+ARXIV_COUNT=0
+ARXIV_ERR=""
 
 set +e
-ARXIV_HTTP=$(curl -4 -sS -o /dev/null -w "%{http_code}" \
+ARXIV_HTTP=$(curl -4 -sS -o "$ARXIV_RAW" -w "%{http_code}" \
   --get "https://export.arxiv.org/api/query" \
-  --data-urlencode "search_query=all:electron" \
-  --data-urlencode "max_results=1" 2>/dev/null)
-[[ $? -eq 0 ]] || ARXIV_HTTP="000"
+  --data-urlencode "search_query=cat:cs.AI OR cat:cs.LG OR cat:cs.CL" \
+  --data-urlencode "sortBy=submittedDate" \
+  --data-urlencode "sortOrder=descending" \
+  --data-urlencode "max_results=20" 2>/dev/null)
+arxiv_curl_exit=$?
 set -e
-ARXIV_STATUS="ok"
-[[ "$ARXIV_HTTP" == "200" ]] || ARXIV_STATUS="warn"
+if [[ $arxiv_curl_exit -ne 0 ]]; then
+  ARXIV_HTTP="000"
+fi
+
+if [[ "$ARXIV_HTTP" == "200" && -s "$ARXIV_RAW" ]]; then
+  ARXIV_COUNT=$(python3 - "$ARXIV_RAW" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+ns = {"a": "http://www.w3.org/2005/Atom"}
+try:
+    root = ET.fromstring(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    print(len(root.findall("a:entry", ns)))
+except Exception:
+    print(0)
+PY
+)
+  if [[ "$ARXIV_COUNT" -ge 1 ]]; then
+    ARXIV_STATUS="ok"
+  else
+    ARXIV_ERR="no arxiv entries in response"
+    rm -f "$ARXIV_RAW"
+  fi
+else
+  ARXIV_ERR="HTTP ${ARXIV_HTTP} (curl exit ${arxiv_curl_exit})"
+  rm -f "$ARXIV_RAW"
+fi
+
+# --- GitHub supplemental raw (optional; do not block ready) ---
+GITHUB_RAW="state/daily/${DATE}-github-raw.json"
+GITHUB_STATUS="skipped"
+GITHUB_HTTP="000"
+GITHUB_COUNT=0
+GITHUB_ERR=""
+GITHUB_ENV="${GITHUB_PREFETCH_ENV:-${HOME}/.cortexops/github-prefetch.env}"
+GITHUB_TOKEN=""
+if [[ -f "$GITHUB_ENV" ]]; then
+  # shellcheck disable=SC1090
+  source "$GITHUB_ENV"
+fi
+
+export DATE GITHUB_RAW ROOT
+GITHUB_URLS_FILE="/tmp/github-prefetch-urls.$$"
+python3 - <<'PY' > "$GITHUB_URLS_FILE"
+import os
+import tomllib
+from pathlib import Path
+from urllib.parse import quote_plus
+from datetime import datetime, timedelta, timezone
+
+cfg = tomllib.loads((Path(os.environ["ROOT"]) / "config/github-prefetch.toml").read_text())["search"]
+q = cfg["query"]
+per_page = int(cfg.get("per_page", 15))
+since_days = int(cfg.get("since_days", 0))
+
+def build(query: str) -> str:
+    return (
+        "https://api.github.com/search/repositories?"
+        f"q={quote_plus(query)}&sort=stars&order=desc&per_page={per_page}"
+    )
+
+urls = []
+if since_days > 0:
+    since_str = (datetime.now(timezone.utc) - timedelta(days=since_days)).strftime("%Y-%m-%d")
+    urls.append(build(f"{q} pushed:>{since_str}"))
+urls.append(build(q))
+for u in urls:
+    print(u)
+PY
+
+GITHUB_AUTH=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  GITHUB_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
+
+GITHUB_HTTP="000"
+github_curl_exit=1
+while IFS= read -r GITHUB_URL; do
+  [[ -z "$GITHUB_URL" ]] && continue
+  set +e
+  GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
+    -H "Accept: application/vnd.github+json" \
+    -H "User-Agent: CortexOps-prefetch" \
+    "${GITHUB_AUTH[@]}" \
+    "$GITHUB_URL" 2>/dev/null)
+  github_curl_exit=$?
+  set -e
+  if [[ $github_curl_exit -ne 0 ]]; then
+    GITHUB_HTTP="000"
+    continue
+  fi
+  if [[ "$GITHUB_HTTP" != "200" || ! -s "$GITHUB_RAW.tmp" ]]; then
+    continue
+  fi
+  export GITHUB_RAW GITHUB_URL
+  GITHUB_COUNT=$(python3 - <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+
+src = Path(os.environ["GITHUB_RAW"] + ".tmp")
+dst = Path(os.environ["GITHUB_RAW"])
+data = json.loads(src.read_text(encoding="utf-8"))
+items = []
+for repo in data.get("items", []):
+    items.append({
+        "full_name": repo.get("full_name"),
+        "html_url": repo.get("html_url"),
+        "description": repo.get("description") or "",
+        "stargazers_count": repo.get("stargazers_count", 0),
+        "pushed_at": repo.get("pushed_at"),
+        "topics": repo.get("topics") or [],
+    })
+out = {
+    "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "query": os.environ.get("GITHUB_URL", ""),
+    "items": items,
+}
+dst.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(len(items))
+PY
+)
+  if [[ "${GITHUB_COUNT:-0}" -ge 1 ]]; then
+    GITHUB_STATUS="ok"
+    break
+  fi
+done < "$GITHUB_URLS_FILE"
+
+if [[ "$GITHUB_STATUS" != "ok" ]]; then
+  if [[ "$GITHUB_HTTP" == "200" ]]; then
+    GITHUB_ERR="search returned 0 items"
+  else
+    GITHUB_ERR="HTTP ${GITHUB_HTTP} (curl exit ${github_curl_exit})"
+  fi
+  rm -f "$GITHUB_RAW"
+fi
+rm -f "$GITHUB_RAW.tmp" "$GITHUB_URLS_FILE"
 
 READY="true"
 FAIL_REASONS=()
@@ -96,7 +232,8 @@ if [[ "$AIHOT_STATUS" != "ok" ]]; then
 fi
 
 export DATE MODE PREFETCH_AT MIN_AIHOT_ITEMS AIHOT_STATUS AIHOT_HTTP AIHOT_COUNT
-export GITHUB_STATUS GITHUB_HTTP ARXIV_STATUS ARXIV_HTTP READY AIHOT_ERR MANIFEST
+export GITHUB_STATUS GITHUB_HTTP GITHUB_COUNT GITHUB_ERR ARXIV_STATUS ARXIV_HTTP ARXIV_COUNT ARXIV_ERR
+export READY AIHOT_ERR MANIFEST
 python3 - <<'PY'
 import json
 import os
@@ -104,8 +241,21 @@ from pathlib import Path
 
 ready = os.environ["READY"] == "true"
 aihot_err = os.environ.get("AIHOT_ERR", "")
+date = os.environ["DATE"]
+
+def supplemental(name, status, http, count, raw_suffix, fetch_mode, err):
+    return {
+        "required": False,
+        "status": status,
+        "http_code": int(http),
+        "item_count": int(count),
+        "raw_path": f"state/daily/{date}-{raw_suffix}" if status == "ok" else None,
+        "fetch_mode": fetch_mode,
+        "error": err or None,
+    }
+
 manifest = {
-    "date": os.environ["DATE"],
+    "date": date,
     "ingest_mode": os.environ["MODE"],
     "ready": ready,
     "prefetch_at": os.environ["PREFETCH_AT"],
@@ -117,19 +267,27 @@ manifest = {
             "status": os.environ["AIHOT_STATUS"],
             "http_code": int(os.environ["AIHOT_HTTP"]),
             "item_count": int(os.environ["AIHOT_COUNT"]),
-            "raw_path": f"state/daily/{os.environ['DATE']}-aihot-raw.json",
+            "raw_path": f"state/daily/{date}-aihot-raw.json",
             "error": aihot_err or None,
         },
-        "github": {
-            "required": False,
-            "status": os.environ["GITHUB_STATUS"],
-            "http_code": int(os.environ["GITHUB_HTTP"]),
-        },
-        "arxiv": {
-            "required": False,
-            "status": os.environ["ARXIV_STATUS"],
-            "http_code": int(os.environ["ARXIV_HTTP"]),
-        },
+        "github": supplemental(
+            "github",
+            os.environ["GITHUB_STATUS"],
+            os.environ["GITHUB_HTTP"],
+            os.environ["GITHUB_COUNT"],
+            "github-raw.json",
+            "search_api",
+            os.environ.get("GITHUB_ERR", ""),
+        ),
+        "arxiv": supplemental(
+            "arxiv",
+            os.environ["ARXIV_STATUS"],
+            os.environ["ARXIV_HTTP"],
+            os.environ["ARXIV_COUNT"],
+            "arxiv-raw.xml",
+            "export_api",
+            os.environ.get("ARXIV_ERR", ""),
+        ),
     },
 }
 Path(os.environ["MANIFEST"]).write_text(
@@ -176,7 +334,9 @@ PY
   exit 1
 fi
 
-echo "INGEST PREFETCH OK: aihot_items=${AIHOT_COUNT} github=${GITHUB_HTTP}(${GITHUB_STATUS}) arxiv=${ARXIV_HTTP}(${ARXIV_STATUS})"
+echo "INGEST PREFETCH OK: aihot_items=${AIHOT_COUNT} github_items=${GITHUB_COUNT}(${GITHUB_STATUS}) arxiv_items=${ARXIV_COUNT}(${ARXIV_STATUS})"
 echo "manifest: ${MANIFEST}"
 echo "raw: ${AIHOT_RAW}"
+[[ "$ARXIV_STATUS" == "ok" ]] && echo "arxiv_raw: ${ARXIV_RAW}"
+[[ "$GITHUB_STATUS" == "ok" ]] && echo "github_raw: ${GITHUB_RAW}"
 exit 0

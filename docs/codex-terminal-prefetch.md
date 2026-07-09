@@ -29,9 +29,15 @@ DATE=$(TZ=Asia/Shanghai date +%Y-%m-%d)
 
 | File | Purpose |
 |------|---------|
-| `state/daily/YYYY-MM-DD-aihot-raw.json` | Raw AIhot API response |
-| `state/daily/YYYY-MM-DD-ingest-manifest.json` | `ready: true` gate |
+| `state/daily/YYYY-MM-DD-aihot-raw.json` | Raw AIhot API response (**required**) |
+| `state/daily/YYYY-MM-DD-arxiv-raw.xml` | arXiv Atom export (**supplemental**, ok or skipped) |
+| `state/daily/YYYY-MM-DD-github-raw.json` | GitHub Search normalized JSON (**supplemental**) |
+| `state/daily/YYYY-MM-DD-ingest-manifest.json` | `ready: true` gate + per-source status |
 | `state/daily/.ingest-mode` | `strict` (default) |
+
+Optional GitHub token: `~/.cortexops/github-prefetch.env` (see `scripts/github-prefetch.env.example`).
+
+Supplemental mapping: `docs/supplemental-prefetch-api.md`.
 
 If prefetch fails, see `state/daily/YYYY-MM-DD-ingest-error.md`.
 
@@ -65,7 +71,7 @@ python3 scripts/verify-daily-ingest.py $(TZ=Asia/Shanghai date +%Y-%m-%d)
 ## Codex DNS note
 
 Codex sandbox may show `scutil --dns` → No DNS configuration. That is expected.
-**Never rely on Codex curl for AIhot** in strict mode; Terminal prefetch is the source of truth.
+**Never rely on Codex curl for AIhot, GitHub, or arXiv** in strict mode; Terminal prefetch is the source of truth.
 
 Optional Codex config (does not fix DNS for all setups):
 
