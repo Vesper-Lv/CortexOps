@@ -19,6 +19,7 @@ Live daily state and candidate pools live outside this snapshot folder:
 - `../state/daily/YYYY-MM-DD-links.jsonl`: structured daily link state
 - `../state/daily/YYYY-MM-DD-report.md`: human-readable daily report view
 - `../state/memory/ai-pm-7d.jsonl`: rolling 7-day deduplication index
+- `../state/weekly/YYYY-MM-DD-report.md`: weekly AI PM execution report record
 - `../pools/*.jsonl`: candidate pools for weekly, monthly, demo, and learning
   automations
 

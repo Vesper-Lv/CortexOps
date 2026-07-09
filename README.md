@@ -11,7 +11,8 @@ system.
 - `docs/change-protocol.md`: change workflow for output contracts, schema, policy, automation bindings, and verification
 - `docs/workbench-design.md`: product and UI design for the CortexOps workbench
 - `automations/`: snapshot copies of current automation configurations
-- `state/`: machine-readable daily radar state and 7-day memory
+- `state/`: machine-readable daily state, weekly execution report records, and
+  7-day memory
 - `pools/`: machine-readable candidate pools used by weekly and monthly reviews
 
 ## Purpose
