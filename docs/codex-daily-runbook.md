@@ -221,4 +221,6 @@ tail -f state/daily/codex-daily-run.log
 
 - `docs/codex-terminal-prefetch.md`
 - `docs/daily-orchestration-cursor-codex.md`
+- `docs/supplemental-prefetch-api.md`
+- `docs/backlog.md` — 搁置项（含 PR-C）
 - `automations/SYNC-CHECKLIST.md`
