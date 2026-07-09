@@ -103,6 +103,8 @@ RUNNER=cursor ./scripts/daily-ingest-pipeline.sh
 
 #### Git push 触发（Webhook 不稳定时的备选）
 
+> **Backlog：** 一键 `push ingest + webhook`（PR-C）见 `docs/backlog.md`，当前**搁置**；以下仍为手动流程。
+
 社区有 Webhook 401 间歇问题；可改用：
 
 ```text
