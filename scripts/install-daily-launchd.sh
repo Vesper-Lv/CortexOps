@@ -16,6 +16,17 @@ fi
 # Patch paths for this machine
 sed "s|/Users/jiexinlv/Documents/CortexOps|${ROOT}|g" "$PLIST_SRC" >"$PLIST_DST"
 
+CODEX_BIN=""
+for candidate in "$(command -v codex 2>/dev/null || true)" \
+  "${HOME}/.local/bin/codex" "${HOME}/.npm-global/bin/codex"; do
+  [[ -n "$candidate" && -x "$candidate" ]] && CODEX_BIN="$candidate" && break
+done
+if [[ -n "$CODEX_BIN" ]]; then
+  /usr/libexec/PlistBuddy -c "Add :EnvironmentVariables:CODEX_BIN string ${CODEX_BIN}" "$PLIST_DST" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Set :EnvironmentVariables:CODEX_BIN ${CODEX_BIN}" "$PLIST_DST"
+  echo "CODEX_BIN=${CODEX_BIN} (written to plist)"
+fi
+
 chmod +x "${ROOT}/scripts/daily-ingest-pipeline.sh"
 chmod +x "${ROOT}/scripts/cursor-trigger-daily.sh"
 chmod +x "${ROOT}/scripts/codex-daily-prefetch.sh"

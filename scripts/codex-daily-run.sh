@@ -65,6 +65,8 @@ CODEX_BIN="${CODEX_BIN:-}"
 if [[ -z "$CODEX_BIN" ]]; then
   if command -v codex >/dev/null 2>&1; then
     CODEX_BIN="$(command -v codex)"
+  elif [[ -x "${HOME}/.local/bin/codex" ]]; then
+    CODEX_BIN="${HOME}/.local/bin/codex"
   elif [[ -x "${HOME}/.npm-global/bin/codex" ]]; then
     CODEX_BIN="${HOME}/.npm-global/bin/codex"
   fi
