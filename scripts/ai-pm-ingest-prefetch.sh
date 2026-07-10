@@ -69,6 +69,14 @@ else
   rm -f "$AIHOT_RAW"
 fi
 
+# --- Supplemental env (https_proxy, GITHUB_TOKEN) — before arXiv + GitHub curl ---
+PREFETCH_ENV="${GITHUB_PREFETCH_ENV:-${HOME}/.cortexops/github-prefetch.env}"
+GITHUB_TOKEN=""
+if [[ -f "$PREFETCH_ENV" ]]; then
+  # shellcheck disable=SC1090
+  source "$PREFETCH_ENV"
+fi
+
 # --- arXiv supplemental raw (optional; do not block ready) ---
 ARXIV_RAW="state/daily/${DATE}-arxiv-raw.xml"
 ARXIV_STATUS="skipped"
@@ -119,12 +127,6 @@ GITHUB_STATUS="skipped"
 GITHUB_HTTP="000"
 GITHUB_COUNT=0
 GITHUB_ERR=""
-GITHUB_ENV="${GITHUB_PREFETCH_ENV:-${HOME}/.cortexops/github-prefetch.env}"
-GITHUB_TOKEN=""
-if [[ -f "$GITHUB_ENV" ]]; then
-  # shellcheck disable=SC1090
-  source "$GITHUB_ENV"
-fi
 
 export DATE GITHUB_RAW ROOT
 GITHUB_URLS_FILE="/tmp/github-prefetch-urls.$$"
