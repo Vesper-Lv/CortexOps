@@ -69,6 +69,14 @@ else
   rm -f "$AIHOT_RAW"
 fi
 
+# --- Supplemental env (https_proxy, GITHUB_TOKEN) — before arXiv + GitHub curl ---
+PREFETCH_ENV="${GITHUB_PREFETCH_ENV:-${HOME}/.cortexops/github-prefetch.env}"
+GITHUB_TOKEN=""
+if [[ -f "$PREFETCH_ENV" ]]; then
+  # shellcheck disable=SC1090
+  source "$PREFETCH_ENV"
+fi
+
 # --- arXiv supplemental raw (optional; do not block ready) ---
 ARXIV_RAW="state/daily/${DATE}-arxiv-raw.xml"
 ARXIV_STATUS="skipped"
@@ -119,12 +127,6 @@ GITHUB_STATUS="skipped"
 GITHUB_HTTP="000"
 GITHUB_COUNT=0
 GITHUB_ERR=""
-GITHUB_ENV="${GITHUB_PREFETCH_ENV:-${HOME}/.cortexops/github-prefetch.env}"
-GITHUB_TOKEN=""
-if [[ -f "$GITHUB_ENV" ]]; then
-  # shellcheck disable=SC1090
-  source "$GITHUB_ENV"
-fi
 
 export DATE GITHUB_RAW ROOT
 GITHUB_URLS_FILE="/tmp/github-prefetch-urls.$$"
@@ -155,21 +157,24 @@ for u in urls:
     print(u)
 PY
 
-GITHUB_AUTH=()
-if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  GITHUB_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-fi
-
 GITHUB_HTTP="000"
 github_curl_exit=1
 while IFS= read -r GITHUB_URL; do
   [[ -z "$GITHUB_URL" ]] && continue
   set +e
-  GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
-    -H "Accept: application/vnd.github+json" \
-    -H "User-Agent: CortexOps-prefetch" \
-    "${GITHUB_AUTH[@]}" \
-    "$GITHUB_URL" 2>/dev/null)
+  # macOS /bin/bash 3.2 + set -u: expanding empty GITHUB_AUTH[@] raises "unbound variable"
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: CortexOps-prefetch" \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      "$GITHUB_URL" 2>/dev/null)
+  else
+    GITHUB_HTTP=$(curl -4 -sS -o "$GITHUB_RAW.tmp" -w "%{http_code}" \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: CortexOps-prefetch" \
+      "$GITHUB_URL" 2>/dev/null)
+  fi
   github_curl_exit=$?
   set -e
   if [[ $github_curl_exit -ne 0 ]]; then
