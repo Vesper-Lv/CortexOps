@@ -57,6 +57,19 @@ and `prompts/daily-ai-pm.md`):
 After prompt changes, run `npm run prompts:sync` and update the live Codex copy in
 `~/.codex/automations` when ready.
 
+## Weekly AI PM — Terminal launch (Codex CLI)
+
+The weekly execution review (`weekly-execution-review.toml`) is scheduled for
+**Sunday 20:30 Asia/Shanghai** via launchd, mirroring the daily pipeline:
+
+1. `scripts/codex-weekly-run.sh` — reads pools + daily JSONL + memory, runs
+   `codex exec`, writes `state/weekly/YYYY-MM-DD-report.md`
+2. `scripts/install-weekly-launchd.sh` — installs `com.cortexops.weekly-ai-pm`
+   with `RunAtLoad` catch-up if Sunday 20:30 was missed
+
+Disable the Codex App built-in cron for the same automation to avoid double runs.
+Prompt source: `prompts/weekly-execution-review.md` (synced to TOML snapshot).
+
 ## Convention
 
 All meaningful automation changes should start from

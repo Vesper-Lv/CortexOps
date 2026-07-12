@@ -106,6 +106,31 @@ tail -30 state/daily/launchd.stderr.log
 
 ---
 
+## 五-B、周报 launchd 定时（周日 20:30）
+
+周报不走 prefetch，直接读 daily JSONL / pools / memory，用 Codex CLI 写入
+`state/weekly/YYYY-MM-DD-report.md`（日期为当周周日）。
+
+```bash
+./scripts/install-weekly-launchd.sh
+grep WorkingDirectory ~/Library/LaunchAgents/com.cortexops.weekly-ai-pm.plist
+
+# 手动试跑（补跑上周日或强制覆盖）
+FORCE=1 ./scripts/codex-weekly-run.sh
+FORCE=1 ./scripts/codex-weekly-run.sh 2026-07-13
+
+tail -30 state/weekly/codex-weekly-run.log
+tail -30 state/weekly/launchd.stdout.log
+ls -la state/weekly/*-report.md
+```
+
+说明：
+- `StartCalendarInterval` 为每周日 20:30（`TZ=Asia/Shanghai`）
+- `RunAtLoad=true`：若周日 20:30 未联网，开机后会补跑（检测本周周报是否已存在）
+- 请在 Codex App 中**关闭**同名 automation 的 cron，避免与 launchd 重复执行
+
+---
+
 ## 六、Cursor Webhook
 
 ```bash
@@ -189,6 +214,9 @@ which codex
 | 重跑今天 | `FORCE=1 ./scripts/codex-daily-run.sh` |
 | 是否在跑 | `pgrep -fl codex` + `tail -f state/daily/codex-daily-run.log` |
 | PR-A 验收 | `grep skipped_no_prefetch state/daily/${DATE}-report.md` |
+| 周报正常跑 | `./scripts/codex-weekly-run.sh` |
+| 周报重跑 | `FORCE=1 ./scripts/codex-weekly-run.sh` |
+| 周报日志 | `tail -f state/weekly/codex-weekly-run.log` |
 
 ---
 
@@ -201,6 +229,8 @@ which codex
 | links | `state/daily/YYYY-MM-DD-links.jsonl` |
 | report | `state/daily/YYYY-MM-DD-report.md` |
 | 日志 | `state/daily/codex-daily-run.log` |
+| 周报 report | `state/weekly/YYYY-MM-DD-report.md` |
+| 周报日志 | `state/weekly/codex-weekly-run.log` |
 | Codex 配置 | `~/.codex/automations/ai-pm.toml` |
 | Cursor webhook | `~/.cortexops/cursor-webhook.env` |
 

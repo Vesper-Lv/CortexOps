@@ -1,8 +1,8 @@
-version = 1
-id = "ai-pm-2"
-kind = "cron"
-name = "每周 AI PM 执行周报"
-prompt = """
+---
+automation_id: ai-pm-2
+kind: weekly
+source_toml: automations/weekly-execution-review.toml
+---
 请生成本周「AI PM 执行周报」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
@@ -59,12 +59,3 @@ prompt = """
 
 ## 7. 一句话周度判断
 用 3-5 句话总结下周应该押注什么。
-"""
-status = "ACTIVE"
-rrule = "FREQ=WEEKLY;BYDAY=SU;BYHOUR=20;BYMINUTE=30;BYSECOND=0"
-model = "gpt-5.5"
-reasoning_effort = "high"
-execution_environment = "local"
-cwds = ["/Users/jiexinlv/Documents/CortexOps"]
-created_at = 1782894695780
-updated_at = 1782895873917
