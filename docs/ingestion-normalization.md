@@ -612,6 +612,33 @@ The daily Markdown report at `state/daily/YYYY-MM-DD-report.md` is a view over
 this JSONL file. It should not be the primary data source for future automation
 runs.
 
+### Weekly Report Record
+
+Weekly execution reviews should write the human-readable report to:
+
+```text
+state/weekly/YYYY-MM-DD-report.md
+```
+
+Weekly reports are scheduling and prioritization views over existing daily
+state, 7-day memory, and candidate pools. They do not need a JSONL companion
+unless a future automation needs to track weekly selections as structured state.
+
+### Weekly Paper Radar Record
+
+Weekly AI / cognitive science paper radar runs should write the human-readable
+report to:
+
+```text
+state/weekly/paper/YYYY-MM-DD-paper-radar.md
+```
+
+The Markdown report is a reading view over current paper discovery and candidate
+pool routing. It should preserve links, confidence, product / engineering
+implications, interview proof candidates, and the weekly action item. It does
+not need a JSONL companion unless a future automation needs structured weekly
+paper selections.
+
 ### 7-Day Memory
 
 Write selected and action-oriented items to:
