@@ -26,6 +26,20 @@ Only selected reading-pack items, main GitHub recommendations, formal daily
 practice items, and confirmed or pending candidate-pool entries should enter
 the 7-day memory file.
 
+## Weekly Files
+
+Weekly execution review runs should create:
+
+- `weekly/YYYY-MM-DD-report.md`: human-readable weekly execution report
+
+`YYYY-MM-DD` is the **Sunday date** for that week (the scheduled run day).
+Weekly reports are scheduling views over daily JSONL state, 7-day memory, and
+candidate pools. They do not need a JSONL companion unless a future automation
+needs structured weekly selection state.
+
+Terminal scheduling: `scripts/codex-weekly-run.sh` + `scripts/install-weekly-launchd.sh`
+(Sunday 20:30 Asia/Shanghai, with login catch-up via `RunAtLoad`).
+
 ## Rule
 
 Automations should read state files before reading long-form reports. Reports
