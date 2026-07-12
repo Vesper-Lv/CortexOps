@@ -354,15 +354,35 @@ The daily AI PM radar should:
     reuse `aihot_summary` verbatim; for non-AIhot items, extract a concise factual
     summary. The report shows this summary for every link so the user can judge
     without opening each source.
-17. Only reading-pack items get `read_reason` and `focus_direction`. Remaining
-    (non-selected) links show summary + state only; do not over-interpret them.
-18. For `knowledge_gap` items, do not output generic "what to look for / what you
-    conclude" lines. Output two parts instead: `known_facts` (facts obtainable
-    from the article) and `open_questions` (questions needing extra research).
-19. Put any duplicate / carry-over / material-update retention explanation only in
+17. Every reading-pack item (`reading_pack_status=selected`) must carry
+    `priority_rationale` (why P0/P1/archive) and `pool_rationale` (why
+    `suggested_pool`). The daily report §2 must show both to support human
+    re-triage.
+18. Only non-`knowledge_gap` reading-pack items get `read_reason` and
+    `focus_direction`. Remaining (non-selected) links show summary + state only;
+    do not over-interpret them.
+19. For `knowledge_gap` items in the **daily** report: show summary +
+    `priority_rationale` + `pool_rationale` only. Do **not** output
+    `known_facts`, `open_questions`, or a knowledge-gap card in the daily report.
+    Leave `known_facts` / `open_questions` empty in JSONL on the daily run. After
+    the user sets `human_status=confirmed` and `final_pool=knowledge_gap`,
+    generate `knowledge_gap_card` (classification reason, knowledge gap filled,
+    extra research beyond the link) in pool state or Workbench — not in the
+    daily automation pass.
+20. Disclose freshness: map `published_at` when available (AIhot `publishedAt`,
+    arXiv entry date, GitHub `pushed_at` fallback). In report §2/§3 show
+    `新闻日期：YYYY-MM-DD` or `新闻日期：未披露`. Do not rewrite verbatim
+    `display_summary`. Codex-generated lines must avoid 「今天/今日/昨天」;
+    if the verbatim summary contains relative dates and `published_at` is known,
+    add one note: 「摘要中的相对日期请参考新闻日期」.
+21. Put any duplicate / carry-over / material-update retention explanation only in
     `novelty_reason`, and render it once in the report. `reason` must not repeat
     the dedup text.
-20. Reserve "P0 detailed reading" for sources with genuine depth. If a source is a
+22. Items with `duplicate_status` of `duplicate_7d` or `duplicate_suppressed`
+    stay in `*-links.jsonl` but **must not** appear in report §3 (they were
+    already classified in a prior run). Only `material_update` / `carry_over`
+    duplicates may appear in §3 with a single `novelty_reason` line.
+23. Reserve "P0 detailed reading" for sources with genuine depth. If a source is a
     thin feature/announcement page, prefer "P1 skim" and let the summary carry the
     facts; do not over-claim depth or over-interpret.
 
