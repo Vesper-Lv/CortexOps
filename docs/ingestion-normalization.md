@@ -367,9 +367,38 @@ status
 display_summary
 read_reason
 focus_direction
+priority_rationale
+pool_rationale
 known_facts
 open_questions
+knowledge_gap_card
 ```
+
+`priority_rationale` / `pool_rationale`:
+
+- Required when `reading_pack_status=selected`.
+- One sentence each; aid human re-triage of priority and `suggested_pool`.
+- Shown in daily report §2 for all selected items including `knowledge_gap`.
+
+`knowledge_gap_card`:
+
+- Optional object; **empty on daily automation**.
+- Populate only after `human_status=confirmed` and `final_pool=knowledge_gap`.
+- Fields: `classification_reason`, `gap_filled`, `extra_research` (questions
+  beyond what the link states).
+
+`published_at`:
+
+- ISO8601 when known from raw (AIhot `publishedAt`, arXiv atom, GitHub
+  `pushed_at` fallback).
+- Render in report as `新闻日期：YYYY-MM-DD` or `新闻日期：未披露`.
+- Do not rewrite verbatim `display_summary` to fix relative dates.
+
+### Report §3 omission (7-day duplicates)
+
+Links with `duplicate_status` in `duplicate_7d`, `duplicate_suppressed` remain
+in `state/daily/YYYY-MM-DD-links.jsonl` for audit but **must not** be listed in
+report §3. Count them in §1 as `excluded_remaining_7d_dup=N`.
 
 ### Field Values
 
