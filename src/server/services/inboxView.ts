@@ -66,18 +66,24 @@ export async function getInboxToday(date?: string): Promise<{ date: string; sign
 
   const rows = await prisma.signal.findMany({
     where: { stream: "daily", date: targetDate, humanStatus: "pending" },
-    orderBy: [{ priority: "asc" }, { sourceLine: "asc" }]
+    orderBy: { sourceLine: "asc" }
   });
-  const signals = rows.map((s) => ({
-    id: s.id,
-    title: s.title ?? "(untitled)",
-    url: s.originalUrl ?? s.sourceUrl ?? "",
-    priority: s.priority ?? "",
-    suggestedPool: s.suggestedPool ?? "",
-    finalPool: s.finalPool ?? s.suggestedPool ?? "",
-    humanStatus: s.humanStatus ?? "pending",
-    readingPackStatus: s.readingPackStatus ?? "not_selected",
-    summary: pickSummary(parseSignalRaw(s.rawJson), s.aihotSummary, s.reason)
-  }));
+  const signals = rows.map((s) => {
+    const raw = parseSignalRaw(s.rawJson);
+    return {
+      id: s.id,
+      title: s.title ?? "(untitled)",
+      url: s.originalUrl ?? s.sourceUrl ?? "",
+      priority: s.priority ?? "",
+      suggestedPool: s.suggestedPool ?? "",
+      finalPool: s.finalPool ?? s.suggestedPool ?? "",
+      humanStatus: s.humanStatus ?? "pending",
+      readingPackStatus: s.readingPackStatus ?? "not_selected",
+      summary: pickSummary(raw, s.aihotSummary, s.reason),
+      priorityRationale: raw.priorityRationale,
+      poolRationale: raw.poolRationale,
+      contentTags: raw.contentTags
+    };
+  });
   return { date: targetDate, signals };
 }

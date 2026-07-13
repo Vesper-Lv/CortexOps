@@ -8,6 +8,9 @@ export type InboxSignal = {
   humanStatus: string;
   readingPackStatus: string;
   summary: string;
+  priorityRationale?: string;
+  poolRationale?: string;
+  contentTags?: string[];
 };
 
 export type PoolGroup = {
@@ -20,6 +23,7 @@ export type PoolGroup = {
     status: string | null;
     finalPool: string | null;
     priority: string;
+    summary: string;
     hasLinkedTask: boolean;
     hasLinkedArtifact: boolean;
   }[];

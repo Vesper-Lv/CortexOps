@@ -195,6 +195,50 @@ export async function promoteCandidateToArtifact(candidateId: string): Promise<s
   return artifact.id;
 }
 
+export async function promoteTaskToArtifact(taskId: string): Promise<string> {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new Error("task not found");
+  if (task.status !== "done") throw new Error("task must be done before converting to artifact");
+
+  const existing =
+    task.linkedSignalId || task.linkedCandidateId
+      ? await prisma.artifact.findFirst({
+          where: {
+            OR: [
+              ...(task.linkedSignalId ? [{ linkedSignalId: task.linkedSignalId }] : []),
+              ...(task.linkedCandidateId ? [{ linkedCandidateId: task.linkedCandidateId }] : [])
+            ]
+          }
+        })
+      : null;
+  if (existing) return existing.id;
+
+  const artifact = await prisma.$transaction(async (tx) => {
+    const created = await tx.artifact.create({
+      data: {
+        title: task.title,
+        description: task.description,
+        origin: "task",
+        linkedSignalId: task.linkedSignalId,
+        linkedCandidateId: task.linkedCandidateId,
+        linkedReportId: task.linkedReportId,
+        status: "draft"
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        entityType: "task",
+        entityId: taskId,
+        action: "promote_to_artifact",
+        toValue: created.id
+      }
+    });
+    return created;
+  });
+
+  return artifact.id;
+}
+
 export function groupArtifactsForCoverage(artifacts: ArtifactItem[]): {
   byStatus: Record<string, number>;
   portfolioReady: ArtifactItem[];

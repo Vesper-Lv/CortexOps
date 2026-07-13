@@ -5,9 +5,17 @@ export type SignalRawFields = {
   knownFacts?: string;
   openQuestions?: string;
   noveltyReason?: string;
+  priorityRationale?: string;
+  poolRationale?: string;
+  contentTags?: string[];
 };
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+const strArray = (v: unknown): string[] | undefined => {
+  if (!Array.isArray(v)) return undefined;
+  const values = v.filter((item): item is string => typeof item === "string");
+  return values.length > 0 ? values : undefined;
+};
 
 export function parseSignalRaw(rawJson: string): SignalRawFields {
   let obj: Record<string, unknown>;
@@ -22,7 +30,10 @@ export function parseSignalRaw(rawJson: string): SignalRawFields {
     focusDirection: str(obj.focus_direction),
     knownFacts: str(obj.known_facts),
     openQuestions: str(obj.open_questions),
-    noveltyReason: str(obj.novelty_reason)
+    noveltyReason: str(obj.novelty_reason),
+    priorityRationale: str(obj.priority_rationale),
+    poolRationale: str(obj.pool_rationale),
+    contentTags: strArray(obj.content_tags)
   };
 }
 

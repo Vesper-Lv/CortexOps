@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { promoteTaskToArtifactAction } from "@/server/actions/artifactActions";
 import { updateTaskAction, updateTaskStatusAction } from "@/server/actions/taskActions";
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 import type { TaskItem } from "@/shared/tasks";
@@ -20,7 +21,8 @@ function TaskCard({
   task,
   pending,
   runStatus,
-  runUpdate
+  runUpdate,
+  runArtifact
 }: {
   task: TaskItem;
   pending: boolean;
@@ -29,6 +31,7 @@ function TaskCard({
     taskId: string,
     input: { title: string; description: string | null; priority: string | null }
   ) => void;
+  runArtifact: (taskId: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -165,6 +168,16 @@ function TaskCard({
               </option>
             ))}
           </select>
+          {task.status === "done" && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => runArtifact(task.id)}
+              className="mt-2 w-full rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+            >
+              沉淀为 Artifact
+            </button>
+          )}
         </>
       )}
     </li>
@@ -183,6 +196,10 @@ export function TaskBoard({ grouped }: TaskBoardProps) {
     input: { title: string; description: string | null; priority: string | null }
   ) => {
     startTransition(() => void updateTaskAction(taskId, input));
+  };
+
+  const runArtifact = (taskId: string) => {
+    startTransition(() => void promoteTaskToArtifactAction(taskId));
   };
 
   const total = TASK_STATUSES.reduce((n, s) => n + (grouped[s]?.length ?? 0), 0);
@@ -217,6 +234,7 @@ export function TaskBoard({ grouped }: TaskBoardProps) {
                   pending={pending}
                   runStatus={runStatus}
                   runUpdate={runUpdate}
+                  runArtifact={runArtifact}
                 />
               ))}
             </ul>
