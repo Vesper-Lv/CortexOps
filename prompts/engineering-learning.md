@@ -1,8 +1,8 @@
-version = 1
-id = "automation"
-kind = "cron"
-name = "每周工程学习任务"
-prompt = """
+---
+automation_id: automation
+kind: weekly
+source_toml: automations/engineering-learning.toml
+---
 请生成本周「工程学习任务」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
@@ -51,12 +51,3 @@ prompt = """
 
 ## 6. 面试与作品沉淀
 说明 proof_artifact、STAR 角度和作品池材料。
-"""
-status = "ACTIVE"
-rrule = "FREQ=WEEKLY;BYDAY=MO;BYHOUR=11;BYMINUTE=30;BYSECOND=0"
-model = "gpt-5.5"
-reasoning_effort = "high"
-execution_environment = "local"
-cwds = ["/Users/jiexinlv/Documents/CortexOps"]
-created_at = 1782755994452
-updated_at = 1782895991105

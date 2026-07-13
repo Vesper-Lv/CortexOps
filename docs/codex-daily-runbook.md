@@ -129,6 +129,28 @@ ls -la state/weekly/*-report.md
 - `RunAtLoad=true`：若周日 20:30 未联网，开机后会补跑（检测本周周报是否已存在）
 - 请在 Codex App 中**关闭**同名 automation 的 cron，避免与 launchd 重复执行
 
+### 周一论文 / Demo / 工程学习 + 月报 launchd
+
+```bash
+./scripts/install-automation-launchd.sh
+
+FORCE=1 ./scripts/codex-automation-run.sh paper-radar
+FORCE=1 ./scripts/codex-automation-run.sh demo
+FORCE=1 ./scripts/codex-automation-run.sh engineering
+FORCE=1 ./scripts/codex-automation-run.sh monthly
+
+ls -la state/weekly/paper/ state/weekly/demo/ state/weekly/engineering/ state/monthly/
+```
+
+| 任务 | 路径 |
+|------|------|
+| 论文雷达 | `state/weekly/paper/YYYY-MM-DD-paper-radar.md` |
+| Demo 推荐 | `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md` |
+| 工程学习 | `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md` |
+| 月报 | `state/monthly/YYYY-MM-01-monthly-review.md` |
+
+`YYYY-MM-DD`（周报子目录）= 当周周日，与执行周报日期一致。
+
 ---
 
 ## 六、Cursor Webhook

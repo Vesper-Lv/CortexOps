@@ -40,6 +40,18 @@ needs structured weekly selection state.
 Terminal scheduling: `scripts/codex-weekly-run.sh` + `scripts/install-weekly-launchd.sh`
 (Sunday 20:30 Asia/Shanghai, with login catch-up via `RunAtLoad`).
 
+Sub-reports (Monday, same week Sunday date):
+
+- `weekly/paper/YYYY-MM-DD-paper-radar.md` — `codex-automation-run.sh paper-radar`
+- `weekly/demo/YYYY-MM-DD-demo-recommendation.md` — `codex-automation-run.sh demo`
+- `weekly/engineering/YYYY-MM-DD-engineering-learning.md` — `codex-automation-run.sh engineering`
+
+Install Monday + monthly launchd: `scripts/install-automation-launchd.sh`.
+
+## Monthly Files
+
+- `monthly/YYYY-MM-DD-monthly-review.md` — first day of month; `codex-automation-run.sh monthly`
+
 ## Rule
 
 Automations should read state files before reading long-form reports. Reports

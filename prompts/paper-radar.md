@@ -1,8 +1,8 @@
-version = 1
-id = "ai"
-kind = "cron"
-name = "每周 AI × 认知科学论文雷达"
-prompt = """
+---
+automation_id: ai
+kind: weekly
+source_toml: automations/ai-paper-radar.toml
+---
 请生成本周「AI × 神经科学 × 心理学论文雷达」，面向一个正在成长为全栈型 AI 产品经理的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
@@ -62,12 +62,3 @@ prompt = """
 给出 1 个 1-2 小时可完成的小任务，要求能帮助用户从论文转化到产品/工程能力或面试证明力。
 
 质量要求：必须提供可点击来源链接；优先最新一周内的论文；不要只按热度或标题党选择；AI 占主线，但神经科学/心理学论文必须明确连接到 AI 产品设计或人机交互；区分事实、论文作者结论、你的产品/工程推断。
-"""
-status = "ACTIVE"
-rrule = "FREQ=WEEKLY;BYDAY=MO;BYHOUR=9;BYMINUTE=0;BYSECOND=0"
-model = "gpt-5.5"
-reasoning_effort = "high"
-execution_environment = "local"
-cwds = ["/Users/jiexinlv/Documents/CortexOps"]
-created_at = 1782754305386
-updated_at = 1782895921015

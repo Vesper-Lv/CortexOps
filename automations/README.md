@@ -70,6 +70,22 @@ The weekly execution review (`weekly-execution-review.toml`) is scheduled for
 Disable the Codex App built-in cron for the same automation to avoid double runs.
 Prompt source: `prompts/weekly-execution-review.md` (synced to TOML snapshot).
 
+## Monday weekly + monthly automations — Terminal launch
+
+| Automation | Script key | Output path | Schedule |
+|---|---|---|---|
+| Paper radar | `paper-radar` | `state/weekly/paper/YYYY-MM-DD-paper-radar.md` | Mon 09:00 |
+| Demo recommendation | `demo` | `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md` | Mon 10:30 |
+| Engineering learning | `engineering` | `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md` | Mon 11:30 |
+| Monthly review | `monthly` | `state/monthly/YYYY-MM-01-monthly-review.md` | 1st 09:30 |
+
+```bash
+./scripts/codex-automation-run.sh paper-radar
+./scripts/install-automation-launchd.sh
+```
+
+Prompt sources: `prompts/paper-radar.md`, `demo-recommendation.md`, `engineering-learning.md`, `monthly-review.md`.
+
 ## Convention
 
 All meaningful automation changes should start from

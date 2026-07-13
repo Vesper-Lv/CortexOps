@@ -668,6 +668,29 @@ implications, interview proof candidates, and the weekly action item. It does
 not need a JSONL companion unless a future automation needs structured weekly
 paper selections.
 
+### Weekly Demo Recommendation Record
+
+```text
+state/weekly/demo/YYYY-MM-DD-demo-recommendation.md
+```
+
+### Weekly Engineering Learning Record
+
+```text
+state/weekly/engineering/YYYY-MM-DD-engineering-learning.md
+```
+
+`YYYY-MM-DD` for weekly sub-reports is the **Sunday date** of that week (same
+week key as the weekly execution report).
+
+### Monthly Review Record
+
+```text
+state/monthly/YYYY-MM-DD-monthly-review.md
+```
+
+`YYYY-MM-DD` is the **first day of the month** being reviewed (e.g. `2026-07-01`).
+
 ### 7-Day Memory
 
 Write selected and action-oriented items to:

@@ -1,8 +1,8 @@
-version = 1
-id = "automation-2"
-kind = "cron"
-name = "每月方向复盘"
-prompt = """
+---
+automation_id: automation-2
+kind: monthly
+source_toml: automations/monthly-review.toml
+---
 请生成「月度 AI 方向复盘」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
@@ -55,12 +55,3 @@ prompt = """
 
 ## 7. 一句话战略判断
 用 3-5 句话总结本月押注。
-"""
-status = "ACTIVE"
-rrule = "FREQ=MONTHLY;BYMONTHDAY=1;BYHOUR=9;BYMINUTE=30;BYSECOND=0"
-model = "gpt-5.5"
-reasoning_effort = "high"
-execution_environment = "local"
-cwds = ["/Users/jiexinlv/Documents/CortexOps"]
-created_at = 1782756045883
-updated_at = 1782896024301
