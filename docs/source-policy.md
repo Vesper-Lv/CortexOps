@@ -366,9 +366,14 @@ The daily radar is the entry point, not the final output.
 - Weekly outputs should select and schedule.
 - They should choose what to read, what to build, and what to investigate next.
 - Weekly outputs should not simply restate the daily radar.
+- Weekly execution reports: `state/weekly/YYYY-MM-DD-report.md`
+- Weekly paper radar: `state/weekly/paper/YYYY-MM-DD-paper-radar.md`
+- Weekly demo recommendation: `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md`
+- Weekly engineering learning: `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md`
 
 ### Monthly
 
+- Monthly direction reviews: `state/monthly/YYYY-MM-DD-monthly-review.md` (first day of month)
 - Monthly outputs should judge direction, not report news.
 - They should answer:
   - continue

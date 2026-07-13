@@ -41,20 +41,20 @@ Why Web App first:
 - TanStack Table
 - TanStack Query can be added later when API state becomes complex.
 
-Core pages:
+Core pages (two-level nav: 4 top sections + per-section tabs; see
+`docs/superpowers/specs/2026-07-03-navigation-restructure-design.md`):
 
-- `Today`: daily report, 30-minute reading pack, remaining links, daily
-  practice, and candidate-pool confirmation.
-- `Reports`: daily radar, weekly review, paper radar, demo recommendation,
-  engineering learning, and monthly review.
-- `Review Inbox`: confirm, reroute, reject, watch, or convert signals to tasks.
-- `Candidate Pools`: product inspiration, paper candidates, demo replication,
-  knowledge gaps, personal work, and archive.
-- `Tasks`: unified task board.
-- `Artifacts`: demos, memos, README files, diagrams, and portfolio material.
-- `Focus Rules`: view, edit, pause, extend, and archive attention rules.
-- `Automations`: automation configs, run state, and referenced policy files.
-- `Settings`: paths, import/export, policy files, and prompt configuration.
+- `Dashboard` (read): `Today` (daily report, 30-minute reading pack, remaining
+  links, daily practice, candidate-pool confirmation), `Weekly`, `Monthly`, and
+  `Tasks` (unified task board).
+- `Inbox` (triage): `Today` (route today's signals, confirm/change/reject),
+  `Candidate Pools` (product inspiration, paper candidates, demo replication,
+  knowledge gaps, personal work, archive), and `Memo` (quick-capture to-do list).
+- `Library` (archive): `Reports` (daily/weekly/monthly with search) and
+  `Artifacts` (portfolio coverage map + external links).
+- `Settings`: `General` (paths, import/export, policy files, prompt config, and a
+  read-only automation runner status panel — Automations is not a standalone page)
+  and `Focus Rules` (view, add, edit, pause, extend, archive attention rules).
 
 ### Backend
 
@@ -311,6 +311,8 @@ Acceptance criteria:
 - Each imported record keeps source file and line number.
 - Raw JSON is stored so future schema changes remain recoverable.
 
+> 已实现（Signal/Candidate 拆表），见 docs/superpowers/plans/2026-07-03-roadmap-phase2-data-import.md。
+
 ### Phase 3: Review Inbox
 
 Goal: build the human review loop.
@@ -318,23 +320,35 @@ Goal: build the human review loop.
 Deliverables:
 
 - Review Inbox page.
-- Signal detail drawer.
-- Confirm, Change Pool, Reject, and Watch actions.
-- AuditLog.
+- Confirm, Change Pool, Drop (route to `drop` pool), and Watch (`status` field) actions.
+- AuditLog (database; audit timeline UI deferred).
+- Pools pending backlog view (`/inbox/pools?status=pending`).
+
+Deferred from original scope:
+
+- Signal detail drawer (summary + original link on cards is sufficient).
+- Audit timeline UI (AuditLog written on every action; UI later).
+- Standalone Reject button (use `final_pool = drop` + `status = dropped` instead).
 
 Core rules:
 
 - `suggested_pool` is the AI suggestion.
-- `human_status` is the human review state.
+- `human_status` is the human review state (`pending` / `confirmed` / `changed`; `rejected` import-only).
+- `status` is the post-triage lifecycle (`inbox` / `confirmed` / `watching` / … / `dropped`).
 - `final_pool` is the downstream pool.
 - When `human_status = changed`, downstream logic must use `final_pool`.
+- Dropped items (`final_pool = drop` or `status = dropped`) must not enter downstream recommendations.
 
 Acceptance criteria:
 
 - Pending signals can be confirmed.
-- Pending signals can be moved into another pool.
-- Rejected signals do not enter downstream recommendations.
-- All human actions are traceable.
+- Pending signals can be moved into another pool (including `drop`).
+- Dropped signals do not enter downstream recommendations.
+- Watch sets `status = watching` without changing `human_status`.
+- Human-owned fields (including `status`) persist across re-import.
+- Audit records exist in the database (UI traceability deferred).
+
+> 收尾实现计划：`docs/superpowers/plans/2026-07-03-phase3-completion.md`
 
 ### Phase 4: Candidate Pools And Tasks
 

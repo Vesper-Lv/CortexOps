@@ -1,4 +1,4 @@
-import { Database, FolderCog } from "lucide-react";
+import { Bot, Settings2 } from "lucide-react";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 
 export default function SettingsPage() {
@@ -6,18 +6,18 @@ export default function SettingsPage() {
     <WorkbenchPage
       eyebrow="System configuration"
       title="Settings"
-      description="Manage source paths, import/export behavior, policy files, prompt templates, and local database settings."
+      description="Configure paths, policy references, import/export, and view the read-only automation runner status."
       metrics={[
-        { label: "Data mode", value: "Local", detail: "Filesystem + SQLite" },
-        { label: "Policy files", value: "-", detail: "Read-only first" },
-        { label: "Prompts", value: "TOML", detail: "Migration later" }
+        { label: "Runner", value: "Codex", detail: "External in MVP" },
+        { label: "Automations", value: "-", detail: "Read-only TOML snapshots" },
+        { label: "Policies", value: "-", detail: "docs/*.md references" }
       ]}
       emptyState={{
-        icon: FolderCog,
-        title: "Settings are intentionally light",
+        icon: Bot,
+        title: "Automations run in Codex (read-only here)",
         description:
-          "The first version keeps configuration explicit and local. Editing policies and prompts can come after read-only views are stable.",
-        actions: [{ icon: Database, label: "SQLite planned", tone: "primary" }]
+          "Automation configs, schedules, and last-run status are shown here for reference only. Codex remains the runner; the app does not call AI directly in Phase 1.",
+        actions: [{ icon: Settings2, label: "Runner status panel planned", tone: "primary" }]
       }}
     />
   );
