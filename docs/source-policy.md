@@ -325,6 +325,12 @@ The daily AI PM radar should:
 7. Use this visible daily order: five-part daily summary, 30-minute reading
    pack, remaining links not selected for the reading pack, then three daily
    practice options.
+7a. Five-part summary labels (exact markdown bold keys) are:
+    `行业信号`, `工程信号`, `研究信号`, `工作流信号`, `风险提示`.
+    Each section must include at least one prose paragraph after
+    `**Label**：` (bullets allowed under that paragraph).
+7b. Reading-pack JSONL items must include `priority_rationale`, `pool_rationale`,
+    and `content_tags` (1-2 tags from the content-tag vocabulary).
 8. The 30-minute reading pack should contain the P0 detailed-reading items, P1
    skim-reading items, and GitHub practice-fit candidates. Do not repeat those
    as separate top-level report sections.
