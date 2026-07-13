@@ -400,9 +400,16 @@ The daily radar is the entry point, not the final output.
   a later automation needs structured weekly selection state.
 - Weekly AI / cognitive science paper radar reports should be kept as Markdown
   records under `state/weekly/paper/YYYY-MM-DD-paper-radar.md`.
+- Weekly Demo replication recommendations should be kept as Markdown records under
+  `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md`.
+- Weekly engineering learning tasks should be kept as Markdown records under
+  `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md`.
 
 ### Monthly
 
+- Monthly direction reviews should be kept as Markdown records under
+  `state/monthly/YYYY-MM-DD-monthly-review.md` where `YYYY-MM-DD` is the first
+  day of the review month (e.g. `2026-07-01`).
 - Monthly outputs should judge direction, not report news.
 - They should answer:
   - continue
