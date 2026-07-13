@@ -5,7 +5,9 @@ import {
   promoteCandidateToTask,
   promoteMemoToTask,
   promoteSignalToTask,
-  updateTaskStatus
+  updateTask,
+  updateTaskStatus,
+  type UpdateTaskInput
 } from "@/server/services/tasks";
 
 export async function promoteMemoAction(memoId: string) {
@@ -29,6 +31,12 @@ export async function promoteCandidateToTaskAction(candidateId: string) {
 
 export async function updateTaskStatusAction(taskId: string, status: string) {
   await updateTaskStatus(taskId, status);
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/today");
+}
+
+export async function updateTaskAction(taskId: string, input: UpdateTaskInput) {
+  await updateTask(taskId, input);
   revalidatePath("/dashboard/tasks");
   revalidatePath("/dashboard/today");
 }

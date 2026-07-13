@@ -90,6 +90,65 @@ export async function updateTaskStatus(taskId: string, status: string): Promise<
   ]);
 }
 
+export type UpdateTaskInput = {
+  title?: string;
+  description?: string | null;
+  priority?: string | null;
+};
+
+export async function updateTask(taskId: string, input: UpdateTaskInput): Promise<void> {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new Error("task not found");
+
+  const data: {
+    title?: string;
+    description?: string | null;
+    priority?: string | null;
+  } = {};
+
+  if (input.title !== undefined) {
+    const title = input.title.trim();
+    if (!title) throw new Error("task title cannot be empty");
+    if (title !== task.title) data.title = title;
+  }
+  if (input.description !== undefined) {
+    const description =
+      input.description === null ? null : input.description.trim() || null;
+    if (description !== task.description) data.description = description;
+  }
+  if (input.priority !== undefined) {
+    const priority =
+      input.priority === null || input.priority === "" ? null : input.priority;
+    if (priority !== task.priority) data.priority = priority;
+  }
+
+  if (Object.keys(data).length === 0) return;
+
+  const fromValue = JSON.stringify({
+    title: task.title,
+    description: task.description,
+    priority: task.priority
+  });
+  const toValue = JSON.stringify({
+    title: data.title ?? task.title,
+    description: data.description !== undefined ? data.description : task.description,
+    priority: data.priority !== undefined ? data.priority : task.priority
+  });
+
+  await prisma.$transaction([
+    prisma.task.update({ where: { id: taskId }, data }),
+    prisma.auditLog.create({
+      data: {
+        entityType: "task",
+        entityId: taskId,
+        action: "update_fields",
+        fromValue,
+        toValue
+      }
+    })
+  ]);
+}
+
 async function resolveLinkedReportId(signalDate: string | null): Promise<string | null> {
   if (!signalDate) return null;
   const report = await prisma.dailyReport.findUnique({ where: { date: signalDate } });
