@@ -1,13 +1,127 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addMemoAction, deleteMemoAction, toggleMemoAction } from "@/server/actions/memoActions";
+import {
+  addMemoAction,
+  deleteMemoAction,
+  toggleMemoAction,
+  updateMemoAction
+} from "@/server/actions/memoActions";
 import { promoteMemoAction } from "@/server/actions/taskActions";
 import { countMemos, filterMemos, type MemoFilter, type MemoItem } from "@/shared/memos";
 
 type MemoListProps = {
   memos: MemoItem[];
 };
+
+function MemoRow({
+  memo,
+  pending,
+  run
+}: {
+  memo: MemoItem;
+  pending: boolean;
+  run: (fn: () => Promise<void>) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(memo.text);
+
+  const startEdit = () => {
+    setDraft(memo.text);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setDraft(memo.text);
+    setEditing(false);
+  };
+
+  const saveEdit = () => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === memo.text) {
+      cancelEdit();
+      return;
+    }
+    run(async () => {
+      await updateMemoAction(memo.id, trimmed);
+      setEditing(false);
+    });
+  };
+
+  return (
+    <li className="flex items-start gap-3 rounded-md border border-border bg-surface px-3 py-2">
+      <input
+        type="checkbox"
+        checked={memo.status === "done"}
+        disabled={pending || editing}
+        onChange={() => run(() => toggleMemoAction(memo.id))}
+        className="mt-1"
+      />
+      {editing ? (
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={pending}
+            rows={3}
+            className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+            aria-label="Edit memo text"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={pending || !draft.trim()}
+              onClick={saveEdit}
+              className="rounded bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              保存
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={cancelEdit}
+              className="rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <span
+            className={`flex-1 text-sm ${memo.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}
+          >
+            {memo.text}
+          </span>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={startEdit}
+            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            编辑
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => promoteMemoAction(memo.id))}
+            className="text-xs text-primary hover:opacity-80 disabled:opacity-50"
+          >
+            升级为 Task
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => deleteMemoAction(memo.id))}
+            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            删除
+          </button>
+        </>
+      )}
+    </li>
+  );
+}
 
 export function MemoList({ memos }: MemoListProps) {
   const [filter, setFilter] = useState<MemoFilter>("all");
@@ -60,39 +174,7 @@ export function MemoList({ memos }: MemoListProps) {
       ) : (
         <ul className="flex flex-col gap-2">
           {visible.map((memo) => (
-            <li
-              key={memo.id}
-              className="flex items-start gap-3 rounded-md border border-border bg-surface px-3 py-2"
-            >
-              <input
-                type="checkbox"
-                checked={memo.status === "done"}
-                disabled={pending}
-                onChange={() => run(() => toggleMemoAction(memo.id))}
-                className="mt-1"
-              />
-              <span
-                className={`flex-1 text-sm ${memo.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}
-              >
-                {memo.text}
-              </span>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run(() => promoteMemoAction(memo.id))}
-                className="text-xs text-primary hover:opacity-80 disabled:opacity-50"
-              >
-                升级为 Task
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run(() => deleteMemoAction(memo.id))}
-                className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-              >
-                删除
-              </button>
-            </li>
+            <MemoRow key={memo.id} memo={memo} pending={pending} run={run} />
           ))}
         </ul>
       )}

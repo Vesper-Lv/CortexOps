@@ -15,6 +15,27 @@ export async function createMemo(text: string): Promise<void> {
   await prisma.memo.create({ data: { text: trimmed, sourceContext: "manual" } });
 }
 
+export async function updateMemo(id: string, text: string): Promise<void> {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("memo text cannot be empty");
+  const memo = await prisma.memo.findUnique({ where: { id } });
+  if (!memo) throw new Error("memo not found");
+  if (memo.text === trimmed) return;
+
+  await prisma.$transaction([
+    prisma.memo.update({ where: { id }, data: { text: trimmed } }),
+    prisma.auditLog.create({
+      data: {
+        entityType: "memo",
+        entityId: id,
+        action: "update_text",
+        fromValue: memo.text,
+        toValue: trimmed
+      }
+    })
+  ]);
+}
+
 export async function toggleMemo(id: string): Promise<void> {
   const memo = await prisma.memo.findUnique({ where: { id } });
   if (!memo) return;

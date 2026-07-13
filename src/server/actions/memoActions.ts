@@ -1,10 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createMemo, deleteMemo, toggleMemo } from "@/server/services/memos";
+import { createMemo, deleteMemo, toggleMemo, updateMemo } from "@/server/services/memos";
 
 export async function addMemoAction(formData: FormData) {
   await createMemo(String(formData.get("text") ?? ""));
+  revalidatePath("/inbox/memo");
+}
+
+export async function updateMemoAction(id: string, text: string) {
+  await updateMemo(id, text);
   revalidatePath("/inbox/memo");
 }
 
