@@ -7,7 +7,9 @@ import {
   type PoolOption
 } from "@/shared/poolOptions";
 import type { PoolGroup } from "@/shared/inboxTypes";
+import { PRIORITY_OPTIONS, type PriorityOption } from "@/shared/priorityOptions";
 import { computeStatusOnFinalize } from "@/shared/signalStatus";
+import { parseSignalRaw, pickSummary } from "@/server/signalRaw";
 
 async function loadPromoteFlags(candidateIds: string[]): Promise<{
   taskIds: Set<string>;
@@ -52,6 +54,7 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
       status: c.status,
       finalPool: c.finalPool,
       priority: c.priority ?? "",
+      summary: pickSummary(parseSignalRaw(c.rawJson), c.aihotSummary, c.reason),
       hasLinkedTask: promoteFlags.taskIds.has(c.id),
       hasLinkedArtifact: promoteFlags.artifactIds.has(c.id)
     });
@@ -143,9 +146,38 @@ export async function watchCandidate(candidateId: string): Promise<void> {
   await syncLinkedSignal(candidate.recordKey, { status: "watching" });
 }
 
+export async function updateCandidatePriority(candidateId: string, priority: string): Promise<void> {
+  if (!PRIORITY_OPTIONS.includes(priority as PriorityOption)) {
+    throw new Error(`invalid priority: ${priority}`);
+  }
+
+  const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
+  if (!candidate) throw new Error(`candidate not found: ${candidateId}`);
+  if (candidate.priority === priority) return;
+
+  await prisma.$transaction([
+    prisma.candidate.update({
+      where: { id: candidateId },
+      data: { priority }
+    }),
+    prisma.auditLog.create({
+      data: {
+        entityType: "candidate",
+        entityId: candidateId,
+        action: "change_priority",
+        fromValue: candidate.priority,
+        toValue: priority,
+        rationale: null
+      }
+    })
+  ]);
+
+  await syncLinkedSignal(candidate.recordKey, { priority });
+}
+
 async function syncLinkedSignal(
   candidateRecordKey: string,
-  patch: { finalPool?: string; status?: string; humanStatus?: string }
+  patch: { finalPool?: string; status?: string; humanStatus?: string; priority?: string }
 ): Promise<void> {
   if (!candidateRecordKey.startsWith("signal-sync:")) return;
   const signalRecordKey = candidateRecordKey.slice("signal-sync:".length);
@@ -157,7 +189,8 @@ async function syncLinkedSignal(
     data: {
       ...(patch.finalPool !== undefined ? { finalPool: patch.finalPool } : {}),
       ...(patch.status !== undefined ? { status: patch.status } : {}),
-      ...(patch.humanStatus !== undefined ? { humanStatus: patch.humanStatus } : {})
+      ...(patch.humanStatus !== undefined ? { humanStatus: patch.humanStatus } : {}),
+      ...(patch.priority !== undefined ? { priority: patch.priority } : {})
     }
   });
 }

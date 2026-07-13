@@ -13,14 +13,19 @@ import {
   type DragStartEvent
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { moveCandidatePool, watchCandidateAction } from "@/server/actions/candidateActions";
-import { promoteCandidateToArtifactAction } from "@/server/actions/artifactActions";
+import {
+  moveCandidatePool,
+  updateCandidatePriorityAction,
+  watchCandidateAction
+} from "@/server/actions/candidateActions";
 import { promoteCandidateToTaskAction } from "@/server/actions/taskActions";
+import { SummaryTooltip } from "@/components/shared/summary-tooltip";
 import {
   POOL_OPTIONS,
   poolOptionFromName,
   type PoolOption
 } from "@/shared/poolOptions";
+import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 import { canPromoteItem, canWatchCandidate } from "@/shared/signalStatus";
 import type { PoolGroup } from "@/shared/inboxTypes";
 
@@ -37,17 +42,17 @@ function PoolCard({
   poolOption,
   pending,
   onMove,
+  onPriority,
   onWatch,
-  onTask,
-  onArtifact
+  onTask
 }: {
   item: PoolGroup["items"][number];
   poolOption: PoolOption | null;
   pending: boolean;
   onMove: (candidateId: string, toPool: string) => void;
+  onPriority: (candidateId: string, priority: string) => void;
   onWatch: (candidateId: string) => void;
   onTask: (candidateId: string) => void;
-  onArtifact: (candidateId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
@@ -66,12 +71,6 @@ function PoolCard({
       status: item.status,
       finalPool: item.finalPool
     }) && !item.hasLinkedTask;
-  const showArtifact =
-    canPromoteItem({
-      humanStatus: item.humanStatus,
-      status: item.status,
-      finalPool: item.finalPool
-    }) && !item.hasLinkedArtifact;
   const lifecycleStatus = item.status ?? "inbox";
 
   return (
@@ -95,20 +94,18 @@ function PoolCard({
             ⋮⋮
           </button>
           <div className="min-w-0 flex-1">
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-foreground hover:underline"
-            >
-              {item.title}
-            </a>
+            <div className="flex items-start gap-2">
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-foreground hover:underline"
+              >
+                {item.title}
+              </a>
+              <SummaryTooltip summary={item.summary} />
+            </div>
             <div className="mt-1 flex flex-wrap gap-1">
-              {item.priority && (
-                <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {item.priority}
-                </span>
-              )}
               <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {item.humanStatus}
               </span>
@@ -121,6 +118,25 @@ function PoolCard({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <select
+            disabled={pending}
+            value={item.priority || ""}
+            onChange={(e) => {
+              const priority = e.target.value;
+              if (priority && priority !== item.priority) onPriority(item.id, priority);
+            }}
+            className="rounded border border-border bg-surface px-2 py-1 text-xs"
+            aria-label="Candidate priority"
+          >
+            <option value="" disabled>
+              优先级…
+            </option>
+            {PRIORITY_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
           {showWatch && lifecycleStatus !== "watching" && (
             <button
               type="button"
@@ -139,16 +155,6 @@ function PoolCard({
               className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
             >
               → Task
-            </button>
-          )}
-          {showArtifact && (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => onArtifact(item.id)}
-              className="rounded border border-border bg-surface px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
-            >
-              → Artifact
             </button>
           )}
           <select
@@ -180,16 +186,16 @@ function PoolColumn({
   group,
   pending,
   onMove,
+  onPriority,
   onWatch,
-  onTask,
-  onArtifact
+  onTask
 }: {
   group: PoolGroup;
   pending: boolean;
   onMove: (candidateId: string, toPool: string) => void;
+  onPriority: (candidateId: string, priority: string) => void;
   onWatch: (candidateId: string) => void;
   onTask: (candidateId: string) => void;
-  onArtifact: (candidateId: string) => void;
 }) {
   const columnId = poolColumnId(group.poolName);
   const { setNodeRef, isOver } = useDroppable({ id: columnId });
@@ -215,9 +221,9 @@ function PoolColumn({
             poolOption={poolOptionFromName(group.poolName)}
             pending={pending}
             onMove={onMove}
+            onPriority={onPriority}
             onWatch={onWatch}
             onTask={onTask}
-            onArtifact={onArtifact}
           />
         ))}
       </ul>
@@ -247,6 +253,12 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     });
   };
 
+  const runPriority = (candidateId: string, priority: string) => {
+    startTransition(() => {
+      void updateCandidatePriorityAction(candidateId, priority);
+    });
+  };
+
   const runWatch = (candidateId: string) => {
     startTransition(() => {
       void watchCandidateAction(candidateId);
@@ -256,12 +268,6 @@ export function PoolBoard({ groups }: PoolBoardProps) {
   const runTask = (candidateId: string) => {
     startTransition(() => {
       void promoteCandidateToTaskAction(candidateId);
-    });
-  };
-
-  const runArtifact = (candidateId: string) => {
-    startTransition(() => {
-      void promoteCandidateToArtifactAction(candidateId);
     });
   };
 
@@ -292,9 +298,9 @@ export function PoolBoard({ groups }: PoolBoardProps) {
             group={group}
             pending={pending}
             onMove={runMove}
+            onPriority={runPriority}
             onWatch={runWatch}
             onTask={runTask}
-            onArtifact={runArtifact}
           />
         ))}
       </div>

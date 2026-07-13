@@ -26,6 +26,9 @@ export type SignalView = {
   focusDirection?: string;
   knownFacts?: string;
   openQuestions?: string;
+  priorityRationale?: string;
+  poolRationale?: string;
+  contentTags?: string[];
   isKnowledgeGap: boolean;
 };
 
@@ -51,6 +54,9 @@ function toView(s: SignalLike): SignalView {
     focusDirection: raw.focusDirection,
     knownFacts: raw.knownFacts,
     openQuestions: raw.openQuestions,
+    priorityRationale: raw.priorityRationale,
+    poolRationale: raw.poolRationale,
+    contentTags: raw.contentTags,
     isKnowledgeGap: pool === "knowledge_gap"
   };
 }

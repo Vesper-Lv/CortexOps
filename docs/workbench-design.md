@@ -41,7 +41,7 @@ The primary user is an AI PM who needs to:
 2. Manual review is part of the system: human confirmation is a control loop,
    not a failure of automation.
 3. Every high-value signal should have a next state: confirm, watch, schedule,
-   convert to task, archive, or drop.
+   convert to task, finish into an artifact, archive, or drop.
 4. Weekly and monthly views should prioritize and schedule, not summarize the
    same information again.
 5. The UI should feel like an operating console, not a marketing dashboard.
@@ -237,7 +237,6 @@ Key actions:
 - Add to reading pack
 - Mark as watching
 - Convert to task
-- Convert to artifact candidate
 - Archive
 - Drop
 
@@ -255,7 +254,8 @@ Open Candidate Pools
 ```
 
 Candidate pools should preserve weak signals lightly, but only P0 and strong P1
-items should regularly become tasks.
+items should regularly become tasks. Pools support watching and task promotion;
+artifact promotion happens after a task reaches Done.
 
 Candidate pool files are the source of truth:
 
@@ -280,6 +280,7 @@ Add or import tasks
 -> classify into Inbox / This Week / Today / In Progress / Waiting / Done
 -> limit active work
 -> complete tasks with visible success criteria
+-> promote done work into an Artifact when it has portfolio value
 ```
 
 Suggested statuses:

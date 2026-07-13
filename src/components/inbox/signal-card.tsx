@@ -8,6 +8,7 @@ import {
 import { POOL_OPTIONS } from "@/shared/poolOptions";
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 import type { InboxSignal } from "@/shared/inboxTypes";
+import { ContentTagChips } from "@/components/shared/content-tag-chips";
 
 export function SignalCard({ signal }: { signal: InboxSignal }) {
   const [pending, startTransition] = useTransition();
@@ -69,6 +70,15 @@ export function SignalCard({ signal }: { signal: InboxSignal }) {
         {signal.title}
       </a>
       {signal.summary && <p className="mt-1 text-sm text-muted-foreground">{signal.summary}</p>}
+      <div className="mt-2">
+        <ContentTagChips tags={signal.contentTags} />
+      </div>
+      {signal.priorityRationale && (
+        <p className="mt-1 text-xs text-muted-foreground">优先级依据：{signal.priorityRationale}</p>
+      )}
+      {signal.poolRationale && (
+        <p className="mt-1 text-xs text-muted-foreground">归池依据：{signal.poolRationale}</p>
+      )}
 
       <div className="mt-3 flex items-center justify-between gap-2">
         <button

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
+import { MonthlyReportView } from "@/components/dashboard/monthly-report-view";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
+import { parseMonthlyReportMarkdown } from "@/server/importers/monthlyReportParser";
 import { getLatestArchiveReport } from "@/server/services/reports";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,8 @@ export default async function MonthlyPage() {
     );
   }
 
+  const sections = parseMonthlyReportMarkdown(report.rawMarkdown);
+
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6">
       <div>
@@ -43,9 +47,7 @@ export default async function MonthlyPage() {
           </Link>
         </p>
       </div>
-      <article className="whitespace-pre-wrap rounded-md border border-border bg-surface p-4 text-sm">
-        {report.rawMarkdown}
-      </article>
+      <MonthlyReportView sections={sections} />
     </section>
   );
 }

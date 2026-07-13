@@ -28,7 +28,8 @@ describe("mergeHumanFieldsIntoObject", () => {
       humanStatus: "confirmed",
       finalPool: "demo_replication",
       status: "confirmed",
-      readingPackStatus: "selected"
+      readingPackStatus: "selected",
+      priority: "P0"
     });
 
     expect(changed).toBe(true);
@@ -37,7 +38,8 @@ describe("mergeHumanFieldsIntoObject", () => {
       human_status: "confirmed",
       final_pool: "demo_replication",
       status: "confirmed",
-      reading_pack_status: "selected"
+      reading_pack_status: "selected",
+      priority: "P0"
     });
   });
 
@@ -47,7 +49,8 @@ describe("mergeHumanFieldsIntoObject", () => {
       humanStatus: "confirmed",
       finalPool: "archive",
       status: "confirmed",
-      readingPackStatus: null
+      readingPackStatus: null,
+      priority: null
     });
     expect(changed).toBe(false);
   });
@@ -65,7 +68,8 @@ describe("registerByLine", () => {
       humanStatus: "confirmed",
       finalPool: "knowledge_gap",
       status: "confirmed",
-      readingPackStatus: null
+      readingPackStatus: null,
+      priority: null
     }, "candidate");
 
     registerByLine(byLine, {
@@ -75,7 +79,8 @@ describe("registerByLine", () => {
       humanStatus: "confirmed",
       finalPool: "demo_replication",
       status: "confirmed",
-      readingPackStatus: "selected"
+      readingPackStatus: "selected",
+      priority: "P1"
     }, "signal");
 
     expect(byLine.get(line)?.recordKey).toBe("daily:d1");
@@ -92,7 +97,8 @@ describe("resolveDbRecord", () => {
       humanStatus: "changed",
       finalPool: "paper_candidate",
       status: "confirmed",
-      readingPackStatus: "selected"
+          readingPackStatus: "selected",
+          priority: "P0"
     };
 
     const lookups = emptyLookups({
@@ -106,7 +112,8 @@ describe("resolveDbRecord", () => {
             humanStatus: "pending",
             finalPool: "paper_candidate",
             status: null,
-            readingPackStatus: "candidate"
+            readingPackStatus: "candidate",
+            priority: "P2"
           }
         ]
       ]),
@@ -138,7 +145,8 @@ describe("exportJsonlFiles", () => {
           humanStatus: "confirmed",
           finalPool: "demo_replication",
           status: "confirmed",
-          readingPackStatus: "selected"
+          readingPackStatus: "selected",
+          priority: "P0"
         }
       ]
     ])
@@ -200,7 +208,8 @@ describe("exportJsonlFiles", () => {
             humanStatus: "confirmed",
             finalPool: "demo_replication",
             status: "confirmed",
-            readingPackStatus: "selected"
+          readingPackStatus: "selected",
+          priority: "P0"
           }
         ]
       ])
@@ -223,6 +232,7 @@ describe("exportJsonlFiles", () => {
     );
 
     expect(written).toContain('"reading_pack_status":"selected"');
+    expect(written).toContain('"priority":"P0"');
   });
 });
 
@@ -330,13 +340,15 @@ describe("dbHumanFieldsToJson", () => {
         humanStatus: "changed",
         finalPool: "demo_replication",
         status: "watching",
-        readingPackStatus: "selected"
+        readingPackStatus: "selected",
+        priority: "P0"
       })
     ).toEqual({
       human_status: "changed",
       final_pool: "demo_replication",
       status: "watching",
-      reading_pack_status: "selected"
+      reading_pack_status: "selected",
+      priority: "P0"
     });
   });
 });

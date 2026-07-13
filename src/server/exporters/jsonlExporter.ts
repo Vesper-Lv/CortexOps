@@ -104,6 +104,7 @@ const dbRecordSelect = {
   finalPool: true,
   status: true,
   readingPackStatus: true,
+  priority: true,
   externalId: true,
   canonicalKey: true
 } as const;

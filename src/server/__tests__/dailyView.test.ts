@@ -40,4 +40,23 @@ describe("buildReadingView", () => {
     expect(view.readingPack[0].summary).toBe("ds");
     expect(view.readingPack[0].url).toBe("orig");
   });
+
+  it("passes raw rationales and content tags through to signal views", () => {
+    const view = buildReadingView([
+      s({
+        readingPackStatus: "selected",
+        rawJson: JSON.stringify({
+          priority_rationale: "High urgency",
+          pool_rationale: "Good demo candidate",
+          content_tags: ["agent", "workflow"]
+        })
+      })
+    ]);
+
+    expect(view.readingPack[0]).toMatchObject({
+      priorityRationale: "High urgency",
+      poolRationale: "Good demo candidate",
+      contentTags: ["agent", "workflow"]
+    });
+  });
 });
