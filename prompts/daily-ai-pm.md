@@ -85,8 +85,8 @@ Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
 每条 JSONL link object 至少包含：
-id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, read_reason, focus_direction, known_facts, open_questions, knowledge_gap_card。
-其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。read_reason/focus_direction 仅阅读包且 suggested_pool 不是 knowledge_gap 时填写。known_facts/open_questions/knowledge_gap_card 在日报 run 必须为空；knowledge_gap 卡片仅在人工 confirmed + final_pool=knowledge_gap 后由后续流程写入（本 automation 不生成卡片）。去重/保留说明只写入 novelty_reason，reason 不得复述。
+id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, content_tags, read_reason, focus_direction, known_facts, open_questions, knowledge_gap_card。
+其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。content_tags 为 1-2 个内容标签数组（从 docs/ingestion-normalization.md §6 Content Tags 词表选取，如 agent、eval、2B、Vibe Coding），供 UI chip 与后续 Obsidian 双链预留。read_reason/focus_direction 仅阅读包且 suggested_pool 不是 knowledge_gap 时填写。known_facts/open_questions/knowledge_gap_card 在日报 run 必须为空；knowledge_gap 卡片仅在人工 confirmed + final_pool=knowledge_gap 后由后续流程写入（本 automation 不生成卡片）。去重/保留说明只写入 novelty_reason，reason 不得复述。
 
 写入规则：
 - 所有采集链接先写入 state/daily/YYYY-MM-DD-links.jsonl。
@@ -101,13 +101,19 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 
 ## 1. 五段式日报
 §1 开头必须包含一行采集状态：ingest_mode、manifest_ready、prefetch_host、aihot_items、arxiv_supplement、github_supplement（ok 或 skipped_no_prefetch）。
-用五段判断今天的大方向：产品/行业动态、GitHub/工程信号、论文/研究信号、工具/工作流信号、风险/限制/反例。
+随后用以下**固定五段标签**（全文精确匹配，勿改字）各写至少一段正文；禁止只有小标题无段落；每段可用 bullet，但必须先有 `**标签**：` 后的主句或主段：
+- **行业信号**：
+- **工程信号**：
+- **研究信号**：
+- **工作流信号**：
+- **风险提示**：
 
 ## 2. 今日 30mins 阅读包
-按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、新闻日期（`新闻日期：YYYY-MM-DD` 或 `新闻日期：未披露`，来自 published_at）、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status。随后：
+按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、新闻日期（`新闻日期：YYYY-MM-DD` 或 `新闻日期：未披露`，来自 published_at）、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status、content_tags（1-2 个）。随后：
 - 摘要：display_summary（AIhot 直接用 aihot_summary verbatim，禁止改写摘要修「今天」）。
 - 优先级分类原因：priority_rationale（一句，说明为何 P0/P1/archive）。
 - 分类池分类原因：pool_rationale（一句，说明为何建议进入该 suggested_pool，供人工二次分类参考）。
+- 内容标签：content_tags（JSON 数组 1-2 项，写入 JSONL；report 中可写成 `标签：agent · eval`）。
 - 若建议池不是 knowledge_gap：再给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度）。不要再输出"读的时候看/读完判断"模板句。
 - 若建议池是 knowledge_gap：**不要**输出「文章可获得的事实」「需要额外研究的问题」或知识空缺卡片；仅保留摘要 + 优先级分类原因 + 分类池分类原因。卡片指引仅在人工确认 final_pool=knowledge_gap 后由后续流程生成（本日报不写）。
 - 若摘要 verbatim 含「今天/今日/昨天」且 published_at 已知：可加一句「摘要中的相对日期请参考新闻日期」，**不得**改写 display_summary 正文。
@@ -120,6 +126,10 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 
 ## 4. 今日练习三选一
 给 3 个 20-45 分钟练习选项，并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
+格式固定为三行（全角竖线 `｜`）：
+1. **正式推荐：标题**｜时长与正文…
+2. **备选：标题**｜时长与正文…
+3. **备选：标题**｜时长与正文…
 
 质量要求：
 - 必须提供可点击来源链接。
@@ -131,5 +141,6 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 事实、AIhot 摘要、Codex 判断分离；剩余链接以事实摘要为主，克制解读。
 - 去重/保留原因只写入 novelty_reason，并在报告中只呈现一次，reason 不复述。
 - duplicate_7d / duplicate_suppressed 只进 JSONL，不进 §3；§1 披露 excluded_remaining_7d_dup。
-- 阅读包每条必须有 priority_rationale 与 pool_rationale。
+- 阅读包每条必须有 priority_rationale、pool_rationale 与 content_tags（1-2 个）。
 - knowledge_gap 日报不写 known_facts/open_questions/卡片；published_at 披露新闻日期；禁止改写 verbatim 摘要修「今天」。
+- §1 五段标签必须精确使用：行业信号 / 工程信号 / 研究信号 / 工作流信号 / 风险提示。

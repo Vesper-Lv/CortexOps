@@ -808,6 +808,14 @@ Merged signal should keep:
 
 Each signal should receive content tags and use-case tags.
 
+### JSONL field: `content_tags`
+
+- Type: string array with **1-2** items.
+- Required for `reading_pack_status=selected` items; recommended for all longlist items.
+- Values MUST come from the Content Tags vocabulary below (exact spelling).
+- Purpose: Workbench chip display and future Obsidian wiki-link export
+  (e.g. `[[agent]]`, frontmatter `tags:`).
+
 ### Content Tags
 
 Use one or more:
@@ -840,6 +848,9 @@ ROI
 integration
 collaboration
 interview story
+LLM
+Product
+Development
 ```
 
 ### Use-Case Tags
@@ -857,6 +868,16 @@ drop
 ```
 
 Content tags describe what the signal is. Use-case tags describe what it is for.
+Prefer encoding use-case via `suggested_pool` / `final_pool`; keep `content_tags`
+for topical chips.
+
+### Classification rationale fields
+
+- `priority_rationale`: one sentence explaining why P0 / P1 / P2 / archive.
+- `pool_rationale`: one sentence explaining why `suggested_pool` was chosen.
+- Both are required when `reading_pack_status=selected`.
+- They are AI suggestions for human review; human edits may later change
+  `priority` / `final_pool` without rewriting these fields unless desired.
 
 ## 7. Priority Pre-classification
 
