@@ -30,6 +30,12 @@ GET https://export.arxiv.org/api/query
   &max_results=20
 ```
 
+Transient timeouts (curl exit 28) are common behind proxies. Prefetch retries up
+to `ARXIV_ATTEMPTS` (default **3**) with `--connect-timeout` /
+`--max-time` (`ARXIV_CONNECT_TIMEOUT` default 15s, `ARXIV_MAX_TIME` default 60s)
+and backoff sleep `attempt * 2` seconds. Still non-blocking: all failures →
+`status: skipped`.
+
 ### Atom entry → JSONL
 
 | arXiv | JSONL field | Rule |
