@@ -332,20 +332,20 @@ export async function createPracticeTask(input: {
   body: string;
 }): Promise<{ taskId: string; created: boolean }> {
   const marker = practiceTaskMarker(input.date, input.practiceIndex);
-  const existing = await prisma.task.findFirst({
-    where: {
-      origin: "practice",
-      description: { contains: marker }
-    },
-    select: { id: true }
-  });
-  if (existing) return { taskId: existing.id, created: false };
-
   const title = input.title.trim() || "今日练习";
   const body = input.body.trim();
   const description = body ? `${marker}\n${body}` : marker;
 
-  const task = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: {
+        origin: "practice",
+        description: { contains: marker }
+      },
+      select: { id: true }
+    });
+    if (existing) return { taskId: existing.id, created: false };
+
     const created = await tx.task.create({
       data: {
         title,
@@ -362,10 +362,8 @@ export async function createPracticeTask(input: {
         toValue: JSON.stringify({ date: input.date, index: input.practiceIndex, title })
       }
     });
-    return created;
+    return { taskId: created.id, created: true };
   });
-
-  return { taskId: task.id, created: true };
 }
 
 export async function findPracticeTaskId(

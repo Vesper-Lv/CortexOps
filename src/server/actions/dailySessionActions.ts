@@ -30,16 +30,13 @@ export async function confirmPractice(
     altFields[`practiceAlt${index}Disposition`] = disposition;
   }
 
-  await upsertDailySession(date, {
-    selectedPracticeIndex: selectedIndex,
-    ...altFields
-  });
-
   const report = await getDailyReport(date);
-  const practice = report?.practices.find((p) => p.index === selectedIndex) ?? report?.practices[selectedIndex];
+  const practice =
+    report?.practices.find((p) => p.index === selectedIndex) ?? report?.practices[selectedIndex];
   const title = practice?.title ?? `今日练习 #${selectedIndex + 1}`;
   const body = practice?.body ?? "";
 
+  // Create Task first so a failed materialization does not leave a locked session.
   const { taskId, created } = await createPracticeTask({
     date,
     practiceIndex: selectedIndex,
@@ -47,9 +44,35 @@ export async function confirmPractice(
     body
   });
 
+  await upsertDailySession(date, {
+    selectedPracticeIndex: selectedIndex,
+    ...altFields
+  });
+
   revalidatePath("/dashboard/today");
   revalidatePath("/dashboard/tasks");
   return { practiceTaskId: taskId, practiceTaskCreated: created };
+}
+
+/** Re-materialize practice Task for an already-confirmed session (pre-PR sessions / failed create). */
+export async function ensurePracticeTaskAction(date: string): Promise<{ practiceTaskId: string }> {
+  const session = await prisma.dailySession.findUnique({ where: { date } });
+  if (session?.selectedPracticeIndex == null) {
+    throw new Error("no confirmed practice for date");
+  }
+  const selectedIndex = session.selectedPracticeIndex;
+  const report = await getDailyReport(date);
+  const practice =
+    report?.practices.find((p) => p.index === selectedIndex) ?? report?.practices[selectedIndex];
+  const { taskId } = await createPracticeTask({
+    date,
+    practiceIndex: selectedIndex,
+    title: practice?.title ?? `今日练习 #${selectedIndex + 1}`,
+    body: practice?.body ?? ""
+  });
+  revalidatePath("/dashboard/today");
+  revalidatePath("/dashboard/tasks");
+  return { practiceTaskId: taskId };
 }
 
 export async function dismissCandidates(date: string) {
