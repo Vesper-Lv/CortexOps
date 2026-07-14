@@ -5,16 +5,25 @@ import {
   finalizeSignalAction,
   submitDraft
 } from "@/server/actions/reviewActions";
+import { IconButton } from "@/components/shared/icon-button";
+import { ContentTagChips } from "@/components/shared/content-tag-chips";
 import { POOL_OPTIONS } from "@/shared/poolOptions";
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 import type { InboxSignal } from "@/shared/inboxTypes";
-import { ContentTagChips } from "@/components/shared/content-tag-chips";
+
+const POOL_SELECT_OPTIONS = POOL_OPTIONS.filter((p) => p !== "drop");
 
 export function SignalCard({ signal }: { signal: InboxSignal }) {
   const [pending, startTransition] = useTransition();
   const inPack = signal.readingPackStatus === "selected";
 
   const run = (fn: () => Promise<void>) => startTransition(() => void fn());
+
+  const dropSignal = () =>
+    run(async () => {
+      await submitDraft(signal.id, { type: "set_pool", pool: "drop" });
+      await finalizeSignalAction(signal.id);
+    });
 
   return (
     <li
@@ -43,7 +52,7 @@ export function SignalCard({ signal }: { signal: InboxSignal }) {
         </select>
         <select
           disabled={pending}
-          value={signal.finalPool || ""}
+          value={signal.finalPool === "drop" ? "" : signal.finalPool || ""}
           onChange={(e) => {
             const pool = e.target.value;
             if (pool) run(() => submitDraft(signal.id, { type: "set_pool", pool }));
@@ -53,12 +62,13 @@ export function SignalCard({ signal }: { signal: InboxSignal }) {
           <option value="" disabled>
             池…
           </option>
-          {POOL_OPTIONS.map((p) => (
+          {POOL_SELECT_OPTIONS.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
           ))}
         </select>
+        <IconButton kind="delete" label="移入 drop（软删除）" disabled={pending} onClick={dropSignal} />
       </div>
 
       <a

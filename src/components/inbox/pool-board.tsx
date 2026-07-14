@@ -19,6 +19,7 @@ import {
   watchCandidateAction
 } from "@/server/actions/candidateActions";
 import { promoteCandidateToTaskAction } from "@/server/actions/taskActions";
+import { IconButton } from "@/components/shared/icon-button";
 import { SummaryTooltip } from "@/components/shared/summary-tooltip";
 import {
   POOL_OPTIONS,
@@ -37,6 +38,8 @@ function poolColumnId(poolName: string): string {
   return poolOptionFromName(poolName) ?? poolName;
 }
 
+const MOVE_TARGETS = POOL_OPTIONS.filter((p) => p !== "drop");
+
 function PoolCard({
   item,
   poolOption,
@@ -44,7 +47,8 @@ function PoolCard({
   onMove,
   onPriority,
   onWatch,
-  onTask
+  onTask,
+  onDrop
 }: {
   item: PoolGroup["items"][number];
   poolOption: PoolOption | null;
@@ -53,6 +57,7 @@ function PoolCard({
   onPriority: (candidateId: string, priority: string) => void;
   onWatch: (candidateId: string) => void;
   onTask: (candidateId: string) => void;
+  onDrop: (candidateId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
@@ -115,6 +120,12 @@ function PoolCard({
               )}
             </div>
           </div>
+          <IconButton
+            kind="delete"
+            label="移入 drop（软删除）"
+            disabled={pending || poolOption === "drop"}
+            onClick={() => onDrop(item.id)}
+          />
         </div>
         <div className="flex flex-wrap gap-2">
           <select
@@ -169,7 +180,7 @@ function PoolCard({
             <option value="" disabled>
               Move to pool…
             </option>
-            {POOL_OPTIONS.map((p) => (
+            {MOVE_TARGETS.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
@@ -187,7 +198,8 @@ function PoolColumn({
   onMove,
   onPriority,
   onWatch,
-  onTask
+  onTask,
+  onDrop
 }: {
   group: PoolGroup;
   pending: boolean;
@@ -195,6 +207,7 @@ function PoolColumn({
   onPriority: (candidateId: string, priority: string) => void;
   onWatch: (candidateId: string) => void;
   onTask: (candidateId: string) => void;
+  onDrop: (candidateId: string) => void;
 }) {
   const columnId = poolColumnId(group.poolName);
   const { setNodeRef, isOver } = useDroppable({ id: columnId });
@@ -223,6 +236,7 @@ function PoolColumn({
             onPriority={onPriority}
             onWatch={onWatch}
             onTask={onTask}
+            onDrop={onDrop}
           />
         ))}
       </ul>
@@ -270,6 +284,12 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     });
   };
 
+  const runDrop = (candidateId: string) => {
+    startTransition(() => {
+      void moveCandidatePool(candidateId, "drop");
+    });
+  };
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
   }
@@ -283,7 +303,7 @@ export function PoolBoard({ groups }: PoolBoardProps) {
     if (!entry?.poolOption) return;
 
     const targetPool = String(over.id) as PoolOption;
-    if (targetPool === entry.poolOption) return;
+    if (targetPool === entry.poolOption || targetPool === "drop") return;
 
     runMove(entry.item.id, targetPool);
   }
@@ -300,6 +320,7 @@ export function PoolBoard({ groups }: PoolBoardProps) {
             onPriority={runPriority}
             onWatch={runWatch}
             onTask={runTask}
+            onDrop={runDrop}
           />
         ))}
       </div>
