@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import type { Route } from "next";
 import type { DailyReportListItem, ArchiveReportListItem } from "@/server/services/reports";
+import type { ContentTagSearchResult } from "@/server/services/contentTags";
+import { ReportTagSearch } from "@/components/library/report-tag-search";
 import {
   displayMonthlyTitle,
   displayWeeklyTitle,
@@ -37,18 +41,28 @@ function groupWeeklyByMonth(weekly: ArchiveReportListItem[]): { monthKey: string
 
 export function ReportLibrary({
   dailyReports,
-  archiveReports
+  archiveReports,
+  vocabulary,
+  activeTag,
+  searchResult
 }: {
   dailyReports: DailyReportListItem[];
   archiveReports: ArchiveReportListItem[];
+  vocabulary: string[];
+  activeTag: string | null;
+  searchResult: ContentTagSearchResult | null;
 }) {
-  if (dailyReports.length === 0 && archiveReports.length === 0) {
+  if (dailyReports.length === 0 && archiveReports.length === 0 && !activeTag) {
     return (
       <p className="text-sm text-muted-foreground">
         暂无导入报告。运行 <code className="text-xs">npm run import</code> 加载 state/daily 与 weekly/monthly 输出。
       </p>
     );
   }
+
+  const tagDates = searchResult ? new Set(searchResult.dates) : null;
+  const filteredDaily =
+    tagDates != null ? dailyReports.filter((r) => tagDates.has(r.date)) : dailyReports;
 
   const weekly = archiveReports.filter((r) => r.reportType === "weekly");
   const monthly = archiveReports.filter((r) => r.reportType === "monthly");
@@ -57,11 +71,17 @@ export function ReportLibrary({
 
   return (
     <div className="flex flex-col gap-8">
-      {dailyReports.length > 0 && (
+      <ReportTagSearch
+        vocabulary={vocabulary}
+        activeTag={activeTag}
+        searchResult={searchResult}
+      />
+
+      {filteredDaily.length > 0 && (
         <section>
           <h3 className="mb-3 text-lg font-semibold text-foreground">Daily reports</h3>
           <ul className="flex flex-col gap-2">
-            {dailyReports.map((r) => (
+            {filteredDaily.map((r) => (
               <li
                 key={r.date}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm"
@@ -83,7 +103,11 @@ export function ReportLibrary({
         </section>
       )}
 
-      {weekly.length > 0 && (
+      {activeTag && filteredDaily.length === 0 && (
+        <p className="text-sm text-muted-foreground">没有匹配标签的 Daily 报告。</p>
+      )}
+
+      {!activeTag && weekly.length > 0 && (
         <section>
           <h3 className="mb-3 text-lg font-semibold text-foreground">Weekly Report</h3>
           <div className="flex flex-col gap-5">
@@ -92,7 +116,10 @@ export function ReportLibrary({
                 <h4 className="mb-2 text-sm font-medium text-muted-foreground">{monthLabelFromKey(monthKey)}</h4>
                 <ul className="flex flex-col gap-2">
                   {items.map((r) => {
-                    const ordinal = weekOrdinalInMonth(toRef(r), weeklyRefs.filter((p) => monthKeyFromPeriod(p.periodStart) === monthKey));
+                    const ordinal = weekOrdinalInMonth(
+                      toRef(r),
+                      weeklyRefs.filter((p) => monthKeyFromPeriod(p.periodStart) === monthKey)
+                    );
                     const range = formatPeriodRange(r.periodStart, r.periodEnd);
                     return (
                       <li
@@ -116,7 +143,7 @@ export function ReportLibrary({
         </section>
       )}
 
-      {monthly.length > 0 && (
+      {!activeTag && monthly.length > 0 && (
         <section>
           <h3 className="mb-3 text-lg font-semibold text-foreground">Monthly Report</h3>
           <ul className="flex flex-col gap-2">

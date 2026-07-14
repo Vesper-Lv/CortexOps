@@ -3,6 +3,7 @@ import {
   POOL_DISPLAY_ORDER,
   assertValidPool,
   poolNameFromOption,
+  poolOptionFromName,
   sortPools,
   type PoolOption
 } from "@/shared/poolOptions";
@@ -67,7 +68,9 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
     }
   }
 
-  return sortPools([...map.values()]);
+  // Keep drop items out of the board seed/order; do not expose a drop column.
+  const groups = [...map.values()].filter((g) => poolOptionFromName(g.poolName) !== "drop");
+  return sortPools(groups);
 }
 
 export async function moveCandidatePool(candidateId: string, toPoolName: string): Promise<void> {
