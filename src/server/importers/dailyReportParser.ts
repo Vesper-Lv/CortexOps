@@ -53,7 +53,7 @@ function findFivePartContent(block: string, aliases: string[]): string {
   const allLabels = FIVE_PART_SECTIONS.flatMap((section) => section.aliases).map(escapeRegex).join("|");
   // Colon may sit outside bold (**标签**：) or inside (**标签：**)
   const re = new RegExp(
-    `^\\s*\\*\\*\\s*(?:${labelAlternation})\\s*(?:\\*\\*\\s*[：:]|[：:]\\s*\\*\\*)\\s*([\\s\\S]*?)(?=^\\s*\\*\\*\\s*(?:${allLabels})\\s*(?:\\*\\*\\s*[：:]|[：:]\\s*\\*\\*)|(?![\\s\\S]))`,
+    `^\\s*(?:[-*]\\s+)?\\*\\*\\s*(?:${labelAlternation})\\s*(?:\\*\\*\\s*[：:]|[：:]\\s*\\*\\*)\\s*([\\s\\S]*?)(?=^\\s*(?:[-*]\\s+)?\\*\\*\\s*(?:${allLabels})\\s*(?:\\*\\*\\s*[：:]|[：:]\\s*\\*\\*)|(?![\\s\\S]))`,
     "m"
   );
   return (block.match(re)?.[1] ?? "").trim();
