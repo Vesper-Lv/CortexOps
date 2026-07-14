@@ -94,7 +94,7 @@ function PoolCard({
             ⋮⋮
           </button>
           <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-2">
+            <SummaryTooltip summary={item.summary}>
               <a
                 href={item.url}
                 target="_blank"
@@ -103,8 +103,7 @@ function PoolCard({
               >
                 {item.title}
               </a>
-              <SummaryTooltip summary={item.summary} />
-            </div>
+            </SummaryTooltip>
             <div className="mt-1 flex flex-wrap gap-1">
               <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {item.humanStatus}
