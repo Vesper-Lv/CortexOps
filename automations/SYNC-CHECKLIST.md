@@ -14,20 +14,7 @@ git show codex/source-layering-policy:automations/ai-pm.toml | \
 
 Copy the full printed prompt.
 
-## 2. Terminal prefetch (required — AIhot + supplemental raw)
-
-```bash
-cd /Users/jiexinlv/Documents/CortexOps
-./scripts/codex-daily-prefetch.sh
-```
-
-Expected: `INGEST PREFETCH OK` with `aihot_items=N`; `arxiv_items` / `github_items` as `ok` or `skipped`.
-
-Optional: `~/.cortexops/github-prefetch.env` with `GITHUB_TOKEN` for higher GitHub rate limits.
-
-See `docs/codex-terminal-prefetch.md` and `docs/supplemental-prefetch-api.md`.
-
-## 3. AIhot API precheck (optional if prefetch already passed)
+## 2. AIhot API precheck
 
 Verify the Public API responds before syncing the prompt:
 
@@ -36,21 +23,9 @@ UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, l
 curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=selected&take=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok', len(d.get('items',[])))"
 ```
 
-Expected: `ok 1` (or similar non-zero item count). **Automation must not curl AIhot** in strict mode; this precheck is for operators only.
+Expected: `ok 1` (or similar non-zero item count). If this fails, the automation may enter AIhot API fallback mode; still complete steps 3–6.
 
-## 3b. PR-A prompt gate (forbid sandbox curl)
-
-After syncing prompt, confirm strict supplemental rules are present:
-
-```bash
-cd /Users/jiexinlv/Documents/CortexOps
-python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read())['prompt']; assert '禁止' in p and 'curl' in p; assert 'skipped_no_prefetch' in p; print('PR-A prompt ok')"
-rg '允许 curl' automations/ai-pm.toml && exit 1 || echo "no forbidden 允许 curl phrase"
-```
-
-Expected: `PR-A prompt ok` and `no forbidden 允许 curl phrase`.
-
-## 4. Paste into Cursor Automation UI
+## 3. Paste into Cursor Automation UI
 
 1. Open Cursor → Automations → AI 日报 → Settings → Prompt.
 2. Paste the exported prompt from step 1.
@@ -61,13 +36,15 @@ Repository: Vesper-Lv/CortexOps
 Branch: codex/source-layering-policy
 ```
 
-## 5. Copy ai-pm.toml to ~/.codex/automations/
+## 4. Copy ai-pm.toml to ~/.codex/automations/
 
 ```bash
 cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
 ```
 
-## 6. Verify diff is empty
+日报五段标签与练习行格式以 `automations/ai-pm.toml` 内钉死模板为准（`**行业信号**：` …；`1. **标题**｜…`），须与 workbench `dailyReportParser.ts` 一致后再同步。
+
+## 5. Verify diff is empty
 
 ```bash
 diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
@@ -75,7 +52,7 @@ diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
 
 Expected: `in sync` (no diff output).
 
-## 7. Run Test
+## 6. Run Test
 
 In Cursor → Automations → AI 日报, click **Run Test** (avoid the 08:00 peak window if possible).
 
