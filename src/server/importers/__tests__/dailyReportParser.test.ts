@@ -118,4 +118,23 @@ describe("parseDailyReportMarkdown", () => {
     expect(parsed.practices[1]?.body).toContain("直接跟在冒号后");
     expect(parsed.practices[2]?.title).toContain("CLI");
   });
+
+  it("parses list-dash five-part labels used by some automation templates", () => {
+    const md = `## 1. 五段式日报
+- **行业信号**：行业内容
+- **工程信号**：工程内容
+- **研究信号**：研究内容
+- **工作流信号**：工作流内容
+- **风险提示**：风险内容
+## 2. End`;
+
+    const parsed = parseDailyReportMarkdown(md);
+    expect(parsed.fivePart.map((s) => s.content)).toEqual([
+      "行业内容",
+      "工程内容",
+      "研究内容",
+      "工作流内容",
+      "风险内容"
+    ]);
+  });
 });
