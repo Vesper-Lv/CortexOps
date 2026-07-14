@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { prisma } from "@/server/db";
-import { listTasks, promoteMemoToTask, updateTask } from "@/server/services/tasks";
+import {
+  createPracticeTask,
+  listTasks,
+  promoteMemoToTask,
+  updateTask
+} from "@/server/services/tasks";
 
 describe("promoteMemoToTask", () => {
   const createdMemoIds: string[] = [];
@@ -133,5 +138,45 @@ describe("listTasks", () => {
     const tasks = await listTasks();
 
     expect(tasks.map((t) => t.title)).toEqual(["Newer task", "Older task"]);
+  });
+});
+
+describe("createPracticeTask", () => {
+  const createdTaskIds: string[] = [];
+
+  afterEach(async () => {
+    for (const taskId of createdTaskIds.splice(0)) {
+      await prisma.task.deleteMany({ where: { id: taskId } });
+    }
+    await prisma.auditLog.deleteMany({ where: { action: "create_practice" } });
+  });
+
+  it("creates today Task and is idempotent for same date+index", async () => {
+    const first = await createPracticeTask({
+      date: "2026-07-14",
+      practiceIndex: 0,
+      title: "Practice A",
+      body: "步骤：1) open docs 2) write note；验收：有结论"
+    });
+    createdTaskIds.push(first.taskId);
+    expect(first.created).toBe(true);
+
+    const second = await createPracticeTask({
+      date: "2026-07-14",
+      practiceIndex: 0,
+      title: "Practice A again",
+      body: "ignored"
+    });
+    expect(second.created).toBe(false);
+    expect(second.taskId).toBe(first.taskId);
+
+    const task = await prisma.task.findUnique({ where: { id: first.taskId } });
+    expect(task).toMatchObject({
+      origin: "practice",
+      status: "today",
+      title: "Practice A"
+    });
+    expect(task?.description).toContain("[practice:2026-07-14:0]");
+    expect(task?.description).toContain("验收");
   });
 });

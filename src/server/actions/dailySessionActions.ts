@@ -2,15 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db";
-import { upsertDailySession } from "@/server/services/dailyReport";
+import { getDailyReport, upsertDailySession } from "@/server/services/dailyReport";
 import { draftSignalEdit } from "@/server/services/review";
+import { createPracticeTask } from "@/server/services/tasks";
 import { assertValidPool } from "@/shared/poolOptions";
 
 export async function confirmPractice(
   date: string,
   selectedIndex: number,
   dispositions: { index: number; disposition: string }[]
-) {
+): Promise<{ practiceTaskId: string; practiceTaskCreated: boolean }> {
   if (selectedIndex < 0 || selectedIndex > 2) {
     throw new Error("selectedPracticeIndex must be 0, 1, or 2");
   }
@@ -29,11 +30,49 @@ export async function confirmPractice(
     altFields[`practiceAlt${index}Disposition`] = disposition;
   }
 
+  const report = await getDailyReport(date);
+  const practice =
+    report?.practices.find((p) => p.index === selectedIndex) ?? report?.practices[selectedIndex];
+  const title = practice?.title ?? `今日练习 #${selectedIndex + 1}`;
+  const body = practice?.body ?? "";
+
+  // Create Task first so a failed materialization does not leave a locked session.
+  const { taskId, created } = await createPracticeTask({
+    date,
+    practiceIndex: selectedIndex,
+    title,
+    body
+  });
+
   await upsertDailySession(date, {
     selectedPracticeIndex: selectedIndex,
     ...altFields
   });
+
   revalidatePath("/dashboard/today");
+  revalidatePath("/dashboard/tasks");
+  return { practiceTaskId: taskId, practiceTaskCreated: created };
+}
+
+/** Re-materialize practice Task for an already-confirmed session (pre-PR sessions / failed create). */
+export async function ensurePracticeTaskAction(date: string): Promise<{ practiceTaskId: string }> {
+  const session = await prisma.dailySession.findUnique({ where: { date } });
+  if (session?.selectedPracticeIndex == null) {
+    throw new Error("no confirmed practice for date");
+  }
+  const selectedIndex = session.selectedPracticeIndex;
+  const report = await getDailyReport(date);
+  const practice =
+    report?.practices.find((p) => p.index === selectedIndex) ?? report?.practices[selectedIndex];
+  const { taskId } = await createPracticeTask({
+    date,
+    practiceIndex: selectedIndex,
+    title: practice?.title ?? `今日练习 #${selectedIndex + 1}`,
+    body: practice?.body ?? ""
+  });
+  revalidatePath("/dashboard/today");
+  revalidatePath("/dashboard/tasks");
+  return { practiceTaskId: taskId };
 }
 
 export async function dismissCandidates(date: string) {
