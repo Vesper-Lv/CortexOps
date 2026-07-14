@@ -101,12 +101,13 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 
 ## 1. 五段式日报
 §1 开头必须包含一行采集状态：ingest_mode、manifest_ready、prefetch_host、aihot_items、arxiv_supplement、github_supplement（ok 或 skipped_no_prefetch）。
-随后用以下**固定五段标签**（全文精确匹配，勿改字）各写至少一段正文；禁止只有小标题无段落；每段可用 bullet，但必须先有 `**标签**：` 后的主句或主段：
-- **行业信号**：
-- **工程信号**：
-- **研究信号**：
-- **工作流信号**：
-- **风险提示**：
+随后用以下**固定五段标签**各写至少一段正文（标签须独占行首，**禁止**写成 `- **标签**：` 列表项；冒号在加粗外侧；禁止只有小标题无段落）：
+
+**行业信号**：……
+**工程信号**：……
+**研究信号**：……
+**工作流信号**：……
+**风险提示**：……
 
 ## 2. 今日 30mins 阅读包
 按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、新闻日期（`新闻日期：YYYY-MM-DD` 或 `新闻日期：未披露`，来自 published_at）、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status、content_tags（1-2 个）。随后：
@@ -125,8 +126,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 去重/保留说明只出现一次：仅当 duplicate_status 为 material_update / carry_over 且该条 **仍出现在 §3** 时，追加一行「保留/去重说明：<duplicate_status> — <novelty_reason>」。duplicate_7d / duplicate_suppressed 不得出现在 §3，故不写保留说明。
 
 ## 4. 今日练习三选一
-给 3 个 20-45 分钟练习选项，并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
-格式固定为三行（全角竖线 `｜`）：
+必须输出恰好 3 行（每项一行；全角 `｜` 或半角 `|` 均可），并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop：
 1. **正式推荐：标题**｜时长与正文…
 2. **备选：标题**｜时长与正文…
 3. **备选：标题**｜时长与正文…

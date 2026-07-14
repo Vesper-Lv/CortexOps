@@ -50,6 +50,8 @@ rg '允许 curl' automations/ai-pm.toml && exit 1 || echo "no forbidden 允许 c
 
 Expected: `PR-A prompt ok` and `no forbidden 允许 curl phrase`.
 
+日报结构化输出须与 workbench `dailyReportParser.ts` 一致：§1 行首 `**行业信号**：`（勿用 `- **行业信号**：`）；§4 `1. **标题**｜正文`。
+
 ## 4. Paste into Cursor Automation UI
 
 1. Open Cursor → Automations → AI 日报 → Settings → Prompt.
