@@ -39,7 +39,7 @@ function clampPanel(anchor: DOMRect, panelHeight = 160): PanelPos {
 export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
   const trimmed = summary.trim();
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const panelRef = useRef<HTMLSpanElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<PanelPos | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -47,6 +47,17 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const show = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    setPos(clampPanel(el.getBoundingClientRect()));
+    setOpen(true);
+  }, []);
+
+  const hide = useCallback(() => {
+    setOpen(false);
   }, []);
 
   const updatePos = useCallback(() => {
@@ -57,33 +68,18 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
   }, []);
 
   useLayoutEffect(() => {
-    if (!open) return;
-    updatePos();
-  }, [open, updatePos, trimmed]);
-
-  useLayoutEffect(() => {
-    if (!open || !pos || !panelRef.current) return;
+    if (!open || !panelRef.current || !triggerRef.current) return;
     const height = panelRef.current.offsetHeight;
-    const next = clampPanel(triggerRef.current!.getBoundingClientRect(), height);
-    if (next.top !== pos.top || next.left !== pos.left || next.width !== pos.width) {
-      setPos(next);
-    }
-  }, [open, pos, trimmed]);
+    setPos(clampPanel(triggerRef.current.getBoundingClientRect(), height));
+  }, [open, trimmed]);
 
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
-    const onScroll = () => {
-      updatePos();
-    };
-    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("scroll", updatePos, true);
     window.addEventListener("resize", updatePos);
-    // Close when the pointer leaves the page (e.g. drag outside).
-    window.addEventListener("blur", close);
     return () => {
-      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("scroll", updatePos, true);
       window.removeEventListener("resize", updatePos);
-      window.removeEventListener("blur", close);
     };
   }, [open, updatePos]);
 
@@ -95,11 +91,11 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
     <>
       <span
         ref={triggerRef}
-        className="inline"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        className="block min-w-0"
+        onPointerEnter={show}
+        onPointerLeave={hide}
+        onFocus={show}
+        onBlur={hide}
         aria-describedby={open ? panelId : undefined}
       >
         {children}
@@ -108,7 +104,7 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
         open &&
         pos &&
         createPortal(
-          <span
+          <div
             ref={panelRef}
             id={panelId}
             role="tooltip"
@@ -116,7 +112,7 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
             style={{ top: pos.top, left: pos.left, width: pos.width }}
           >
             {trimmed}
-          </span>,
+          </div>,
           document.body
         )}
     </>
