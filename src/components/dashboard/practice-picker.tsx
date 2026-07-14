@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { confirmPractice } from "@/server/actions/dailySessionActions";
+import {
+  confirmPractice,
+  ensurePracticeTaskAction
+} from "@/server/actions/dailySessionActions";
 import { POOL_OPTIONS } from "@/shared/poolOptions";
 import type { PracticeOption } from "@/server/importers/dailyReportParser";
 import type { DailySessionData } from "@/server/services/dailyReport";
@@ -12,6 +15,8 @@ type Props = {
   date: string;
   practices: PracticeOption[];
   session: DailySessionData | null;
+  /** Existing practice Task id when already materialized. */
+  practiceTaskId?: string | null;
 };
 
 function getDisposition(session: DailySessionData | null, index: number): string {
@@ -21,7 +26,7 @@ function getDisposition(session: DailySessionData | null, index: number): string
   return session.practiceAlt2Disposition ?? "";
 }
 
-export function PracticePicker({ date, practices, session }: Props) {
+export function PracticePicker({ date, practices, session, practiceTaskId = null }: Props) {
   const [pending, startTransition] = useTransition();
   const isComplete = session?.selectedPracticeIndex != null;
 
@@ -37,15 +42,45 @@ export function PracticePicker({ date, practices, session }: Props) {
     return initial;
   });
   const [error, setError] = useState<string | null>(null);
+  const [localTaskId, setLocalTaskId] = useState<string | null>(practiceTaskId);
 
   if (isComplete && session?.selectedPracticeIndex != null) {
     const practice = practices[session.selectedPracticeIndex];
     if (!practice) return null;
+    const hasTask = Boolean(localTaskId ?? practiceTaskId);
     return (
       <div className="rounded-md border border-border bg-surface p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">今日练习</p>
         <h4 className="mt-2 text-base font-semibold text-foreground">{practice.title}</h4>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{practice.body}</p>
+        {hasTask ? (
+          <p className="mt-3 text-xs font-medium text-primary">
+            已生成 Task（Dashboard / Tasks · Today）
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-muted-foreground">尚未生成 Task（可能是升级前确认）。</p>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setError(null);
+                startTransition(async () => {
+                  try {
+                    const res = await ensurePracticeTaskAction(date);
+                    setLocalTaskId(res.practiceTaskId);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "补生成失败");
+                  }
+                });
+              }}
+              className="rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              补生成 Task
+            </button>
+            {error && <p className="w-full text-sm text-destructive">{error}</p>}
+          </div>
+        )}
       </div>
     );
   }
@@ -70,7 +105,8 @@ export function PracticePicker({ date, practices, session }: Props) {
 
     startTransition(async () => {
       try {
-        await confirmPractice(date, selectedIndex, payload);
+        const res = await confirmPractice(date, selectedIndex, payload);
+        setLocalTaskId(res.practiceTaskId);
       } catch (e) {
         setError(e instanceof Error ? e.message : "确认失败");
       }

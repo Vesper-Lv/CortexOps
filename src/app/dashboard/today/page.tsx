@@ -9,7 +9,7 @@ import { ReadingPack } from "@/components/dashboard/reading-pack";
 import { RemainingLinks } from "@/components/dashboard/remaining-links";
 import { getDailyPageData } from "@/server/services/dailyView";
 import { getDailyReport, getDailySession } from "@/server/services/dailyReport";
-import { listActiveTasks } from "@/server/services/tasks";
+import { findPracticeTaskId, listActiveTasks } from "@/server/services/tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +52,10 @@ export default async function TodayPage({ searchParams }: PageProps) {
     getDailySession(date),
     listActiveTasks()
   ]);
+  const practiceTaskId =
+    session?.selectedPracticeIndex != null
+      ? await findPracticeTaskId(date, session.selectedPracticeIndex)
+      : null;
 
   const candidatesWithId = view.candidates.filter(
     (c): c is typeof c & { id: string } => typeof c.id === "string"
@@ -85,7 +89,12 @@ export default async function TodayPage({ searchParams }: PageProps) {
         <div>
           <h3 className="mb-3 text-xl font-semibold text-foreground">今日练习三选一</h3>
           {report.practices.length > 0 ? (
-            <PracticePicker date={date} practices={report.practices} session={session} />
+            <PracticePicker
+              date={date}
+              practices={report.practices}
+              session={session}
+              practiceTaskId={practiceTaskId}
+            />
           ) : (
             <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
               今日练习暂无结构化内容（§4 需符合 `1. **标题**｜正文`）。重新导入日报后可恢复。

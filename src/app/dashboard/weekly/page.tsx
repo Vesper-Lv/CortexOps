@@ -1,10 +1,17 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { CalendarRange } from "lucide-react";
+import { PeriodTrackingPanel } from "@/components/dashboard/period-tracking-panel";
 import { WeeklyEligibleSignals } from "@/components/dashboard/weekly-eligible-signals";
 import { WeeklyReportView } from "@/components/dashboard/weekly-report-view";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { parseWeeklyReportMarkdown } from "@/server/importers/weeklyReportParser";
+import { getLatestDailyDate } from "@/server/services/dailyView";
 import { getPendingSignalBacklog } from "@/server/services/inboxView";
+import {
+  getPeriodTracking,
+  weekWindowEnding
+} from "@/server/services/periodTracking";
 import { getLatestArchiveReport, listArchiveReports } from "@/server/services/reports";
 import { displayArchiveTitle, formatPeriodRange } from "@/shared/reportDisplay";
 import { listSignalsForWeeklyReview } from "@/server/services/weeklyReview";
@@ -12,18 +19,26 @@ import { listSignalsForWeeklyReview } from "@/server/services/weeklyReview";
 export const dynamic = "force-dynamic";
 
 export default async function WeeklyPage() {
-  const [report, eligibleSignals, pendingBacklog, weeklyPeers] = await Promise.all([
+  const [report, eligibleSignals, pendingBacklog, weeklyPeers, latestDaily] = await Promise.all([
     getLatestArchiveReport("weekly"),
     listSignalsForWeeklyReview(),
     getPendingSignalBacklog(),
-    listArchiveReports("weekly")
+    listArchiveReports("weekly"),
+    getLatestDailyDate()
   ]);
+
+  const window =
+    report?.kind === "archive" && report.periodStart && report.periodEnd
+      ? { start: report.periodStart, end: report.periodEnd }
+      : weekWindowEnding(latestDaily ?? new Date().toISOString().slice(0, 10));
+  const tracking = await getPeriodTracking(window.start, window.end);
+
   const pendingBanner =
     pendingBacklog.length > 0 ? (
       <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         仍有 {pendingBacklog.length} 条历史待分拣信号 →{" "}
-        <Link href="/inbox/today" className="font-medium text-primary hover:underline">
-          去 Inbox 处理
+        <Link href={"/inbox/backlog" as Route} className="font-medium text-primary hover:underline">
+          去 Inbox / Backlog
         </Link>
       </div>
     ) : null;
@@ -32,6 +47,7 @@ export default async function WeeklyPage() {
     return (
       <section className="mx-auto flex max-w-4xl flex-col gap-6">
         {pendingBanner}
+        <PeriodTrackingPanel title="本周追踪" metrics={tracking.metrics} tables={tracking.tables} />
         <WeeklyEligibleSignals signals={eligibleSignals} />
         <WorkbenchPage
           eyebrow="Weekly digest"
@@ -40,7 +56,7 @@ export default async function WeeklyPage() {
           metrics={[
             { label: "Weekly reports", value: "0", detail: "Import state/weekly/*.md" },
             { label: "Eligible signals", value: String(eligibleSignals.length), detail: "Ready for automation" },
-            { label: "Practice picks", value: "-", detail: "Not selected" }
+            { label: "Signals", value: String(tracking.metrics.signalCount), detail: "In tracking window" }
           ]}
           emptyState={{
             icon: CalendarRange,
@@ -86,6 +102,7 @@ export default async function WeeklyPage() {
           </Link>
         </p>
       </div>
+      <PeriodTrackingPanel title="本周追踪" metrics={tracking.metrics} tables={tracking.tables} />
       <WeeklyReportView sections={sections} />
     </section>
   );
