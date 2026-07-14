@@ -46,6 +46,7 @@ export function PracticePicker({ date, practices, session }: Props) {
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">今日练习</p>
         <h4 className="mt-2 text-base font-semibold text-foreground">{practice.title}</h4>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{practice.body}</p>
+        <p className="mt-3 text-xs font-medium text-primary">已生成 Task（Dashboard / Tasks · Today）</p>
       </div>
     );
   }

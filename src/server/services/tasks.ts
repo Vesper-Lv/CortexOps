@@ -320,6 +320,66 @@ export async function createManualTask(input: {
   return task.id;
 }
 
+/** Idempotent practice → today Task. Marker: `[practice:YYYY-MM-DD:index]` in description. */
+export function practiceTaskMarker(date: string, practiceIndex: number): string {
+  return `[practice:${date}:${practiceIndex}]`;
+}
+
+export async function createPracticeTask(input: {
+  date: string;
+  practiceIndex: number;
+  title: string;
+  body: string;
+}): Promise<{ taskId: string; created: boolean }> {
+  const marker = practiceTaskMarker(input.date, input.practiceIndex);
+  const existing = await prisma.task.findFirst({
+    where: {
+      origin: "practice",
+      description: { contains: marker }
+    },
+    select: { id: true }
+  });
+  if (existing) return { taskId: existing.id, created: false };
+
+  const title = input.title.trim() || "今日练习";
+  const body = input.body.trim();
+  const description = body ? `${marker}\n${body}` : marker;
+
+  const task = await prisma.$transaction(async (tx) => {
+    const created = await tx.task.create({
+      data: {
+        title,
+        description,
+        origin: "practice",
+        status: "today"
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        entityType: "task",
+        entityId: created.id,
+        action: "create_practice",
+        toValue: JSON.stringify({ date: input.date, index: input.practiceIndex, title })
+      }
+    });
+    return created;
+  });
+
+  return { taskId: task.id, created: true };
+}
+
+export async function findPracticeTaskId(
+  date: string,
+  practiceIndex: number
+): Promise<string | null> {
+  const marker = practiceTaskMarker(date, practiceIndex);
+  const row = await prisma.task.findFirst({
+    where: { origin: "practice", description: { contains: marker } },
+    select: { id: true }
+  });
+  return row?.id ?? null;
+}
+
 export async function getLatestDailyDateForTasks(): Promise<string | null> {
   return getLatestDailyDate();
 }

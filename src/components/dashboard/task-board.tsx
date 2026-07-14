@@ -23,7 +23,19 @@ function isNoisyDescription(description: string | null, origin: string): boolean
   if (origin === "manual" || origin === "memo") {
     return /^from:\s*manual$/i.test(trimmed);
   }
+  if (origin === "practice") {
+    const withoutMarker = trimmed.replace(/^\[practice:[^\]]+\]\s*/i, "").trim();
+    return withoutMarker.length === 0;
+  }
   return false;
+}
+
+function displayDescription(description: string | null, origin: string): string {
+  if (!description) return "";
+  if (origin === "practice") {
+    return description.replace(/^\[practice:[^\]]+\]\s*/i, "").trim();
+  }
+  return description.trim();
 }
 
 function TaskCard({
@@ -136,7 +148,7 @@ function TaskCard({
           </div>
           {showDescription ? (
             <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
-              {task.description}
+              {displayDescription(task.description, task.origin)}
             </p>
           ) : null}
           {(showOrigin || task.priority) && (
