@@ -20,13 +20,13 @@ export function assertValidPool(pool: string): asserts pool is PoolOption {
   }
 }
 
+/** Board / list column order. `drop` stays a valid PoolOption but is not seeded or shown as a column. */
 export const POOL_DISPLAY_ORDER = [
   "product_inspiration",
   "paper_candidate",
   "demo_replication",
   "knowledge_gap",
   "personal_work",
-  "drop",
   "archive"
 ] as const;
 

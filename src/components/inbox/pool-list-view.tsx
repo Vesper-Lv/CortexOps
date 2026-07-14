@@ -7,6 +7,7 @@ import {
   watchCandidateAction
 } from "@/server/actions/candidateActions";
 import { promoteCandidateToTaskAction } from "@/server/actions/taskActions";
+import { IconButton } from "@/components/shared/icon-button";
 import {
   POOL_OPTIONS,
   poolOptionFromName,
@@ -19,6 +20,8 @@ import type { PoolGroup } from "@/shared/inboxTypes";
 type PoolListViewProps = {
   groups: PoolGroup[];
 };
+
+const MOVE_TARGETS = POOL_OPTIONS.filter((p) => p !== "drop");
 
 export function PoolListView({ groups }: PoolListViewProps) {
   const [pending, startTransition] = useTransition();
@@ -104,7 +107,7 @@ export function PoolListView({ groups }: PoolListViewProps) {
                     <option value="" disabled>
                       …
                     </option>
-                    {POOL_OPTIONS.map((p) => (
+                    {MOVE_TARGETS.map((p) => (
                       <option key={p} value={p}>
                         {p}
                       </option>
@@ -152,6 +155,14 @@ export function PoolListView({ groups }: PoolListViewProps) {
                         → Task
                       </button>
                     )}
+                    <IconButton
+                      kind="delete"
+                      label="移入 drop（软删除）"
+                      disabled={pending}
+                      onClick={() =>
+                        startTransition(() => void moveCandidatePool(item.id, "drop"))
+                      }
+                    />
                   </div>
                 </td>
               </tr>
