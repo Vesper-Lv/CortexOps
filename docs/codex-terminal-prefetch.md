@@ -30,7 +30,7 @@ DATE=$(TZ=Asia/Shanghai date +%Y-%m-%d)
 | File | Purpose |
 |------|---------|
 | `state/daily/YYYY-MM-DD-aihot-raw.json` | Raw AIhot API response (**required**) |
-| `state/daily/YYYY-MM-DD-arxiv-raw.xml` | arXiv Atom export (**supplemental**, ok or skipped) |
+| `state/daily/YYYY-MM-DD-arxiv-raw.xml` | arXiv Atom export (**supplemental**, ok or skipped; 3 retries + timeouts by default) |
 | `state/daily/YYYY-MM-DD-github-raw.json` | GitHub Search normalized JSON (**supplemental**) |
 | `state/daily/YYYY-MM-DD-ingest-manifest.json` | `ready: true` gate + per-source status |
 | `state/daily/.ingest-mode` | `strict` (default) |

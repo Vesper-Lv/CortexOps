@@ -78,27 +78,36 @@ if [[ -f "$PREFETCH_ENV" ]]; then
 fi
 
 # --- arXiv supplemental raw (optional; do not block ready) ---
+# Transient timeouts (curl exit 28) are common; retry with bounded timeouts.
 ARXIV_RAW="state/daily/${DATE}-arxiv-raw.xml"
 ARXIV_STATUS="skipped"
 ARXIV_HTTP="000"
 ARXIV_COUNT=0
 ARXIV_ERR=""
+ARXIV_ATTEMPTS="${ARXIV_ATTEMPTS:-3}"
+ARXIV_CONNECT_TIMEOUT="${ARXIV_CONNECT_TIMEOUT:-15}"
+ARXIV_MAX_TIME="${ARXIV_MAX_TIME:-60}"
+arxiv_curl_exit=1
 
-set +e
-ARXIV_HTTP=$(curl -4 -sS -o "$ARXIV_RAW" -w "%{http_code}" \
-  --get "https://export.arxiv.org/api/query" \
-  --data-urlencode "search_query=cat:cs.AI OR cat:cs.LG OR cat:cs.CL" \
-  --data-urlencode "sortBy=submittedDate" \
-  --data-urlencode "sortOrder=descending" \
-  --data-urlencode "max_results=20" 2>/dev/null)
-arxiv_curl_exit=$?
-set -e
-if [[ $arxiv_curl_exit -ne 0 ]]; then
-  ARXIV_HTTP="000"
-fi
+for arxiv_attempt in $(seq 1 "$ARXIV_ATTEMPTS"); do
+  rm -f "$ARXIV_RAW"
+  set +e
+  ARXIV_HTTP=$(curl -4 -sS -o "$ARXIV_RAW" -w "%{http_code}" \
+    --connect-timeout "$ARXIV_CONNECT_TIMEOUT" \
+    --max-time "$ARXIV_MAX_TIME" \
+    --get "https://export.arxiv.org/api/query" \
+    --data-urlencode "search_query=cat:cs.AI OR cat:cs.LG OR cat:cs.CL" \
+    --data-urlencode "sortBy=submittedDate" \
+    --data-urlencode "sortOrder=descending" \
+    --data-urlencode "max_results=20" 2>/dev/null)
+  arxiv_curl_exit=$?
+  set -e
+  if [[ $arxiv_curl_exit -ne 0 ]]; then
+    ARXIV_HTTP="000"
+  fi
 
-if [[ "$ARXIV_HTTP" == "200" && -s "$ARXIV_RAW" ]]; then
-  ARXIV_COUNT=$(python3 - "$ARXIV_RAW" <<'PY'
+  if [[ "$ARXIV_HTTP" == "200" && -s "$ARXIV_RAW" ]]; then
+    ARXIV_COUNT=$(python3 - "$ARXIV_RAW" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -110,15 +119,29 @@ except Exception:
     print(0)
 PY
 )
-  if [[ "$ARXIV_COUNT" -ge 1 ]]; then
-    ARXIV_STATUS="ok"
-  else
+    if [[ "$ARXIV_COUNT" -ge 1 ]]; then
+      ARXIV_STATUS="ok"
+      ARXIV_ERR=""
+      break
+    fi
     ARXIV_ERR="no arxiv entries in response"
     rm -f "$ARXIV_RAW"
+  else
+    ARXIV_ERR="HTTP ${ARXIV_HTTP} (curl exit ${arxiv_curl_exit})"
+    rm -f "$ARXIV_RAW"
   fi
-else
-  ARXIV_ERR="HTTP ${ARXIV_HTTP} (curl exit ${arxiv_curl_exit})"
+
+  if [[ "$arxiv_attempt" -lt "$ARXIV_ATTEMPTS" ]]; then
+    echo "WARN: arXiv prefetch attempt ${arxiv_attempt}/${ARXIV_ATTEMPTS} failed: ${ARXIV_ERR}; retrying..." >&2
+    sleep $((arxiv_attempt * 2))
+  fi
+done
+
+if [[ "$ARXIV_STATUS" != "ok" ]]; then
   rm -f "$ARXIV_RAW"
+  if [[ -z "$ARXIV_ERR" ]]; then
+    ARXIV_ERR="HTTP ${ARXIV_HTTP} (curl exit ${arxiv_curl_exit})"
+  fi
 fi
 
 # --- GitHub supplemental raw (optional; do not block ready) ---
