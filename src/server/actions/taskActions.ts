@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  createManualTask,
   promoteCandidateToTask,
   promoteMemoToTask,
   promoteSignalToTask,
@@ -13,6 +14,16 @@ import {
 export async function promoteMemoAction(memoId: string) {
   await promoteMemoToTask(memoId);
   revalidatePath("/inbox/memo");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/today");
+}
+
+export async function createManualTaskAction(input: {
+  title: string;
+  description?: string | null;
+  priority?: string | null;
+}) {
+  await createManualTask(input);
   revalidatePath("/dashboard/tasks");
   revalidatePath("/dashboard/today");
 }

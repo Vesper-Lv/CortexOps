@@ -75,7 +75,10 @@ export function buildReadingView(signals: SignalLike[]): DailyReadingView {
 }
 
 export function getRemainingLinks(signals: SignalLike[]): SignalView[] {
-  return signals.filter((s) => s.readingPackStatus !== "selected").map(toView);
+  return signals
+    .filter((s) => s.readingPackStatus !== "selected")
+    .filter((s) => s.priority === "P0" || s.priority === "P1")
+    .map(toView);
 }
 
 export async function getLatestDailyDate(): Promise<string | null> {

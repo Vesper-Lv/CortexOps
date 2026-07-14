@@ -8,6 +8,7 @@ import {
   updateMemoAction
 } from "@/server/actions/memoActions";
 import { promoteMemoAction } from "@/server/actions/taskActions";
+import { IconButton } from "@/components/shared/icon-button";
 import { countMemos, filterMemos, type MemoFilter, type MemoItem } from "@/shared/memos";
 
 type MemoListProps = {
@@ -93,30 +94,21 @@ function MemoRow({
           >
             {memo.text}
           </span>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={startEdit}
-            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            编辑
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => run(() => promoteMemoAction(memo.id))}
-            className="text-xs text-primary hover:opacity-80 disabled:opacity-50"
-          >
-            升级为 Task
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => run(() => deleteMemoAction(memo.id))}
-            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            删除
-          </button>
+          <div className="flex shrink-0 gap-1">
+            <IconButton kind="edit" label="编辑" disabled={pending} onClick={startEdit} />
+            <IconButton
+              kind="promote"
+              label="升级为 Task"
+              disabled={pending}
+              onClick={() => run(() => promoteMemoAction(memo.id))}
+            />
+            <IconButton
+              kind="delete"
+              label="删除"
+              disabled={pending}
+              onClick={() => run(() => deleteMemoAction(memo.id))}
+            />
+          </div>
         </>
       )}
     </li>

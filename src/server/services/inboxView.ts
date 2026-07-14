@@ -54,6 +54,45 @@ export async function getPendingSignalBacklog(): Promise<PendingBacklogSignal[]>
   }));
 }
 
+/** Full triage cards for Backlog (non-latest pending), grouped by date. */
+export async function getPendingBacklogInboxGroups(): Promise<
+  { date: string; signals: InboxSignal[] }[]
+> {
+  const date = await getLatestDailyDate();
+  const rows = await prisma.signal.findMany({
+    where: {
+      stream: "daily",
+      humanStatus: "pending",
+      ...(date ? { NOT: { date } } : {})
+    },
+    orderBy: [{ date: "desc" }, { sourceLine: "asc" }]
+  });
+
+  const byDate = new Map<string, InboxSignal[]>();
+  for (const s of rows) {
+    const d = s.date ?? "unknown";
+    const raw = parseSignalRaw(s.rawJson);
+    const signal: InboxSignal = {
+      id: s.id,
+      title: s.title ?? "(untitled)",
+      url: s.originalUrl ?? s.sourceUrl ?? "",
+      priority: s.priority ?? "",
+      suggestedPool: s.suggestedPool ?? "",
+      finalPool: s.finalPool ?? s.suggestedPool ?? "",
+      humanStatus: s.humanStatus ?? "pending",
+      readingPackStatus: s.readingPackStatus ?? "not_selected",
+      summary: pickSummary(raw, s.aihotSummary, s.reason),
+      priorityRationale: raw.priorityRationale,
+      poolRationale: raw.poolRationale,
+      contentTags: raw.contentTags
+    };
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d)!.push(signal);
+  }
+
+  return [...byDate.entries()].map(([d, signals]) => ({ date: d, signals }));
+}
+
 export async function getInboxToday(date?: string): Promise<{ date: string; signals: InboxSignal[] } | null> {
   const targetDate = date ?? (await getLatestDailyDate());
   if (!targetDate) return null;

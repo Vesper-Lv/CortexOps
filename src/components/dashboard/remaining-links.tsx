@@ -7,9 +7,9 @@ export function RemainingLinks({ items }: { items: SignalView[] }) {
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <h3 className="text-xl font-semibold text-foreground">剩余链接</h3>
+        <h3 className="text-xl font-semibold text-foreground">建议扩展补充（P0/P1）</h3>
         <Link href="/inbox/today" className="text-sm font-medium text-primary hover:underline">
-          去 Inbox 分拣 →
+          其余链接去 Inbox 分拣 →
         </Link>
       </div>
       <ul className="flex flex-col gap-2">

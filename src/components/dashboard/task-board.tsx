@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { promoteTaskToArtifactAction } from "@/server/actions/artifactActions";
-import { updateTaskAction, updateTaskStatusAction } from "@/server/actions/taskActions";
+import {
+  createManualTaskAction,
+  updateTaskAction,
+  updateTaskStatusAction
+} from "@/server/actions/taskActions";
+import { IconButton } from "@/components/shared/icon-button";
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 import type { TaskItem } from "@/shared/tasks";
 import { TASK_STATUSES } from "@/shared/tasks";
@@ -10,6 +15,16 @@ import { TASK_STATUSES } from "@/shared/tasks";
 type TaskBoardProps = {
   grouped: Record<string, TaskItem[]>;
 };
+
+function isNoisyDescription(description: string | null, origin: string): boolean {
+  if (!description) return true;
+  const trimmed = description.trim();
+  if (!trimmed) return true;
+  if (origin === "manual" || origin === "memo") {
+    return /^from:\s*manual$/i.test(trimmed);
+  }
+  return false;
+}
 
 function TaskCard({
   task,
@@ -56,6 +71,9 @@ function TaskCard({
     });
     setEditing(false);
   };
+
+  const showDescription = !isNoisyDescription(task.description, task.origin);
+  const showOrigin = task.origin !== "manual";
 
   return (
     <li className="rounded-md border border-border bg-surface p-3 text-sm">
@@ -114,28 +132,21 @@ function TaskCard({
         <>
           <div className="flex items-start justify-between gap-2">
             <p className="font-medium text-foreground">{task.title}</p>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={startEdit}
-              className="shrink-0 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-            >
-              编辑
-            </button>
+            <IconButton kind="edit" label="编辑任务" disabled={pending} onClick={startEdit} />
           </div>
-          {task.description ? (
+          {showDescription ? (
             <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
               {task.description}
             </p>
-          ) : (
-            <p className="mt-2 text-xs italic text-muted-foreground">暂无详细描述</p>
+          ) : null}
+          {(showOrigin || task.priority) && (
+            <div className="mt-2 flex flex-wrap gap-1 text-xs text-muted-foreground">
+              {showOrigin ? <span className="rounded bg-muted px-2 py-0.5">{task.origin}</span> : null}
+              {task.priority ? (
+                <span className="rounded bg-muted px-2 py-0.5">{task.priority}</span>
+              ) : null}
+            </div>
           )}
-          <div className="mt-2 flex flex-wrap gap-1 text-xs text-muted-foreground">
-            <span className="rounded bg-muted px-2 py-0.5">{task.origin}</span>
-            {task.priority ? (
-              <span className="rounded bg-muted px-2 py-0.5">{task.priority}</span>
-            ) : null}
-          </div>
           <select
             disabled={pending}
             value={task.status}
@@ -167,6 +178,9 @@ function TaskCard({
 
 export function TaskBoard({ grouped }: TaskBoardProps) {
   const [pending, startTransition] = useTransition();
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
 
   const runStatus = (taskId: string, status: string) => {
     startTransition(() => void updateTaskStatusAction(taskId, status));
@@ -183,45 +197,120 @@ export function TaskBoard({ grouped }: TaskBoardProps) {
     startTransition(() => void promoteTaskToArtifactAction(taskId));
   };
 
+  const submitCreate = () => {
+    const title = newTitle.trim();
+    if (!title) return;
+    startTransition(async () => {
+      await createManualTaskAction({
+        title,
+        description: newDescription.trim() || null
+      });
+      setNewTitle("");
+      setNewDescription("");
+      setCreating(false);
+    });
+  };
+
   const total = TASK_STATUSES.reduce((n, s) => n + (grouped[s]?.length ?? 0), 0);
-  if (total === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        暂无任务。在 Inbox/Memo 升级 memo，或在 Pools 中将已分拣条目转为 Task。
-      </p>
-    );
-  }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
-      {TASK_STATUSES.map((status) => {
-        const items = grouped[status] ?? [];
-        return (
-          <div
-            key={status}
-            className="flex w-72 shrink-0 flex-col rounded-lg border border-border bg-muted/20"
-          >
-            <div className="border-b border-border px-3 py-2">
-              <h3 className="text-sm font-semibold capitalize text-foreground">
-                {status.replace(/_/g, " ")}
-                <span className="ml-2 font-normal text-muted-foreground">({items.length})</span>
-              </h3>
-            </div>
-            <ul className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
-              {items.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  pending={pending}
-                  runStatus={runStatus}
-                  runUpdate={runUpdate}
-                  runArtifact={runArtifact}
-                />
-              ))}
-            </ul>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <IconButton
+          kind="add"
+          label="新建任务"
+          disabled={pending}
+          onClick={() => setCreating((v) => !v)}
+        />
+        <span className="text-xs text-muted-foreground">新建任务</span>
+      </div>
+
+      {creating && (
+        <div className="max-w-xl rounded-md border border-border bg-surface p-3">
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submitCreate();
+              }
+            }}
+            disabled={pending}
+            placeholder="任务标题"
+            className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm"
+            aria-label="New task title"
+          />
+          <textarea
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            disabled={pending}
+            rows={3}
+            placeholder="可选：步骤与验收标准"
+            className="mt-2 w-full rounded border border-border bg-surface px-2 py-1.5 text-xs"
+            aria-label="New task description"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={pending || !newTitle.trim()}
+              onClick={submitCreate}
+              className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            >
+              创建
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setCreating(false);
+                setNewTitle("");
+                setNewDescription("");
+              }}
+              className="rounded border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+            >
+              取消
+            </button>
           </div>
-        );
-      })}
+        </div>
+      )}
+
+      {total === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          暂无任务。点击上方 + 直接创建，或从 Memo / Pools 升级。
+        </p>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {TASK_STATUSES.map((status) => {
+            const items = grouped[status] ?? [];
+            return (
+              <div
+                key={status}
+                className="flex w-72 shrink-0 flex-col rounded-lg border border-border bg-muted/20"
+              >
+                <div className="border-b border-border px-3 py-2">
+                  <h3 className="text-sm font-semibold capitalize text-foreground">
+                    {status.replace(/_/g, " ")}
+                    <span className="ml-2 font-normal text-muted-foreground">({items.length})</span>
+                  </h3>
+                </div>
+                <ul className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
+                  {items.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      pending={pending}
+                      runStatus={runStatus}
+                      runUpdate={runUpdate}
+                      runArtifact={runArtifact}
+                    />
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

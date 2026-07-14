@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReadingView, type SignalLike } from "@/server/services/dailyView";
+import { buildReadingView, getRemainingLinks, type SignalLike } from "@/server/services/dailyView";
 
 const s = (o: Partial<SignalLike>): SignalLike => ({
   title: "t",
@@ -58,5 +58,18 @@ describe("buildReadingView", () => {
       poolRationale: "Good demo candidate",
       contentTags: ["agent", "workflow"]
     });
+  });
+});
+
+describe("getRemainingLinks", () => {
+  it("keeps only non-selected P0/P1 items for Dashboard supplement list", () => {
+    const links = getRemainingLinks([
+      s({ readingPackStatus: "selected", priority: "P0", title: "in-pack" }),
+      s({ readingPackStatus: "not_selected", priority: "P0", title: "p0" }),
+      s({ readingPackStatus: "candidate", priority: "P1", title: "p1" }),
+      s({ readingPackStatus: "not_selected", priority: "P2", title: "p2" }),
+      s({ readingPackStatus: "not_selected", priority: "archive", title: "arch" })
+    ]);
+    expect(links.map((x) => x.title)).toEqual(["p0", "p1"]);
   });
 });

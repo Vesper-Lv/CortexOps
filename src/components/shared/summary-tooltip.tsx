@@ -21,6 +21,7 @@ type PanelPos = { top: number; left: number; width: number };
 const PANEL_WIDTH = 320;
 const GAP = 8;
 const VIEWPORT_PAD = 8;
+const HIDE_DELAY_MS = 150;
 
 function clampPanel(anchor: DOMRect, panelHeight = 160): PanelPos {
   const width = Math.min(PANEL_WIDTH, window.innerWidth - VIEWPORT_PAD * 2);
@@ -40,6 +41,7 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
   const trimmed = summary.trim();
   const triggerRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<PanelPos | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -49,16 +51,25 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
     setMounted(true);
   }, []);
 
+  const clearHide = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+  }, []);
+
   const show = useCallback(() => {
+    clearHide();
     const el = triggerRef.current;
     if (!el) return;
     setPos(clampPanel(el.getBoundingClientRect()));
     setOpen(true);
-  }, []);
+  }, [clearHide]);
 
-  const hide = useCallback(() => {
-    setOpen(false);
-  }, []);
+  const scheduleHide = useCallback(() => {
+    clearHide();
+    hideTimer.current = setTimeout(() => setOpen(false), HIDE_DELAY_MS);
+  }, [clearHide]);
 
   const updatePos = useCallback(() => {
     const el = triggerRef.current;
@@ -83,6 +94,8 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
     };
   }, [open, updatePos]);
 
+  useEffect(() => () => clearHide(), [clearHide]);
+
   if (!trimmed) {
     return <>{children}</>;
   }
@@ -93,9 +106,9 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
         ref={triggerRef}
         className="block min-w-0"
         onPointerEnter={show}
-        onPointerLeave={hide}
+        onPointerLeave={scheduleHide}
         onFocus={show}
-        onBlur={hide}
+        onBlur={scheduleHide}
         aria-describedby={open ? panelId : undefined}
       >
         {children}
@@ -108,7 +121,9 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
             ref={panelRef}
             id={panelId}
             role="tooltip"
-            className="pointer-events-none fixed z-[100] max-h-[min(40vh,24rem)] overflow-y-auto rounded-md border border-border bg-surface p-3 text-xs leading-5 text-foreground shadow-lg"
+            onPointerEnter={show}
+            onPointerLeave={scheduleHide}
+            className="fixed z-[100] max-h-[min(40vh,24rem)] overflow-y-auto rounded-md border border-border bg-surface p-3 text-xs leading-5 text-foreground shadow-lg"
             style={{ top: pos.top, left: pos.left, width: pos.width }}
           >
             {trimmed}
