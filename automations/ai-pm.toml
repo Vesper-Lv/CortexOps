@@ -10,7 +10,7 @@ prompt = """
 - 优先遵循 docs/source-policy.md。
 - 采集、字段标准化、JSONL 状态、候选池路由、去重和人工确认规则优先遵循 docs/ingestion-normalization.md。
 - 用户当前注意力、GitHub 实践适配度和求职面试证明力规则优先遵循 docs/focus-policy.md。
-- AIhot 采集契约优先遵循 docs/aihot-api.md（Public API + UA + 字段映射）。
+- AIhot 采集契约优先遵循 docs/aihot-api.md；GitHub/arXiv 补充契约遵循 docs/supplemental-prefetch-api.md。
 - 先读取 state/memory/ai-pm-7d.jsonl 做 7 天去重；再用最近日报 Markdown 作为补充复核。
 
 总目标：
@@ -27,35 +27,57 @@ prompt = """
 - pools/personal-work.jsonl
 - pools/archive.jsonl
 
-AIhot API 采集（强制，优先于任何 Web 抓取）：
-0. 预检：带浏览器 UA 请求 AIhot API（见 docs/aihot-api.md）。预检失败则进入 fallback 模式并在 report 披露，禁止伪造 AIhot 条目。
-1. 拉取精选池（默认路径，不是 /api/public/daily）：
-   UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-   since=$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)   # Asia/Shanghai 过去 24h 对应 UTC
-   curl -sS -H "User-Agent: $UA" \
-     "https://aihot.virxact.com/api/public/items?mode=selected&since=${since}&take=50"
-2. 可选：将原始 JSON 保存到 state/daily/YYYY-MM-DD-aihot-raw.json 便于审计。
-3. 字段映射（每条 AIhot item）：
+AIhot 采集（两阶段，strict 默认）：
+
+Phase 0 — Ingest 门禁（必须先于任何采集/写入）：
+0. 读取 state/daily/.ingest-mode（默认 strict）。
+1. 运行：python3 scripts/verify-daily-ingest.py <今日 YYYY-MM-DD>
+   - exit 0 → 继续 Phase 1
+   - exit 非 0 → **立即停止**：
+     a. 若 manifest 不存在或 ready=false，读取 state/daily/YYYY-MM-DD-ingest-error.json（若存在）总结原因
+     b. 写入/更新 state/daily/YYYY-MM-DD-ingest-error.md（人可读，说明需在 Terminal 运行 ./scripts/ai-pm-ingest-prefetch.sh）
+     c. **不得**创建或覆盖 state/daily/YYYY-MM-DD-links.jsonl、state/daily/YYYY-MM-DD-report.md、pools 写入
+     d. 向用户返回明确错误并 exit
+2. strict 模式下 **禁止**在 Codex / Cursor sandbox 内 curl、fetch 或 Web 访问任何外网 URL，包括但不限于 AIhot、GitHub、arXiv、官网、Trending；不得 Web fallback 凑 longlist。
+
+Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
+1. 读取 state/daily/YYYY-MM-DD-ingest-manifest.json 与 state/daily/YYYY-MM-DD-aihot-raw.json（manifest 已验证）。
+2. AIhot 映射 — 对 raw.items[] 逐条映射（见 docs/aihot-api.md）：
    - aihot_id ← item.id
    - source_url ← https://aihot.virxact.com/items/{item.id}
    - original_url ← item.url
    - title ← item.title
+   - published_at ← item.publishedAt（ISO8601；缺失则 null）
    - aihot_summary ← item.summary（verbatim，禁止改写/压缩）
    - display_summary ← item.summary（同 aihot_summary）
    - aihot_summary_status ← verified
    - source_origin ← aggregator；source_role ← daily_discovery
-4. 硬门禁（写入 JSONL 前自检）：
+3. 硬门禁（写入 JSONL 前自检）：
    - 无 aihot_id → aihot_summary 必须为空，aihot_summary_status=not_applicable
-   - 有 aihot_id → aihot_summary 非空且来自 API summary；禁止自写一句压缩
+   - 有 aihot_id → aihot_summary 非空且来自 raw item.summary；禁止自写一句压缩
    - 禁止用 ai-bot.cn 内容填入 aihot_summary；禁止 10 条共用同一列表 source_url
-5. API 不可用 fallback：
-   - report 必须写「AIhot API 不可用」及失败原因
-   - 仅允许 GitHub/arXiv/官方等补充源；aihot_summary 全空
-   - 目标 longlist 可低于 25，不得伪造 AIhot 凑数
+4. GitHub / arXiv 补充 — **仅读 prefetch raw，禁止 sandbox curl**（映射见 docs/supplemental-prefetch-api.md）：
+   a. arXiv：仅当 manifest.sources.arxiv.status==ok **且** state/daily/YYYY-MM-DD-arxiv-raw.xml 存在 → 解析 Atom `<entry>` 补充 longlist：
+      - original_url ← https://arxiv.org/abs/{id}
+      - title ← `<title>`（去换行）
+      - discovery_summary ← `<summary>` verbatim
+      - source_origin ← primary；source_mix_note ← arxiv_export_supplement
+      - aihot_id 空；aihot_summary 空；aihot_summary_status ← not_applicable
+   b. GitHub：仅当 manifest.sources.github.status==ok **且** state/daily/YYYY-MM-DD-github-raw.json 存在 → 读取 items[] 补充：
+      - original_url ← html_url
+      - title ← full_name（或 description 首句作副标题）
+      - discovery_summary ← description（非空则 verbatim）
+      - source_origin ← primary；source_mix_note ← github_search_supplement
+      - aihot_id 空；aihot_summary 空；aihot_summary_status ← not_applicable
+   c. manifest status==skipped 或 raw 缺失 → 该源 **必须 skip**；§1 写 arxiv_supplement=skipped_no_prefetch 或 github_supplement=skipped_no_prefetch。
+   d. supplemental 与 AIhot 经 canonical_key 去重后并入 longlist；不得伪造链接。
+   e. supplemental 全部跳过时：允许 AIhot-only longlist；须在 report 说明原因。
+5. §1 采集状态行必须写：ingest_mode、manifest_ready、prefetch_host、aihot_items、arxiv_items、github_items、arxiv_supplement=ok|skipped_no_prefetch、github_supplement=ok|skipped_no_prefetch、excluded_remaining_7d_dup=N（§3 因 7 天重复省略条数）。
+6. resilient 模式（ingest_mode=resilient 时）：才允许原 fallback——report 披露 API 失败、aihot_summary 全空、外网补充；strict 下不适用。
 
 采集与长清单规则：
-1. AIhot 是 daily_discovery 主入口，但不是唯一填充来源。每日 longlist 不能默认 30 条全部来自 AIhot；必须评估官方/一手来源、产品案例、产品 teardown、优秀产品实践、GitHub/release/changelog、研究/报告是否需要补充进入 25-30 条清单。
-2. 建议配比：AIhot 约 18-24 条；官方/一手来源 2-5 条；产品案例/产品 teardown/优秀产品实践 1-3 条；GitHub/release/changelog 2-4 条。若最终全部来自 AIhot，必须在 daily state 或 report 中说明其他来源未补充的原因。
+1. AIhot 是 daily_discovery 主入口。有 supplemental raw 时评估 GitHub/arXiv 补充；**无 supplemental raw 时允许 AIhot-only longlist**，但须在 report 披露 skip 原因。
+2. 建议配比（有 supplemental raw 时）：AIhot 约 18-24 条；官方/一手 2-5；产品案例 1-3；GitHub/release 2-4。若最终全部来自 AIhot，必须在 report 说明其他来源未补充的原因。
 3. 非 AIhot 补充来源应写入 source_mix_note，说明为什么补充进入 longlist，尤其是产品案例如何帮助建立产品思路。
 4. AIhot 条目使用 AIhot 标题作为日报标题候选；确认原始来源链接后，把 AIhot 摘要写入 aihot_summary。
 5. P0/P1、30 分钟阅读包、GitHub 主推和正式练习必须尽量指向原始来源 URL，而不是 AIhot 聚合页。
@@ -63,8 +85,8 @@ AIhot API 采集（强制，优先于任何 Web 抓取）：
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
 每条 JSONL link object 至少包含：
-id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, read_reason, focus_direction, known_facts, open_questions。
-其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary；非 AIhot 从 discovery_summary 或原文事实提取。read_reason/focus_direction 仅阅读包非 knowledge_gap 条目填写；known_facts/open_questions 仅 knowledge_gap 条目填写；去重/保留说明只写入 novelty_reason，reason 不得复述。
+id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, content_tags, read_reason, focus_direction, known_facts, open_questions, knowledge_gap_card。
+其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。content_tags 为 1-2 个内容标签数组（从 docs/ingestion-normalization.md §6 Content Tags 词表选取，如 agent、eval、2B、Vibe Coding），供 UI chip 与后续 Obsidian 双链预留。read_reason/focus_direction 仅阅读包且 suggested_pool 不是 knowledge_gap 时填写。known_facts/open_questions/knowledge_gap_card 在日报 run 必须为空；knowledge_gap 卡片仅在人工 confirmed + final_pool=knowledge_gap 后由后续流程写入（本 automation 不生成卡片）。去重/保留说明只写入 novelty_reason，reason 不得复述。
 
 写入规则：
 - 所有采集链接先写入 state/daily/YYYY-MM-DD-links.jsonl。
@@ -78,22 +100,36 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 # 今日 AI PM 行业雷达
 
 ## 1. 五段式日报
-§1 开头必须包含一行采集状态：AIhot API 成功/失败、入库条数、Web 补充条数。
-用五段判断今天的大方向：产品/行业动态、GitHub/工程信号、论文/研究信号、工具/工作流信号、风险/限制/反例。
+§1 开头必须包含一行采集状态：ingest_mode、manifest_ready、prefetch_host、aihot_items、arxiv_supplement、github_supplement（ok 或 skipped_no_prefetch）。
+随后用以下**固定五段标签**各写至少一段正文（标签须独占行首，**禁止**写成 `- **标签**：` 列表项；冒号在加粗外侧；禁止只有小标题无段落）：
+
+**行业信号**：……
+**工程信号**：……
+**研究信号**：……
+**工作流信号**：……
+**风险提示**：……
 
 ## 2. 今日 30mins 阅读包
-按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status。随后：
-- 摘要：display_summary（AIhot 直接用 aihot_summary，纯事实，不加解读）。
-- 若建议池不是 knowledge_gap：给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度，不要臆造文章未必包含的细节）。不要再输出"读的时候看/读完判断"模板句。
-- 若建议池是 knowledge_gap：改为两部分——「文章可获得的事实」（known_facts，从文章本身能得到的事实点）与「需要额外研究的问题」（open_questions，读完仍需另行查证的问题）。
+按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、新闻日期（`新闻日期：YYYY-MM-DD` 或 `新闻日期：未披露`，来自 published_at）、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status、content_tags（1-2 个）。随后：
+- 摘要：display_summary（AIhot 直接用 aihot_summary verbatim，禁止改写摘要修「今天」）。
+- 优先级分类原因：priority_rationale（一句，说明为何 P0/P1/archive）。
+- 分类池分类原因：pool_rationale（一句，说明为何建议进入该 suggested_pool，供人工二次分类参考）。
+- 内容标签：content_tags（JSON 数组 1-2 项，写入 JSONL；report 中可写成 `标签：agent · eval`）。
+- 若建议池不是 knowledge_gap：再给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度）。不要再输出"读的时候看/读完判断"模板句。
+- 若建议池是 knowledge_gap：**不要**输出「文章可获得的事实」「需要额外研究的问题」或知识空缺卡片；仅保留摘要 + 优先级分类原因 + 分类池分类原因。卡片指引仅在人工确认 final_pool=knowledge_gap 后由后续流程生成（本日报不写）。
+- 若摘要 verbatim 含「今天/今日/昨天」且 published_at 已知：可加一句「摘要中的相对日期请参考新闻日期」，**不得**改写 display_summary 正文。
+- Codex 自写行（五段式、分类原因、read_reason 等）禁止使用「今天/今日/昨天」，改用「该报道/此文/消息源日期」。
 "P0 详细阅读"仅用于确有深度的来源；若来源只是产品功能/发布介绍页（信息浅），降为 P1 扫读，靠摘要让用户判断，不要为凑深度而过度解读。
 
 ## 3. 未入选阅读包的剩余链接
-列出剩余链接，尽量保持今日信息面完整。每条首行标注：优先级、AI 建议池、reading_pack_status、human_status、是否建议人工加入阅读包；非 AIhot 补充来源标注 source_mix_note。随后另起一行给「摘要」（display_summary，AIhot 用 aihot_summary，纯事实）。剩余链接不写推荐阅读原因/关注方向，克制解读。
-去重/保留说明只出现一次：仅当 duplicate_status 为 material_update / carry_over / duplicate_suppressed 时，追加一行「保留/去重说明：<duplicate_status> — <novelty_reason>」。novelty_reason 只写一次，reason 不得复述该内容。
+列出剩余链接（**排除** duplicate_status 为 duplicate_7d 或 duplicate_suppressed 的条目——它们已在 7 天内完成分类，不得重复出现在 §3；仍保留在 links.jsonl）。每条首行标注：新闻日期、优先级、AI 建议池、reading_pack_status、human_status、是否建议人工加入阅读包；非 AIhot 补充来源标注 source_mix_note。随后另起一行给「摘要」（display_summary，verbatim）。剩余链接不写推荐阅读原因/关注方向/分类原因，克制解读。
+去重/保留说明只出现一次：仅当 duplicate_status 为 material_update / carry_over 且该条 **仍出现在 §3** 时，追加一行「保留/去重说明：<duplicate_status> — <novelty_reason>」。duplicate_7d / duplicate_suppressed 不得出现在 §3，故不写保留说明。
 
 ## 4. 今日练习三选一
-给 3 个 20-45 分钟练习选项，并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
+必须输出恰好 3 行（每项一行；全角 `｜` 或半角 `|` 均可），并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop：
+1. **正式推荐：标题**｜时长与正文…
+2. **备选：标题**｜时长与正文…
+3. **备选：标题**｜时长与正文…
 
 质量要求：
 - 必须提供可点击来源链接。
@@ -104,7 +140,10 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 每条链接都要有 display_summary；AIhot 来源直接复用 aihot_summary，不改写。
 - 事实、AIhot 摘要、Codex 判断分离；剩余链接以事实摘要为主，克制解读。
 - 去重/保留原因只写入 novelty_reason，并在报告中只呈现一次，reason 不复述。
-- knowledge_gap 用“可获得的事实 + 需要额外研究的问题”呈现，不假装给出文章未包含的判断。
+- duplicate_7d / duplicate_suppressed 只进 JSONL，不进 §3；§1 披露 excluded_remaining_7d_dup。
+- 阅读包每条必须有 priority_rationale、pool_rationale 与 content_tags（1-2 个）。
+- knowledge_gap 日报不写 known_facts/open_questions/卡片；published_at 披露新闻日期；禁止改写 verbatim 摘要修「今天」。
+- §1 五段标签必须精确使用：行业信号 / 工程信号 / 研究信号 / 工作流信号 / 风险提示。
 """
 status = "ACTIVE"
 rrule = "FREQ=DAILY;BYHOUR=8;BYMINUTE=30;BYSECOND=0"

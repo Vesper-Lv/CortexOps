@@ -39,12 +39,14 @@ export type ReportDetail =
 export async function listDailyReports(): Promise<DailyReportListItem[]> {
   const rows = await prisma.dailyReport.findMany({ orderBy: { date: "desc" } });
   return rows.map((r) => {
-    const fivePart = JSON.parse(r.fivePartJson) as unknown[];
-    const practices = JSON.parse(r.practicesJson) as unknown[];
+    const fivePart = JSON.parse(r.fivePartJson) as FivePartSection[];
+    const practices = JSON.parse(r.practicesJson) as PracticeOption[];
     return {
       date: r.date,
       sourceFile: r.sourceFile,
-      sectionCount: Array.isArray(fivePart) ? fivePart.length : 0,
+      sectionCount: Array.isArray(fivePart)
+        ? fivePart.filter((s) => typeof s?.content === "string" && s.content.trim().length > 0).length
+        : 0,
       practiceCount: Array.isArray(practices) ? practices.length : 0
     };
   });

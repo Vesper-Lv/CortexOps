@@ -1,3 +1,4 @@
+import { MarkdownBody } from "@/components/shared/markdown-body";
 import type { ReportSection } from "@/server/importers/weeklyReportParser";
 
 export function MonthlyReportView({ sections }: { sections: ReportSection[] }) {
@@ -14,9 +15,7 @@ export function MonthlyReportView({ sections }: { sections: ReportSection[] }) {
       {sections.map((section) => (
         <section key={section.title} className="rounded-md border border-border bg-surface p-4">
           <h3 className="text-base font-semibold text-foreground">{section.title}</h3>
-          <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-            {section.content}
-          </div>
+          <MarkdownBody className="mt-2" markdown={section.content} />
         </section>
       ))}
     </div>

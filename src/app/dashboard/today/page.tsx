@@ -75,17 +75,23 @@ export default async function TodayPage({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      {report && report.fivePart.length > 0 && (
+      {report && (
         <div>
           <h3 className="mb-3 text-xl font-semibold text-foreground">五段式日报</h3>
           <FivePartSummary sections={report.fivePart} />
         </div>
       )}
 
-      {report && report.practices.length > 0 && (
+      {report && (
         <div>
           <h3 className="mb-3 text-xl font-semibold text-foreground">今日练习三选一</h3>
-          <PracticePicker date={date} practices={report.practices} session={session} />
+          {report.practices.length > 0 ? (
+            <PracticePicker date={date} practices={report.practices} session={session} />
+          ) : (
+            <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              今日练习暂无结构化内容（§4 需符合 `1. **标题**｜正文`）。重新导入日报后可恢复。
+            </p>
+          )}
         </div>
       )}
 

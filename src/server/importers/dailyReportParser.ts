@@ -8,11 +8,31 @@ export type PracticeOption = {
 };
 
 const FIVE_PART_SECTIONS = [
-  { key: "industry", label: "行业信号", aliases: ["行业信号", "产品 / 行业动态", "产品", "行业动态"] },
-  { key: "engineering", label: "工程信号", aliases: ["工程信号", "GitHub / 工程信号", "GitHub"] },
-  { key: "research", label: "研究信号", aliases: ["研究信号", "论文 / 研究信号", "论文"] },
-  { key: "workflow", label: "工作流信号", aliases: ["工作流信号", "工具 / 工作流信号", "工具"] },
-  { key: "risk", label: "风险提示", aliases: ["风险提示", "风险 / 限制 / 反例", "风险", "限制", "反例"] }
+  {
+    key: "industry",
+    label: "行业信号",
+    aliases: ["行业信号", "产品 / 行业动态", "产品", "行业动态", "行业"]
+  },
+  {
+    key: "engineering",
+    label: "工程信号",
+    aliases: ["工程信号", "GitHub / 工程信号", "GitHub", "工程"]
+  },
+  {
+    key: "research",
+    label: "研究信号",
+    aliases: ["研究信号", "论文 / 研究信号", "论文", "研究"]
+  },
+  {
+    key: "workflow",
+    label: "工作流信号",
+    aliases: ["工作流信号", "工具 / 工作流信号", "工具", "工作流"]
+  },
+  {
+    key: "risk",
+    label: "风险提示",
+    aliases: ["风险提示", "风险 / 限制 / 反例", "风险", "限制", "反例"]
+  }
 ];
 
 function escapeRegex(value: string): string {
@@ -31,11 +51,54 @@ function extractSection(markdown: string, sectionNumber: number): string {
 function findFivePartContent(block: string, aliases: string[]): string {
   const labelAlternation = aliases.map(escapeRegex).join("|");
   const allLabels = FIVE_PART_SECTIONS.flatMap((section) => section.aliases).map(escapeRegex).join("|");
+  // Colon may sit outside bold (**标签**：) or inside (**标签：**)
   const re = new RegExp(
-    `^\\s*\\*\\*\\s*(?:${labelAlternation})\\s*\\*\\*\\s*[：:]\\s*([\\s\\S]*?)(?=^\\s*\\*\\*\\s*(?:${allLabels})\\s*\\*\\*\\s*[：:]|(?![\\s\\S]))`,
+    `^\\s*(?:[-*]\\s+)?\\*\\*\\s*(?:${labelAlternation})\\s*(?:\\*\\*\\s*[：:]|[：:]\\s*\\*\\*)\\s*([\\s\\S]*?)(?=^\\s*(?:[-*]\\s+)?\\*\\*\\s*(?:${allLabels})\\s*(?:\\*\\*\\s*[：:]|[：:]\\s*\\*\\*)|(?![\\s\\S]))`,
     "m"
   );
   return (block.match(re)?.[1] ?? "").trim();
+}
+
+function parsePracticeLines(practiceBlock: string): PracticeOption[] {
+  const practices: PracticeOption[] = [];
+  const lines = practiceBlock.split("\n");
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]?.trim() ?? "";
+    if (!/^\d+\./.test(line)) continue;
+
+    const pipe = line.match(/^\d+\.\s*\*\*(.+?)\*\*\s*[｜|]\s*(.+)$/);
+    if (pipe) {
+      practices.push({ index: practices.length, title: pipe[1].trim(), body: pipe[2].trim() });
+      continue;
+    }
+
+    const colon = line.match(/^\d+\.\s*\*\*(.+?)\*\*\s*[：:]\s*(.+)$/);
+    if (colon) {
+      practices.push({ index: practices.length, title: colon[1].trim(), body: colon[2].trim() });
+      continue;
+    }
+
+    const titleOnly = line.match(/^\d+\.\s*\*\*(.+?)\*\*\s*$/);
+    if (titleOnly) {
+      const bodyParts: string[] = [];
+      let j = i + 1;
+      while (j < lines.length) {
+        const next = lines[j] ?? "";
+        if (/^\d+\./.test(next.trim()) || /^##\s+\S/.test(next.trim())) break;
+        if (next.trim()) bodyParts.push(next.trim());
+        j += 1;
+      }
+      practices.push({
+        index: practices.length,
+        title: titleOnly[1].trim(),
+        body: bodyParts.join(" ").trim() || titleOnly[1].trim()
+      });
+      continue;
+    }
+  }
+
+  return practices;
 }
 
 export function parseDailyReportMarkdown(markdown: string): {
@@ -51,13 +114,5 @@ export function parseDailyReportMarkdown(markdown: string): {
     content: findFivePartContent(fiveBlock, section.aliases)
   }));
 
-  const practices: PracticeOption[] = [];
-  const lines = practiceBlock.split("\n").filter((l) => /^\d+\./.test(l.trim()));
-  lines.forEach((line, index) => {
-    const m = line.trim().match(/^\d+\.\s*\*\*(.+?)\*\*\s*[｜|]\s*(.+)$/);
-    if (!m) return;
-    practices.push({ index, title: m[1].trim(), body: m[2].trim() });
-  });
-
-  return { fivePart, practices };
+  return { fivePart, practices: parsePracticeLines(practiceBlock) };
 }

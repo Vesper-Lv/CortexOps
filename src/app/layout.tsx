@@ -3,8 +3,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CortexOps Workbench",
-  description: "Local-first AI PM information workbench"
+  title: "Vesper's Workspace",
+  description: "Local-first workspace"
 };
 
 export default function RootLayout({

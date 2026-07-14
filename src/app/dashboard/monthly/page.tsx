@@ -4,6 +4,7 @@ import { MonthlyReportView } from "@/components/dashboard/monthly-report-view";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { parseMonthlyReportMarkdown } from "@/server/importers/monthlyReportParser";
 import { getLatestArchiveReport } from "@/server/services/reports";
+import { displayMonthlyTitle, formatPeriodRange } from "@/shared/reportDisplay";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +34,17 @@ export default async function MonthlyPage() {
   }
 
   const sections = parseMonthlyReportMarkdown(report.rawMarkdown);
+  const title = displayMonthlyTitle(report.periodStart);
+  const range = formatPeriodRange(report.periodStart, report.periodEnd);
 
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Monthly review</p>
-        <h2 className="mt-3 text-4xl font-semibold text-foreground">{report.title}</h2>
+        <h2 className="mt-3 text-4xl font-semibold text-foreground">{title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          {report.periodStart}
-          {report.periodEnd ? ` → ${report.periodEnd}` : ""} ·{" "}
+          {range}
+          {range ? " · " : ""}
           <Link href="/library/reports" className="text-primary hover:underline">
             全部报告
           </Link>

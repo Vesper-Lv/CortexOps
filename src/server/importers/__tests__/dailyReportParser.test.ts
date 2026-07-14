@@ -86,4 +86,55 @@ describe("parseDailyReportMarkdown", () => {
       { index: 2, title: "第三项", body: "继续练习" }
     ]);
   });
+
+  it("parses short aliases, colon-inside-bold, and multiline practices", () => {
+    const md = `## 1. 五段式日报
+采集状态：AIhot API 成功。
+
+**行业：**行业短标签
+**工程：**工程短标签
+**研究：**研究短标签
+**工作流：**工作流短标签
+**风险：**风险短标签
+
+## 4. 今日练习三选一
+1. **正式推荐：企业 memo**
+20-30 分钟。写一页产品 memo。
+2. **备选：评估拆解**：直接跟在冒号后
+3. **备选：CLI 复刻**｜半角或全角竖线
+`;
+
+    const parsed = parseDailyReportMarkdown(md);
+
+    expect(parsed.fivePart.map((s) => [s.label, s.content])).toEqual([
+      ["行业信号", "行业短标签"],
+      ["工程信号", "工程短标签"],
+      ["研究信号", "研究短标签"],
+      ["工作流信号", "工作流短标签"],
+      ["风险提示", "风险短标签"]
+    ]);
+    expect(parsed.practices).toHaveLength(3);
+    expect(parsed.practices[0]?.body).toContain("产品 memo");
+    expect(parsed.practices[1]?.body).toContain("直接跟在冒号后");
+    expect(parsed.practices[2]?.title).toContain("CLI");
+  });
+
+  it("parses list-dash five-part labels used by some automation templates", () => {
+    const md = `## 1. 五段式日报
+- **行业信号**：行业内容
+- **工程信号**：工程内容
+- **研究信号**：研究内容
+- **工作流信号**：工作流内容
+- **风险提示**：风险内容
+## 2. End`;
+
+    const parsed = parseDailyReportMarkdown(md);
+    expect(parsed.fivePart.map((s) => s.content)).toEqual([
+      "行业内容",
+      "工程内容",
+      "研究内容",
+      "工作流内容",
+      "风险内容"
+    ]);
+  });
 });
