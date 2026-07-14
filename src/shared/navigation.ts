@@ -45,6 +45,7 @@ export const navigationSections: NavSection[] = [
     basePath: "/inbox",
     children: [
       { href: "/inbox/today", label: "Today", icon: CalendarDays },
+      { href: "/inbox/backlog" as Route, label: "Backlog", icon: ListTodo },
       { href: "/inbox/pools", label: "Candidate Pools", icon: Archive },
       { href: "/inbox/memo", label: "Memo", icon: ListTodo }
     ]

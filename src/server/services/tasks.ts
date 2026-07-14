@@ -278,6 +278,48 @@ export async function promoteMemoToTask(memoId: string): Promise<string> {
   return task.id;
 }
 
+export async function createManualTask(input: {
+  title: string;
+  description?: string | null;
+  priority?: string | null;
+  status?: string;
+}): Promise<string> {
+  const title = input.title.trim();
+  if (!title) throw new Error("task title cannot be empty");
+  const status = input.status ?? "inbox";
+  assertValidTaskStatus(status);
+  const description =
+    input.description === undefined || input.description === null
+      ? null
+      : input.description.trim() || null;
+  const priority =
+    input.priority === undefined || input.priority === null || input.priority === ""
+      ? null
+      : input.priority;
+
+  const task = await prisma.$transaction(async (tx) => {
+    const created = await tx.task.create({
+      data: {
+        title,
+        description,
+        priority,
+        origin: "manual",
+        status
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        entityType: "task",
+        entityId: created.id,
+        action: "create_manual",
+        toValue: title
+      }
+    });
+    return created;
+  });
+  return task.id;
+}
+
 export async function getLatestDailyDateForTasks(): Promise<string | null> {
   return getLatestDailyDate();
 }

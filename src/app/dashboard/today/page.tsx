@@ -4,7 +4,6 @@ import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { ActiveTasksStrip } from "@/components/dashboard/active-tasks-strip";
 import { CandidateSupplementPanel } from "@/components/dashboard/candidate-supplement-panel";
 import { FivePartSummary } from "@/components/dashboard/five-part-summary";
-import { PoolRoutingTable } from "@/components/dashboard/pool-routing-table";
 import { PracticePicker } from "@/components/dashboard/practice-picker";
 import { ReadingPack } from "@/components/dashboard/reading-pack";
 import { RemainingLinks } from "@/components/dashboard/remaining-links";
@@ -47,7 +46,7 @@ export default async function TodayPage({ searchParams }: PageProps) {
     );
   }
 
-  const { date, view, remaining, routing } = data;
+  const { date, view, remaining } = data;
   const [report, session, activeTasks] = await Promise.all([
     getDailyReport(date),
     getDailySession(date),
@@ -111,7 +110,6 @@ export default async function TodayPage({ searchParams }: PageProps) {
       </div>
 
       <RemainingLinks items={remaining} />
-      <PoolRoutingTable signals={routing} />
 
       {showCandidates && (
         <CandidateSupplementPanel date={date} candidates={candidatesWithId} />

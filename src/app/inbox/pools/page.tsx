@@ -1,10 +1,11 @@
 import { Boxes } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
-import { PendingBacklogList } from "@/components/inbox/pending-backlog-list";
-import { PoolBoard } from "@/components/inbox/pool-board";
 import { PoolFiltersBar } from "@/components/inbox/pool-filters-bar";
-import { getCandidatePools, getPendingSignalBacklog } from "@/server/services/inboxView";
+import { PoolViews } from "@/components/inbox/pool-views";
+import { getCandidatePools } from "@/server/services/inboxView";
 
 export const dynamic = "force-dynamic";
 
@@ -14,21 +15,22 @@ type PageProps = {
 
 export default async function PoolsPage({ searchParams }: PageProps) {
   const { status: humanStatusFilter, pool: poolFilter, priority: priorityFilter } = await searchParams;
-  const [groups, backlog] = await Promise.all([
-    getCandidatePools({
-      humanStatus: humanStatusFilter,
-      pool: poolFilter,
-      priority: priorityFilter
-    }),
-    humanStatusFilter === "pending" ? getPendingSignalBacklog() : Promise.resolve([])
-  ]);
+
+  if (humanStatusFilter === "pending") {
+    redirect("/inbox/backlog" as Route);
+  }
+
+  const groups = await getCandidatePools({
+    humanStatus: humanStatusFilter,
+    pool: poolFilter,
+    priority: priorityFilter
+  });
 
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0);
   const nonEmptyPools = groups.filter((g) => g.items.length > 0).length;
   const hasFilters = Boolean(humanStatusFilter || poolFilter || priorityFilter);
-  const showEmpty = totalItems === 0 && (humanStatusFilter !== "pending" || backlog.length === 0);
 
-  if (showEmpty && !hasFilters) {
+  if (totalItems === 0 && !hasFilters) {
     return (
       <WorkbenchPage
         eyebrow="Option management"
@@ -58,7 +60,10 @@ export default async function PoolsPage({ searchParams }: PageProps) {
         <p className="mt-2 text-sm text-muted-foreground">
           {hasFilters
             ? `Filtered · ${totalItems} items`
-            : `${totalItems} items across ${nonEmptyPools} pools · drag cards between columns or use the pool dropdown on mobile.`}
+            : `${totalItems} items across ${nonEmptyPools} pools · Board 或 List 视图均可编辑。`}{" "}
+          <Link href={"/inbox/backlog" as Route} className="font-medium text-primary hover:underline">
+            Backlog →
+          </Link>
         </p>
       </div>
 
@@ -67,8 +72,6 @@ export default async function PoolsPage({ searchParams }: PageProps) {
         activePool={poolFilter}
         activePriority={priorityFilter}
       />
-
-      {humanStatusFilter === "pending" && <PendingBacklogList signals={backlog} />}
 
       {totalItems === 0 && hasFilters ? (
         <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
@@ -79,7 +82,7 @@ export default async function PoolsPage({ searchParams }: PageProps) {
           分拣今日信号。
         </p>
       ) : (
-        <PoolBoard groups={groups} />
+        <PoolViews groups={groups} />
       )}
     </section>
   );

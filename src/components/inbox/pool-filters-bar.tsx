@@ -3,9 +3,9 @@ import type { Route } from "next";
 import { POOL_OPTIONS } from "@/shared/poolOptions";
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 
-const STATUS_FILTERS: { label: string; value?: string }[] = [
+const STATUS_FILTERS: { label: string; value?: string; href?: Route }[] = [
   { label: "All" },
-  { label: "pending", value: "pending" },
+  { label: "pending → Backlog", value: "pending", href: "/inbox/backlog" as Route },
   { label: "confirmed", value: "confirmed" },
   { label: "changed", value: "changed" }
 ];
@@ -37,7 +37,10 @@ export function PoolFiltersBar({
           return (
             <Link
               key={f.label}
-              href={buildHref({ status: f.value, pool: activePool, priority: activePriority })}
+              href={
+                f.href ??
+                buildHref({ status: f.value, pool: activePool, priority: activePriority })
+              }
               className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
                 isActive
                   ? "border-primary bg-primary/10 text-primary"

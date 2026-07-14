@@ -22,12 +22,6 @@ export function ReadingPack({ items }: { items: SignalView[] }) {
           <div className="mt-2">
             <ContentTagChips tags={item.contentTags} />
           </div>
-          {item.priorityRationale && (
-            <p className="mt-1 text-sm text-muted-foreground">优先级依据：{item.priorityRationale}</p>
-          )}
-          {item.poolRationale && (
-            <p className="mt-1 text-sm text-muted-foreground">归池依据：{item.poolRationale}</p>
-          )}
           {item.isKnowledgeGap ? (
             <>
               {item.knownFacts && (
