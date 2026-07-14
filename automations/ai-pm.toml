@@ -79,7 +79,15 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 
 ## 1. 五段式日报
 §1 开头必须包含一行采集状态：AIhot API 成功/失败、入库条数、Web 补充条数。
-用五段判断今天的大方向：产品/行业动态、GitHub/工程信号、论文/研究信号、工具/工作流信号、风险/限制/反例。
+然后严格按下列五段输出（标签必须与下文字面一致，冒号在加粗外侧）：
+
+**行业信号**：……
+**工程信号**：……
+**研究信号**：……
+**工作流信号**：……
+**风险提示**：……
+
+兼容旧标签（产品 / 行业动态、GitHub / 工程信号、论文 / 研究信号、工具 / 工作流信号、风险 / 限制 / 反例）亦可被导入解析，但新日报请优先使用上方短标签。
 
 ## 2. 今日 30mins 阅读包
 按阅读顺序列出 P0 详细阅读、P1 扫读和 GitHub 热门/可复刻项目，不要另列为独立顶层章节。每条首行：标题、原始链接、类别（P0 详细阅读 / P1 扫读 / GitHub 热门或可复刻项目）、建议池、human_status。随后：
@@ -93,7 +101,11 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 去重/保留说明只出现一次：仅当 duplicate_status 为 material_update / carry_over / duplicate_suppressed 时，追加一行「保留/去重说明：<duplicate_status> — <novelty_reason>」。novelty_reason 只写一次，reason 不得复述该内容。
 
 ## 4. 今日练习三选一
-给 3 个 20-45 分钟练习选项，并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
+必须输出恰好 3 行，格式固定为（全角｜或半角 | 均可）：
+1. **正式推荐：……**｜20-30 分钟。……去向建议：……
+2. **备选：……**｜30-45 分钟。……去向建议：……
+3. **备选：……**｜30-45 分钟。……去向建议：……
+选择其中 1 个作为正式练习；未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
 
 质量要求：
 - 必须提供可点击来源链接。

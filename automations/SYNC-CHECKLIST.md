@@ -42,6 +42,8 @@ Branch: codex/source-layering-policy
 cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
 ```
 
+日报五段标签与练习行格式以 `automations/ai-pm.toml` 内钉死模板为准（`**行业信号**：` …；`1. **标题**｜…`），须与 workbench `dailyReportParser.ts` 一致后再同步。
+
 ## 5. Verify diff is empty
 
 ```bash

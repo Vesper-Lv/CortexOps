@@ -1,6 +1,39 @@
 import Link from "next/link";
 import type { Route } from "next";
 import type { DailyReportListItem, ArchiveReportListItem } from "@/server/services/reports";
+import {
+  displayMonthlyTitle,
+  displayWeeklyTitle,
+  formatPeriodRange,
+  monthKeyFromPeriod,
+  monthLabelFromKey,
+  weekOrdinalInMonth,
+  type ArchiveReportRef
+} from "@/shared/reportDisplay";
+
+function toRef(r: ArchiveReportListItem): ArchiveReportRef {
+  return {
+    id: r.id,
+    reportType: r.reportType,
+    periodStart: r.periodStart,
+    periodEnd: r.periodEnd
+  };
+}
+
+function groupWeeklyByMonth(weekly: ArchiveReportListItem[]): { monthKey: string; items: ArchiveReportListItem[] }[] {
+  const map = new Map<string, ArchiveReportListItem[]>();
+  for (const r of weekly) {
+    const key = monthKeyFromPeriod(r.periodStart);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(r);
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([monthKey, items]) => ({
+      monthKey,
+      items: [...items].sort((a, b) => (a.periodStart ?? "").localeCompare(b.periodStart ?? ""))
+    }));
+}
 
 export function ReportLibrary({
   dailyReports,
@@ -17,6 +50,11 @@ export function ReportLibrary({
     );
   }
 
+  const weekly = archiveReports.filter((r) => r.reportType === "weekly");
+  const monthly = archiveReports.filter((r) => r.reportType === "monthly");
+  const weeklyGroups = groupWeeklyByMonth(weekly);
+  const weeklyRefs = weekly.map(toRef);
+
   return (
     <div className="flex flex-col gap-8">
       {dailyReports.length > 0 && (
@@ -24,26 +62,20 @@ export function ReportLibrary({
           <h3 className="mb-3 text-lg font-semibold text-foreground">Daily reports</h3>
           <ul className="flex flex-col gap-2">
             {dailyReports.map((r) => (
-              <li key={r.date} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
+              <li
+                key={r.date}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+              >
                 <div>
-                  <span className="font-medium">{r.date}</span>
+                  <Link
+                    href={`/library/reports/${r.date}` as "/library/reports"}
+                    className="font-medium text-foreground hover:underline"
+                  >
+                    {r.date}
+                  </Link>
                   <span className="ml-2 text-xs text-muted-foreground">
                     {r.sectionCount} sections · {r.practiceCount} practices
                   </span>
-                </div>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/dashboard/today?date=${r.date}` as Route}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    打开 Today 视图
-                  </Link>
-                  <Link
-                    href={`/library/reports/${r.date}` as "/library/reports"}
-                    className="text-xs text-muted-foreground hover:underline"
-                  >
-                    详情
-                  </Link>
                 </div>
               </li>
             ))}
@@ -51,30 +83,61 @@ export function ReportLibrary({
         </section>
       )}
 
-      {archiveReports.length > 0 && (
+      {weekly.length > 0 && (
         <section>
-          <h3 className="mb-3 text-lg font-semibold text-foreground">Weekly / Monthly / Other</h3>
-          <ul className="flex flex-col gap-2">
-            {archiveReports.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
-                <div>
-                  <span className="font-medium">{r.title}</span>
-                  <span className="ml-2 text-xs capitalize text-muted-foreground">{r.reportType}</span>
-                  {r.periodStart && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {r.periodStart}
-                      {r.periodEnd ? ` → ${r.periodEnd}` : ""}
-                    </span>
-                  )}
-                </div>
-                <Link
-                  href={`/library/reports/archive/${r.id}` as "/library/reports"}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  阅读
-                </Link>
-              </li>
+          <h3 className="mb-3 text-lg font-semibold text-foreground">Weekly Report</h3>
+          <div className="flex flex-col gap-5">
+            {weeklyGroups.map(({ monthKey, items }) => (
+              <div key={monthKey}>
+                <h4 className="mb-2 text-sm font-medium text-muted-foreground">{monthLabelFromKey(monthKey)}</h4>
+                <ul className="flex flex-col gap-2">
+                  {items.map((r) => {
+                    const ordinal = weekOrdinalInMonth(toRef(r), weeklyRefs.filter((p) => monthKeyFromPeriod(p.periodStart) === monthKey));
+                    const range = formatPeriodRange(r.periodStart, r.periodEnd);
+                    return (
+                      <li
+                        key={r.id}
+                        className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                      >
+                        <Link
+                          href={`/library/reports/archive/${r.id}` as Route}
+                          className="font-medium text-foreground hover:underline"
+                        >
+                          {displayWeeklyTitle(ordinal)}
+                        </Link>
+                        {range && <span className="text-xs text-muted-foreground">{range}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {monthly.length > 0 && (
+        <section>
+          <h3 className="mb-3 text-lg font-semibold text-foreground">Monthly Report</h3>
+          <ul className="flex flex-col gap-2">
+            {[...monthly]
+              .sort((a, b) => (b.periodStart ?? "").localeCompare(a.periodStart ?? ""))
+              .map((r) => (
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                >
+                  <Link
+                    href={`/library/reports/archive/${r.id}` as Route}
+                    className="font-medium text-foreground hover:underline"
+                  >
+                    {displayMonthlyTitle(r.periodStart)}
+                  </Link>
+                  {r.periodStart && (
+                    <span className="text-xs text-muted-foreground">{r.periodStart}</span>
+                  )}
+                </li>
+              ))}
           </ul>
         </section>
       )}

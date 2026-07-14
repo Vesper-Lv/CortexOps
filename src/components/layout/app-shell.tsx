@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 CortexOps
               </p>
               <h1 className="mt-1 text-xl font-semibold tracking-normal text-foreground">
-                AI PM Workbench
+                Vesper&apos;s Workspace
               </h1>
             </div>
             <div className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted-foreground">

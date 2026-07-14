@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { getArchiveReportDetail } from "@/server/services/reports";
+import { MarkdownBody } from "@/components/shared/markdown-body";
+import { displayArchiveTitle, formatPeriodRange } from "@/shared/reportDisplay";
+import { getArchiveReportDetail, listArchiveReports } from "@/server/services/reports";
 
 export const dynamic = "force-dynamic";
 
@@ -20,21 +22,41 @@ export default async function ArchiveReportDetailPage({ params }: PageProps) {
     );
   }
 
+  const peers =
+    report.reportType === "weekly"
+      ? (await listArchiveReports("weekly")).map((r) => ({
+          id: r.id,
+          reportType: r.reportType,
+          periodStart: r.periodStart,
+          periodEnd: r.periodEnd
+        }))
+      : [];
+
+  const title = displayArchiveTitle(
+    {
+      id: report.id,
+      reportType: report.reportType,
+      periodStart: report.periodStart,
+      periodEnd: report.periodEnd
+    },
+    peers
+  );
+  const range = formatPeriodRange(report.periodStart, report.periodEnd);
+
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
       <div>
         <Link href="/library/reports" className="text-sm text-primary hover:underline">
           ← Reports
         </Link>
-        <h2 className="mt-2 text-3xl font-semibold">{report.title}</h2>
+        <h2 className="mt-2 text-3xl font-semibold">{title}</h2>
         <p className="mt-1 text-sm capitalize text-muted-foreground">
           {report.reportType}
-          {report.periodStart ? ` · ${report.periodStart}` : ""}
-          {report.periodEnd ? ` → ${report.periodEnd}` : ""}
+          {range ? ` · ${range}` : ""}
         </p>
       </div>
-      <article className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md border border-border bg-surface p-4 text-sm dark:prose-invert">
-        {report.rawMarkdown}
+      <article className="rounded-md border border-border bg-surface p-4">
+        <MarkdownBody markdown={report.rawMarkdown} />
       </article>
     </section>
   );
