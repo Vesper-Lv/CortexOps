@@ -60,3 +60,8 @@ export function displayArchiveTitle(
   }
   return "报告";
 }
+
+/** Drop a leading ATX H1 so archive pages don't duplicate the UI title. */
+export function stripLeadingMarkdownH1(markdown: string): string {
+  return markdown.replace(/^\uFEFF?#\s+[^\n]*\n+/, "");
+}

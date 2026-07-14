@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { MarkdownBody } from "@/components/shared/markdown-body";
-import { displayArchiveTitle, formatPeriodRange } from "@/shared/reportDisplay";
+import {
+  displayArchiveTitle,
+  formatPeriodRange,
+  stripLeadingMarkdownH1
+} from "@/shared/reportDisplay";
 import { getArchiveReportDetail, listArchiveReports } from "@/server/services/reports";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +46,7 @@ export default async function ArchiveReportDetailPage({ params }: PageProps) {
     peers
   );
   const range = formatPeriodRange(report.periodStart, report.periodEnd);
+  const bodyMarkdown = stripLeadingMarkdownH1(report.rawMarkdown);
 
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
@@ -56,7 +61,7 @@ export default async function ArchiveReportDetailPage({ params }: PageProps) {
         </p>
       </div>
       <article className="rounded-md border border-border bg-surface p-4">
-        <MarkdownBody markdown={report.rawMarkdown} />
+        <MarkdownBody markdown={bodyMarkdown} />
       </article>
     </section>
   );

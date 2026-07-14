@@ -4,6 +4,7 @@ import {
   displayMonthlyTitle,
   displayWeeklyTitle,
   formatPeriodRange,
+  stripLeadingMarkdownH1,
   weekOrdinalInMonth
 } from "@/shared/reportDisplay";
 
@@ -32,5 +33,12 @@ describe("reportDisplay", () => {
         periodEnd: null
       })
     ).toBe("7月度复盘报告");
+  });
+
+  it("strips a leading ATX H1 from archive markdown bodies", () => {
+    expect(stripLeadingMarkdownH1("# 本周 AI PM 执行周报\n\n## 1. 趋势\n正文")).toBe(
+      "## 1. 趋势\n正文"
+    );
+    expect(stripLeadingMarkdownH1("## 1. 趋势\n正文")).toBe("## 1. 趋势\n正文");
   });
 });
