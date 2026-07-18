@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import {
   moveCandidatePool as moveCandidatePoolService,
-  updateCandidateReason as updateCandidateReasonService,
   updateCandidateSuggestion as updateCandidateSuggestionService,
   updateCandidatePriority as updateCandidatePriorityService,
   watchCandidate as watchCandidateService
@@ -23,12 +22,6 @@ export async function watchCandidateAction(candidateId: string): Promise<void> {
 
 export async function updateCandidatePriorityAction(candidateId: string, priority: string): Promise<void> {
   await updateCandidatePriorityService(candidateId, priority);
-  revalidatePath("/inbox/pools");
-  revalidatePath("/dashboard/today");
-}
-
-export async function updateCandidateReasonAction(candidateId: string, reason: string): Promise<void> {
-  await updateCandidateReasonService(candidateId, reason);
   revalidatePath("/inbox/pools");
   revalidatePath("/dashboard/today");
 }

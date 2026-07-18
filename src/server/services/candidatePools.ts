@@ -1,7 +1,6 @@
 import { prisma } from "@/server/db";
 import {
   POOL_DISPLAY_ORDER,
-  assertValidPool,
   normalizePoolName,
   poolNameFromOption,
   poolOptionFromName,
@@ -87,13 +86,13 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
 export async function moveCandidatePool(candidateId: string, toPoolName: string): Promise<void> {
   const normalizedPool = normalizePoolName(toPoolName);
   if (!normalizedPool) {
-    assertValidPool(toPoolName);
+    throw new Error(`invalid pool: ${toPoolName}`);
   }
 
   const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
   if (!candidate) throw new Error(`candidate not found: ${candidateId}`);
 
-  const newPoolName = normalizedPool ?? poolNameFromOption(toPoolName as PoolOption);
+  const newPoolName = normalizedPool;
   if (candidate.poolName === newPoolName) return;
 
   const status = computeStatusOnFinalize(newPoolName);

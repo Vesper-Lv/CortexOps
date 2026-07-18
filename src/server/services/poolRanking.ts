@@ -130,7 +130,8 @@ export async function rankPoolItems(poolName: string, limit?: number): Promise<R
   const items: RankedItem[] = candidates.map((c) => {
     const url = c.originalUrl ?? c.sourceUrl ?? "";
     const contentType = inferContentType(url);
-    const dc = 0.5; // default, will be enriched from Signal if available
+    // PR-A: decisionConfidence stays at default 0.5 until confidence-routing schema lands in PR-C.
+    const dc = 0.5;
     const raw = parseSignalRaw(c.rawJson);
     const summary = raw.displaySummary ?? c.aihotSummary ?? c.reason ?? "";
 
@@ -151,29 +152,6 @@ export async function rankPoolItems(poolName: string, limit?: number): Promise<R
       contentType
     };
   });
-
-  // Enrich with decisionConfidence from linked Signal
-  for (const item of items) {
-    const candidate = candidates.find((c) => c.id === item.id);
-    if (candidate?.recordKey.startsWith("signal-sync:")) {
-      const signalKey = candidate.recordKey.slice("signal-sync:".length);
-      const signal = await prisma.signal.findUnique({
-        where: { recordKey: signalKey },
-        select: { decisionConfidence: true }
-      });
-      if (signal?.decisionConfidence !== null && signal?.decisionConfidence !== undefined) {
-        item.decisionConfidence = signal.decisionConfidence;
-        item.rankScore = computeRankScore(
-          normalizedPool,
-          item.contentType,
-          signal.decisionConfidence,
-          candidate.priority,
-          item.practiceFit,
-          item.publishedAt
-        );
-      }
-    }
-  }
 
   items.sort((a, b) => b.rankScore - a.rankScore);
   return limit ? items.slice(0, limit) : items;
