@@ -44,12 +44,7 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<PanelPos | null>(null);
-  const [mounted, setMounted] = useState(false);
   const panelId = useId();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const clearHide = useCallback(() => {
     if (hideTimer.current) {
@@ -113,8 +108,7 @@ export function SummaryTooltip({ summary, children }: SummaryTooltipProps) {
       >
         {children}
       </span>
-      {mounted &&
-        open &&
+      {open &&
         pos &&
         createPortal(
           <div
