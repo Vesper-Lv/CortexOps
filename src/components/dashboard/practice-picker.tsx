@@ -1,176 +1,60 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import {
-  confirmPractice,
-  ensurePracticeTaskAction
-} from "@/server/actions/dailySessionActions";
-import { POOL_OPTIONS } from "@/shared/poolOptions";
-import type { PracticeOption } from "@/server/importers/dailyReportParser";
-import type { DailySessionData } from "@/server/services/dailyReport";
-
-const PRACTICE_POOL_OPTIONS = POOL_OPTIONS.filter((p) => p !== "archive");
+import { useTransition } from "react";
+import { promoteCandidateToTaskAction } from "@/server/actions/taskActions";
+import type { RankedItem } from "@/server/services/poolRanking";
 
 type Props = {
-  date: string;
-  practices: PracticeOption[];
-  session: DailySessionData | null;
-  /** Existing practice Task id when already materialized. */
-  practiceTaskId?: string | null;
+  items: RankedItem[];
 };
 
-function getDisposition(session: DailySessionData | null, index: number): string {
-  if (!session) return "";
-  if (index === 0) return session.practiceAlt0Disposition ?? "";
-  if (index === 1) return session.practiceAlt1Disposition ?? "";
-  return session.practiceAlt2Disposition ?? "";
-}
-
-export function PracticePicker({ date, practices, session, practiceTaskId = null }: Props) {
+export function PracticePicker({ items }: Props) {
   const [pending, startTransition] = useTransition();
-  const isComplete = session?.selectedPracticeIndex != null;
 
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(
-    session?.selectedPracticeIndex ?? null
-  );
-  const [dispositions, setDispositions] = useState<Record<number, string>>(() => {
-    const initial: Record<number, string> = {};
-    practices.forEach((p) => {
-      const d = getDisposition(session, p.index);
-      if (d) initial[p.index] = d;
-    });
-    return initial;
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [localTaskId, setLocalTaskId] = useState<string | null>(practiceTaskId);
-
-  if (isComplete && session?.selectedPracticeIndex != null) {
-    const practice = practices[session.selectedPracticeIndex];
-    if (!practice) return null;
-    const hasTask = Boolean(localTaskId ?? practiceTaskId);
+  if (items.length === 0) {
     return (
-      <div className="rounded-md border border-border bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">今日练习</p>
-        <h4 className="mt-2 text-base font-semibold text-foreground">{practice.title}</h4>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{practice.body}</p>
-        {hasTask ? (
-          <p className="mt-3 text-xs font-medium text-primary">
-            已生成 Task（Dashboard / Tasks · Today）
-          </p>
-        ) : (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <p className="text-xs text-muted-foreground">尚未生成 Task（可能是升级前确认）。</p>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                setError(null);
-                startTransition(async () => {
-                  try {
-                    const res = await ensurePracticeTaskAction(date);
-                    setLocalTaskId(res.practiceTaskId);
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : "补生成失败");
-                  }
-                });
-              }}
-              className="rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-            >
-              补生成 Task
-            </button>
-            {error && <p className="w-full text-sm text-destructive">{error}</p>}
-          </div>
-        )}
-      </div>
+      <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        工程池暂无可练习条目。导入数据后，系统会从 practice_fit 为 high/medium 的工程候选中推荐三项。
+      </p>
     );
   }
 
-  const handleConfirm = () => {
-    setError(null);
-    if (selectedIndex == null) {
-      setError("请选择一条练习");
-      return;
-    }
-    const missing = practices
-      .filter((p) => p.index !== selectedIndex)
-      .filter((p) => !dispositions[p.index]);
-    if (missing.length > 0) {
-      setError("请为未选中的练习指定去向（池或 drop）");
-      return;
-    }
-
-    const payload = practices
-      .filter((p) => p.index !== selectedIndex)
-      .map((p) => ({ index: p.index, disposition: dispositions[p.index] }));
-
-    startTransition(async () => {
-      try {
-        const res = await confirmPractice(date, selectedIndex, payload);
-        setLocalTaskId(res.practiceTaskId);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "确认失败");
-      }
-    });
-  };
+  const top = items.slice(0, 3);
 
   return (
     <div className="flex flex-col gap-3">
-      {practices.map((practice) => {
-        const isSelected = selectedIndex === practice.index;
-        return (
-          <label
-            key={practice.index}
-            className={`flex cursor-pointer flex-col gap-2 rounded-md border p-4 transition-colors ${
-              isSelected ? "border-primary bg-primary/5" : "border-border bg-surface"
-            }`}
+      <p className="text-xs text-muted-foreground">
+        以下来自工程池练习适配 Top 3，选定后自动创建 Task。
+      </p>
+      {top.map((item) => (
+        <div key={item.id} className="rounded-md border border-border bg-surface p-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="rounded bg-muted px-2 py-0.5">{item.pool}</span>
+            {item.priority && <span className="rounded bg-muted px-2 py-0.5">{item.priority}</span>}
+            {item.practiceFit && <span>practice_fit: {item.practiceFit}</span>}
+            <span>rank: {item.rankScore.toFixed(2)}</span>
+          </div>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 block text-base font-semibold text-foreground hover:underline"
           >
-            <div className="flex items-start gap-3">
-              <input
-                type="radio"
-                name="practice"
-                checked={isSelected}
-                onChange={() => setSelectedIndex(practice.index)}
-                className="mt-1"
-              />
-              <div className="flex-1">
-                <span className="text-base font-semibold text-foreground">{practice.title}</span>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{practice.body}</p>
-              </div>
-            </div>
-            {!isSelected && selectedIndex != null && (
-              <div className="ml-7">
-                <select
-                  value={dispositions[practice.index] ?? ""}
-                  onChange={(e) =>
-                    setDispositions((prev) => ({ ...prev, [practice.index]: e.target.value }))
-                  }
-                  className="rounded border border-border bg-surface px-2 py-1 text-sm"
-                >
-                  <option value="" disabled>
-                    选择去向…
-                  </option>
-                  {PRACTICE_POOL_OPTIONS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </label>
-        );
-      })}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <button
-        type="button"
-        disabled={pending}
-        onClick={handleConfirm}
-        className="self-start rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
-        确认今日练习
-      </button>
+            {item.title}
+          </a>
+          {item.summary && (
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.summary}</p>
+          )}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => startTransition(() => void promoteCandidateToTaskAction(item.id))}
+            className="mt-3 rounded border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+          >
+            添加为task
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
