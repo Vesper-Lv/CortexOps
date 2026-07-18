@@ -85,18 +85,15 @@ daily_radar
 weekly_execution_review
 paper_radar
 demo_recommendation
-engineering_learning
 monthly_review
 ```
 
 Suggested `candidate_pool_boost` values:
 
 ```text
-product_inspiration
-paper_candidate
-demo_replication
-knowledge_gap
-personal_work
+product
+paper
+engineering
 ```
 
 ## 4. Active Focus Rules
@@ -129,16 +126,13 @@ content_tags:
   - MVP
   - portfolio
 candidate_pool_boost:
-  - demo_replication
-  - knowledge_gap
-  - personal_work
-  - product_inspiration
+  - product
+  - engineering
 applies_to:
   - daily_radar
   - weekly_execution_review
   - demo_recommendation
-  - engineering_learning
-start_date: 2026-07-01
+  - start_date: 2026-07-01
 end_date: 2026-07-14
 review_cadence: weekly
 created_at: 2026-07-01
@@ -195,17 +189,15 @@ content_tags:
   - portfolio
   - interview story
 candidate_pool_boost:
-  - product_inspiration
-  - demo_replication
-  - knowledge_gap
-  - personal_work
+  - product
+  - paper
+  - engineering
 applies_to:
   - daily_radar
   - weekly_execution_review
   - paper_radar
   - demo_recommendation
-  - engineering_learning
-  - monthly_review
+  -   - monthly_review
 start_date: 2026-07-02
 end_date: 2026-08-31
 review_cadence: weekly

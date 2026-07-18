@@ -52,7 +52,7 @@ prompt = """
 ## 6. 面试与作品沉淀
 说明 proof_artifact、STAR 角度和作品池材料。
 """
-status = "ACTIVE"
+status = "INACTIVE"
 rrule = "FREQ=WEEKLY;BYDAY=MO;BYHOUR=11;BYMINUTE=30;BYSECOND=0"
 model = "gpt-5.5"
 reasoning_effort = "high"

@@ -10,6 +10,25 @@ DATE=$(TZ=Asia/Shanghai date +%Y-%m-%d)
 
 ---
 
+## 目录口径
+
+- `state/daily` 分成两个逻辑区：`active/` 和 `backups/`
+- `active/` 只放当天正式流程要用的日报文件
+- `backups/` 只放历史成品、A/B test 副本、重跑产物和临时备份
+- **2026-07-18 之前**的成品日报统一视为备份
+- **2026-07-18** 起才算当前 web 端的数据积累起点
+- `2026-07-18-report-A.md` 归入备份，不留在正式目录
+- `ingest-error` 只在失败态保留；当天补跑成功后，从 `active/` 清除，必要时归档到 `backups/`
+- `active/` 就是 web 的输入面，成功日报写进去即视为已导入，不再另设同步脚本
+
+## Web 扫描
+
+- web 端只扫描 `state/daily/active/`
+- 看到当天 `YYYY-MM-DD-report.md` 和 `YYYY-MM-DD-links.jsonl` 就算导入完成
+- `backups/` 不参与扫描，也不参与当前数据积累
+
+---
+
 ## 一、环境与代码同步
 
 ```bash
@@ -74,15 +93,16 @@ python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read(
 
 ```bash
 ls -la state/daily/${DATE}-{aihot-raw.json,arxiv-raw.xml,github-raw.json,ingest-manifest.json}
-ls -la state/daily/${DATE}-{links.jsonl,report.md}
-open state/daily/${DATE}-report.md
+ls -la state/daily/active/${DATE}-{aihot-raw.json,arxiv-raw.xml,github-raw.json,ingest-manifest.json}
+ls -la state/daily/active/${DATE}-{links.jsonl,report.md}
+open state/daily/active/${DATE}-report.md
 
-grep -nE 'ingest_mode|skipped_no_prefetch|arxiv_supplement|github_supplement' state/daily/${DATE}-report.md
+grep -nE 'ingest_mode|skipped_no_prefetch|arxiv_supplement|github_supplement' state/daily/active/${DATE}-report.md
 
 python3 scripts/verify-daily-ingest.py "$DATE"
 echo $?
 
-wc -l state/daily/${DATE}-links.jsonl
+wc -l state/daily/active/${DATE}-links.jsonl
 pgrep -fl "codex.*exec"
 ```
 
@@ -177,26 +197,28 @@ curl -4 -sS -X POST "$CURSOR_AUTOMATION_WEBHOOK_URL" \
 ```bash
 ./scripts/codex-daily-prefetch.sh --ab "$DATE"
 
-cp state/daily/${DATE}-links.jsonl state/daily/${DATE}-links.a.jsonl
-cp state/daily/${DATE}-report.md     state/daily/${DATE}-report.a.md
+cp state/daily/active/${DATE}-links.jsonl state/daily/backups/2026-07-18-ab-test/${DATE}-links.a.jsonl
+cp state/daily/active/${DATE}-report.md     state/daily/backups/2026-07-18-ab-test/${DATE}-report.a.md
 
-rm -f state/daily/${DATE}-links.jsonl state/daily/${DATE}-report.md
+rm -f state/daily/active/${DATE}-links.jsonl state/daily/active/${DATE}-report.md
 FORCE=1 ./scripts/codex-daily-run.sh "$DATE"
 
-cp state/daily/${DATE}-links.jsonl state/daily/${DATE}-links.b.jsonl
-cp state/daily/${DATE}-report.md     state/daily/${DATE}-report.b.md
+cp state/daily/active/${DATE}-links.jsonl state/daily/backups/2026-07-18-ab-test/${DATE}-links.b.jsonl
+cp state/daily/active/${DATE}-report.md     state/daily/backups/2026-07-18-ab-test/${DATE}-report.b.md
 
 python3 scripts/compare-daily-links.py \
-  state/daily/${DATE}-links.a.jsonl \
-  state/daily/${DATE}-links.b.jsonl
+  state/daily/backups/2026-07-18-ab-test/${DATE}-links.a.jsonl \
+  state/daily/backups/2026-07-18-ab-test/${DATE}-links.b.jsonl
 ```
+
+对比结束后，A 版本与其它临时副本都应移入 `state/daily/backups/`，不要留在正式目录。
 
 ---
 
 ## 八、Git 推送日报
 
 ```bash
-git add state/daily/${DATE}-links.jsonl state/daily/${DATE}-report.md
+git add state/daily/active/${DATE}-links.jsonl state/daily/active/${DATE}-report.md
 git commit -m "chore(daily): ${DATE} report"
 git push origin codex/source-layering-policy
 ```
@@ -211,7 +233,7 @@ curl -4 -sS -H "User-Agent: $UA" \
   "https://aihot.virxact.com/api/public/items?mode=selected&take=1" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok', len(d.get('items',[])))"
 
-cat state/daily/${DATE}-ingest-error.md
+cat state/daily/active/${DATE}-ingest-error.md
 ```
 
 ---
@@ -235,7 +257,7 @@ which codex
 | 检查门禁 | `python3 scripts/verify-daily-ingest.py "$DATE"` |
 | 重跑今天 | `FORCE=1 ./scripts/codex-daily-run.sh` |
 | 是否在跑 | `pgrep -fl codex` + `tail -f state/daily/codex-daily-run.log` |
-| PR-A 验收 | `grep skipped_no_prefetch state/daily/${DATE}-report.md` |
+| PR-A 验收 | `grep skipped_no_prefetch state/daily/active/${DATE}-report.md` |
 | 周报正常跑 | `./scripts/codex-weekly-run.sh` |
 | 周报重跑 | `FORCE=1 ./scripts/codex-weekly-run.sh` |
 | 周报日志 | `tail -f state/weekly/codex-weekly-run.log` |
@@ -246,10 +268,12 @@ which codex
 
 | 用途 | 路径 |
 |------|------|
-| AIhot raw | `state/daily/YYYY-MM-DD-aihot-raw.json` |
-| manifest | `state/daily/YYYY-MM-DD-ingest-manifest.json` |
-| links | `state/daily/YYYY-MM-DD-links.jsonl` |
-| report | `state/daily/YYYY-MM-DD-report.md` |
+| 当天正式区 | `state/daily/active/` |
+| 历史备份区 | `state/daily/backups/` |
+| AIhot raw | `state/daily/active/YYYY-MM-DD-aihot-raw.json` |
+| manifest | `state/daily/active/YYYY-MM-DD-ingest-manifest.json` |
+| links | `state/daily/active/YYYY-MM-DD-links.jsonl` |
+| report | `state/daily/active/YYYY-MM-DD-report.md` |
 | 日志 | `state/daily/codex-daily-run.log` |
 | 周报 report | `state/weekly/YYYY-MM-DD-report.md` |
 | 周报日志 | `state/weekly/codex-weekly-run.log` |

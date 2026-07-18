@@ -41,8 +41,8 @@ if ! python3 scripts/verify-daily-ingest.py "$DATE" >/dev/null; then
   exit 1
 fi
 
-MANIFEST="state/daily/${DATE}-ingest-manifest.json"
-RAW="state/daily/${DATE}-aihot-raw.json"
+MANIFEST="state/daily/active/${DATE}-ingest-manifest.json"
+RAW="state/daily/active/${DATE}-aihot-raw.json"
 ITEMS=$(python3 - "$MANIFEST" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1]))["sources"]["aihot"]["item_count"])

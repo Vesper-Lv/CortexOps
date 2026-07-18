@@ -53,7 +53,7 @@ prompt = """
 ## 6. 个人作品池沉淀
 说明如何沉淀为作品集材料。
 """
-status = "ACTIVE"
+status = "INACTIVE"
 rrule = "FREQ=WEEKLY;BYDAY=MO;BYHOUR=10;BYMINUTE=30;BYSECOND=0"
 model = "gpt-5.5"
 reasoning_effort = "high"

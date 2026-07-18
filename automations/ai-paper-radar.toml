@@ -1,70 +1,58 @@
 version = 1
 id = "ai"
 kind = "cron"
-name = "每周 AI × 认知科学论文雷达"
+name = "每周神经科学×心理学论文雷达"
 prompt = """
-请生成本周「AI × 神经科学 × 心理学论文雷达」，面向一个正在成长为全栈型 AI 产品经理的用户。当前日期按运行时日期，时区 Asia/Shanghai。
+请生成本周「神经科学 × 心理学论文雷达」，面向一个正在成长为 AI 产品经理的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
-基础规则：
-- 优先遵循 docs/source-policy.md。
-- 论文/研究信号的采集、解析、字段结构、置信度、候选池路由优先遵循 docs/ingestion-normalization.md。
-- 用户当前注意力、GitHub 实践适配度和求职面试证明力规则优先遵循 docs/focus-policy.md。
+目标：
+从 arXiv API 搜索本周最新的神经科学和心理学方向论文，筛选 5 篇最值得阅读的。
+AI 方向的论文不需要在这里搜索——每天日报已从 arXiv 中提取 AI 论文。
+这里只补充神经科学和心理学方向，为用户的 AI 产品设计提供跨学科认知桥梁。
 
-必须优先读取：
-- pools/paper-candidates.jsonl
-- pools/product-inspiration.jsonl
-- state/memory/ai-pm-7d.jsonl
-- state/daily/*-links.jsonl（近 7 天）
+搜索方法：
+1. 使用 arXiv API 搜索以下分类的最近 7 天论文：
+   - q-bio.NC（Neurons and Cognition，神经元与认知）
+   - 用关键词补充搜索：psychology, cognitive science, decision making, reward prediction error, predictive coding, memory consolidation, dopamine, reinforcement learning, attention, perception
+2. 从搜索结果中筛选 5 篇，优先选择：
+   - 时效性：最近 7 天内发布
+   - 权威性：有 journal_ref（已发表在顶刊/会议，如 Nature, Science, Neuron, PNAS, Psychological Science），优先于纯 preprint
+   - 引用性：如能通过 Semantic Scholar API 或 web search 查到引用数，优先高引用
+   - 跨学科价值：与 AI、agent 设计、认知科学、决策科学有交叉，能启发 AI 产品设计
+3. 配比建议：神经科学 2-3 篇，心理学/认知科学 2-3 篇
+
+每篇论文输出格式：
+- 标题（英文原标题）
+- 期刊/来源（journal_ref，若无标注 "arXiv preprint"）
+- arXiv 链接
+- 摘要（中文翻译，200 字以内）
+- 与 AI/Agent 设计的关联点（1-2 句话，说明这篇论文为什么对 AI PM 有启发）
 
 必须写入的状态文件：
 - state/weekly/paper/YYYY-MM-DD-paper-radar.md（YYYY-MM-DD = 本周周日日期）
 
-用户已选择：
-- Workflow 方案：方案 B，AI PM 成长型。
-- 筛选目标：目标 3，跨学科认知桥梁。
-- 每周推送 5 篇论文：AI 为主，同时连接神经科学/心理学到 AI 产品判断与工程练习。
+请按以下结构输出，并完整写入文件：
 
-默认配比：
-- 3 篇 AI 论文。
-- 1 篇神经科学 / 认知科学论文。
-- 1 篇心理学 / 行为科学 / HCI 论文。
+# 本周神经科学 × 心理学论文雷达
 
-筛选标准：
-每篇候选论文按以下标准判断：前沿性、产品启发、工程可落地、认知启发、可信度、是否适合进入论文候选池、是否能产生产品灵感/工程复刻/知识补缺/个人作品、是否能支持 AI PM 面试证明力或快速验证动作。
+## 1. 本周 5 篇推荐论文
 
-请按以下结构输出，并**完整写入** `state/weekly/paper/YYYY-MM-DD-paper-radar.md`：
+### 论文 1
+- 标题：...
+- 期刊：...
+- 链接：...
+- 摘要：...
+- AI/Agent 关联：...
 
-# 本周 AI × 神经科学 × 心理学论文雷达
+### 论文 2
+...
 
-## 1. 本周 5 篇必读论文
-每篇使用统一模板：标题、来源 / 会议 / 期刊、链接、领域、推荐级别、置信度、为什么选它、一句话总结、核心问题、核心方法、关键发现、对 AI 产品经理的启发、对工程 / 全栈能力的启发、面试证明力、可快速验证动作、值得追问的问题、30-60 分钟行动项、候选池路由建议。
-
-## 2. 本周最重要研究信号
-用 3-5 条 bullet 总结这一周最值得注意的趋势，不要只是复述论文摘要。
-
-## 3. 对 AI 产品的启发
-把 5 篇论文转成产品灵感、交互设计启发、用户需求、agent workflow 或可信 AI 机制。
-
-## 4. 对工程学习的启发
-给出可复刻 demo、可读 repo、notebook、eval 设计、API 实验或技术概念学习路径，并标注是否进入工程复刻池或知识补缺池。
-
-## 5. 个人作品池候选
-指出哪些论文可转成对外展示成果，例如论文精读报告、产品 memo、架构图、eval 设计、demo README 或作品集页面。
-
-## 6. 面试证明力候选
-列出 1-3 个可转成面试表达的研究信号。每个包含：interview_relevance、target_role_signal、proof_artifact、validation_window、interview_story_angle、next_proof_action。
-
-## 7. 阅读顺序
-告诉用户先读哪篇、精读哪篇、哪篇只看摘要即可。考虑用户是 AI 产品经理，不是全职研究员。
-
-## 8. 本周行动项
-给出 1 个 1-2 小时可完成的小任务，要求能帮助用户从论文转化到产品/工程能力或面试证明力。
-
-质量要求：必须提供可点击来源链接；优先最新一周内的论文；不要只按热度或标题党选择；AI 占主线，但神经科学/心理学论文必须明确连接到 AI 产品设计或人机交互；区分事实、论文作者结论、你的产品/工程推断。
+## 2. 本周论文选取建议
+从 5 篇中推荐 1-2 篇最值得深读的，说明推荐理由。用户选取后将在 Web Workbench 中自动转化为论文 Task。
 """
 status = "ACTIVE"
-rrule = "FREQ=WEEKLY;BYDAY=MO;BYHOUR=9;BYMINUTE=0;BYSECOND=0"
+rrule = "FREQ=WEEKLY;BYDAY=SU;BYHOUR=18;BYMINUTE=0;BYSECOND=0"
 model = "gpt-5.5"
 reasoning_effort = "high"
 execution_environment = "local"

@@ -138,7 +138,7 @@ Primary sources:
 Rules:
 
 - Weekly candidate sources should feed the demo replication pool, paper
-  candidate pool, knowledge gap pool, and personal work pool.
+  product, paper, and engineering pools.
 - Prefer candidates with a clear first action, recent activity, readable
   documentation, and a 3-8 hour replication path.
 - Do not promote a weekly candidate into next week's execution card unless it
@@ -166,7 +166,7 @@ Rules:
 - Monthly background sources should not answer "what happened today".
 - Use them to ask whether an ecosystem direction is still worth following,
   whether CortexOps missed an important repo / paper / tool category, which
-  directions should enter next month's demo / engineering / personal work pools,
+  directions should enter next month's product, paper, or engineering pools,
   and which high-heat but low-practice directions should be downgraded.
 - A background source cannot enter P0 / P1 only because it has high stars,
   historical fame, or broad coverage.
@@ -364,15 +364,15 @@ The daily AI PM radar should:
     `priority_rationale` (why P0/P1/archive) and `pool_rationale` (why
     `suggested_pool`). The daily report §2 must show both to support human
     re-triage.
-18. Only non-`knowledge_gap` reading-pack items get `read_reason` and
+18. All reading-pack items get `read_reason` and
     `focus_direction`. Remaining (non-selected) links show summary + state only;
     do not over-interpret them.
-19. For `knowledge_gap` items in the **daily** report: show summary +
+19. For `engineering` items in the **daily** report: show summary +
     `priority_rationale` + `pool_rationale` only. Do **not** output
-    `known_facts`, `open_questions`, or a knowledge-gap card in the daily report.
-    Leave `known_facts` / `open_questions` empty in JSONL on the daily run. After
-    the user sets `human_status=confirmed` and `final_pool=knowledge_gap`,
-    generate `knowledge_gap_card` (classification reason, knowledge gap filled,
+    additional research notes in the daily report.
+    Leave these fields empty in JSONL on the daily run. After
+    the user sets `human_status=confirmed` and `final_pool=engineering`,
+    generate additional research notes (classification reason, knowledge gap filled,
     extra research beyond the link) in pool state or Workbench — not in the
     daily automation pass.
 20. Disclose freshness: map `published_at` when available (AIhot `publishedAt`,

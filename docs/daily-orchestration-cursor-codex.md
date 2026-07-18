@@ -109,7 +109,7 @@ RUNNER=cursor ./scripts/daily-ingest-pipeline.sh
 
 ```text
 prefetch 成功
-  → git add state/daily/YYYY-MM-DD-{ingest-manifest,aihot-raw}.json
+  → git add state/daily/active/YYYY-MM-DD-{ingest-manifest,aihot-raw}.json
   → git commit -m "chore(ingest): daily prefetch YYYY-MM-DD"
   → git push origin codex/source-layering-policy
   → Cursor Automation「Push to branch」触发
@@ -148,7 +148,7 @@ prefetch → verify → 写 signal 文件 → codex exec（headless）
 | `scripts/cursor-trigger-daily.sh` | prefetch 成功后 POST Cursor Webhook |
 | `scripts/daily-ingest-pipeline.sh` | 统一入口（RUNNER=cursor/codex/both） |
 | `scripts/codex-daily-prefetch.sh` | 仅 prefetch（已有） |
-| `state/daily/YYYY-MM-DD-ingest-ready.signal` | Terminal 成功后的「提示文件」 |
+| `state/daily/active/YYYY-MM-DD-ingest-ready.signal` | Terminal 成功后的「提示文件」 |
 | `launchd/com.cortexops.daily-ai-pm.plist.example` | 09:00 + 登录时补跑 |
 | `scripts/install-daily-launchd.sh` | 安装 launchd |
 
@@ -196,7 +196,7 @@ SKIP_CODEX=1 ./scripts/codex-daily-run.sh
 
 ```bash
 SKIP_CODEX=1 ./scripts/codex-daily-run.sh
-# 看 state/daily/YYYY-MM-DD-ingest-ready.signal
+# 看 state/daily/active/YYYY-MM-DD-ingest-ready.signal
 # 再打开 Codex App 点 Run Now
 ```
 
@@ -217,7 +217,7 @@ SKIP_CODEX=1 ./scripts/codex-daily-run.sh
 三层信号，由强到弱：
 
 1. **`verify-daily-ingest.py` exit 0** — `codex-daily-run.sh` 内建，失败不调用 `codex exec`
-2. **`state/daily/YYYY-MM-DD-ingest-ready.signal`** — 人读或监控用
+2. **`state/daily/active/YYYY-MM-DD-ingest-ready.signal`** — 人读或监控用
 3. **`manifest.ready == true` + `*-aihot-raw.json` 存在** — Automation prompt Phase 0 再验一遍（双保险）
 
 Codex App 若仍手动 Run，prompt 里 Phase 0 会先跑 verify；无 manifest 则 **拒绝写 report**。

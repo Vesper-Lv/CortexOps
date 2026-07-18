@@ -1,0 +1,36 @@
+{
+  "date": "2026-07-18",
+  "ingest_mode": "strict",
+  "ready": true,
+  "prefetch_at": "2026-07-18T10:01:08Z",
+  "prefetch_host": "terminal",
+  "min_aihot_items": 1,
+  "sources": {
+    "aihot": {
+      "required": true,
+      "status": "ok",
+      "http_code": 200,
+      "item_count": 9,
+      "raw_path": "state/daily/2026-07-18-aihot-raw.json",
+      "error": null
+    },
+    "github": {
+      "required": false,
+      "status": "ok",
+      "http_code": 200,
+      "item_count": 15,
+      "raw_path": "state/daily/2026-07-18-github-raw.json",
+      "fetch_mode": "search_api",
+      "error": null
+    },
+    "arxiv": {
+      "required": false,
+      "status": "ok",
+      "http_code": 200,
+      "item_count": 20,
+      "raw_path": "state/daily/2026-07-18-arxiv-raw.xml",
+      "fetch_mode": "export_api",
+      "error": null
+    }
+  }
+}

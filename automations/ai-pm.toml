@@ -3,6 +3,10 @@ id = "ai-pm"
 kind = "cron"
 name = "每日 AI PM 行业雷达"
 prompt = """
+## 文件写入规则
+
+生成 JSONL 和 report.md 时，直接用 `python3 << 'EOF'` 或 heredoc 写入文件，不要用 apply_patch。apply_patch 用于代码编辑，不适合批量数据写入。
+
 请生成今日“AI PM 行业雷达”，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
@@ -85,8 +89,8 @@ Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
 每条 JSONL link object 至少包含：
-id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, content_tags, read_reason, focus_direction, known_facts, open_questions, knowledge_gap_card。
-其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。content_tags 为 1-2 个内容标签数组（从 docs/ingestion-normalization.md §6 Content Tags 词表选取，如 agent、eval、2B、Vibe Coding），供 UI chip 与后续 Obsidian 双链预留。read_reason/focus_direction 仅阅读包且 suggested_pool 不是 knowledge_gap 时填写。known_facts/open_questions/knowledge_gap_card 在日报 run 必须为空；knowledge_gap 卡片仅在人工 confirmed + final_pool=knowledge_gap 后由后续流程写入（本 automation 不生成卡片）。去重/保留说明只写入 novelty_reason，reason 不得复述。
+id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, content_tags, read_reason, focus_direction。
+其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。content_tags 为 1-2 个内容标签数组（从 docs/ingestion-normalization.md §6 Content Tags 词表选取，如 agent、eval、2B、Vibe Coding），供 UI chip 与后续 Obsidian 双链预留。read_reason/focus_direction 所有阅读包条目（reading_pack_status=selected）都填写。去重/保留说明只写入 novelty_reason，reason 不得复述。
 
 写入规则：
 - 所有采集链接先写入 state/daily/YYYY-MM-DD-links.jsonl。
@@ -115,8 +119,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 优先级分类原因：priority_rationale（一句，说明为何 P0/P1/archive）。
 - 分类池分类原因：pool_rationale（一句，说明为何建议进入该 suggested_pool，供人工二次分类参考）。
 - 内容标签：content_tags（JSON 数组 1-2 项，写入 JSONL；report 中可写成 `标签：agent · eval`）。
-- 若建议池不是 knowledge_gap：再给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度）。不要再输出"读的时候看/读完判断"模板句。
-- 若建议池是 knowledge_gap：**不要**输出「文章可获得的事实」「需要额外研究的问题」或知识空缺卡片；仅保留摘要 + 优先级分类原因 + 分类池分类原因。卡片指引仅在人工确认 final_pool=knowledge_gap 后由后续流程生成（本日报不写）。
+- 所有阅读包条目都给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度）。不要再输出"读的时候看/读完判断"模板句。
 - 若摘要 verbatim 含「今天/今日/昨天」且 published_at 已知：可加一句「摘要中的相对日期请参考新闻日期」，**不得**改写 display_summary 正文。
 - Codex 自写行（五段式、分类原因、read_reason 等）禁止使用「今天/今日/昨天」，改用「该报道/此文/消息源日期」。
 "P0 详细阅读"仅用于确有深度的来源；若来源只是产品功能/发布介绍页（信息浅），降为 P1 扫读，靠摘要让用户判断，不要为凑深度而过度解读。
@@ -145,7 +148,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 去重/保留原因只写入 novelty_reason，并在报告中只呈现一次，reason 不复述。
 - duplicate_7d / duplicate_suppressed 只进 JSONL，不进 §3；§1 披露 excluded_remaining_7d_dup。
 - 阅读包每条必须有 priority_rationale、pool_rationale 与 content_tags（1-2 个）。
-- knowledge_gap 日报不写 known_facts/open_questions/卡片；published_at 披露新闻日期；禁止改写 verbatim 摘要修「今天」。
+- published_at 披露新闻日期；禁止改写 verbatim 摘要修「今天」。
 - §1 五段标签必须精确使用：行业信号 / 工程信号 / 研究信号 / 工作流信号 / 风险提示。
 """
 status = "ACTIVE"

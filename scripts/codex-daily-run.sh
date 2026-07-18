@@ -23,11 +23,13 @@ cd "$ROOT"
 DATE="${1:-$(TZ=Asia/Shanghai date +%Y-%m-%d)}"
 LOG_DIR="${ROOT}/state/daily"
 LOG_FILE="${LOG_DIR}/codex-daily-run.log"
-LINKS="${ROOT}/state/daily/${DATE}-links.jsonl"
-REPORT="${ROOT}/state/daily/${DATE}-report.md"
-SIGNAL="${ROOT}/state/daily/${DATE}-ingest-ready.signal"
+ACTIVE_DIR="${ROOT}/state/daily/active"
+LINKS="${ACTIVE_DIR}/${DATE}-links.jsonl"
+REPORT="${ACTIVE_DIR}/${DATE}-report.md"
+SIGNAL="${ACTIVE_DIR}/${DATE}-ingest-ready.signal"
 
 mkdir -p "$LOG_DIR"
+mkdir -p "$ACTIVE_DIR"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $*" | tee -a "$LOG_FILE"
@@ -42,7 +44,7 @@ log "START daily pipeline for ${DATE}"
 
 chmod +x scripts/codex-daily-prefetch.sh scripts/ai-pm-ingest-prefetch.sh
 if ! ./scripts/codex-daily-prefetch.sh "$DATE" >>"$LOG_FILE" 2>&1; then
-  log "FAIL: prefetch/verify failed — see ${LOG_DIR}/${DATE}-ingest-error.md"
+  log "FAIL: prefetch/verify failed — see ${ACTIVE_DIR}/${DATE}-ingest-error.md"
   exit 1
 fi
 

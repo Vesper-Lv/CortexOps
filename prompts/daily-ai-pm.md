@@ -3,6 +3,10 @@ automation_id: ai-pm
 kind: daily
 source_toml: automations/ai-pm.toml
 ---
+## 文件写入规则
+
+生成 JSONL 和 report.md 时，直接用 `python3 << 'EOF'` 或 heredoc 写入文件，不要用 apply_patch。apply_patch 用于代码编辑，不适合批量数据写入。
+
 请生成今日“AI PM 行业雷达”，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
@@ -17,8 +21,8 @@ source_toml: automations/ai-pm.toml
 日报不是只生成一篇自然语言摘要，而是维护一个文件驱动的信息工作台。请先形成结构化链接状态，再生成用户阅读版日报。用户端最终应先看到五段式方向判断，再看今日 30mins 阅读包，然后处理未入选阅读包的剩余链接和今日练习。每条链接后面带 AI 建议池、优先级、阅读包状态、人工确认状态；若 7 天内重复但因 material_update 或 carry_over 被保留，直接在该链接后注明原因。
 
 必须维护的状态文件：
-- state/daily/YYYY-MM-DD-links.jsonl
-- state/daily/YYYY-MM-DD-report.md
+- state/daily/active/YYYY-MM-DD-links.jsonl
+- state/daily/active/YYYY-MM-DD-report.md
 - state/memory/ai-pm-7d.jsonl
 - pools/product-inspiration.jsonl
 - pools/paper-candidates.jsonl
@@ -34,14 +38,14 @@ Phase 0 — Ingest 门禁（必须先于任何采集/写入）：
 1. 运行：python3 scripts/verify-daily-ingest.py <今日 YYYY-MM-DD>
    - exit 0 → 继续 Phase 1
    - exit 非 0 → **立即停止**：
-     a. 若 manifest 不存在或 ready=false，读取 state/daily/YYYY-MM-DD-ingest-error.json（若存在）总结原因
-     b. 写入/更新 state/daily/YYYY-MM-DD-ingest-error.md（人可读，说明需在 Terminal 运行 ./scripts/ai-pm-ingest-prefetch.sh）
-     c. **不得**创建或覆盖 state/daily/YYYY-MM-DD-links.jsonl、state/daily/YYYY-MM-DD-report.md、pools 写入
+     a. 若 manifest 不存在或 ready=false，读取 state/daily/active/YYYY-MM-DD-ingest-error.json（若存在）总结原因
+     b. 写入/更新 state/daily/active/YYYY-MM-DD-ingest-error.md（人可读，说明需在 Terminal 运行 ./scripts/ai-pm-ingest-prefetch.sh）
+     c. **不得**创建或覆盖 state/daily/active/YYYY-MM-DD-links.jsonl、state/daily/active/YYYY-MM-DD-report.md、pools 写入
      d. 向用户返回明确错误并 exit
 2. strict 模式下 **禁止**在 Codex / Cursor sandbox 内 curl、fetch 或 Web 访问任何外网 URL，包括但不限于 AIhot、GitHub、arXiv、官网、Trending；不得 Web fallback 凑 longlist。
 
 Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
-1. 读取 state/daily/YYYY-MM-DD-ingest-manifest.json 与 state/daily/YYYY-MM-DD-aihot-raw.json（manifest 已验证）。
+1. 读取 state/daily/active/YYYY-MM-DD-ingest-manifest.json 与 state/daily/active/YYYY-MM-DD-aihot-raw.json（manifest 已验证）。
 2. AIhot 映射 — 对 raw.items[] 逐条映射（见 docs/aihot-api.md）：
    - aihot_id ← item.id
    - source_url ← https://aihot.virxact.com/items/{item.id}
@@ -57,13 +61,13 @@ Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
    - 有 aihot_id → aihot_summary 非空且来自 raw item.summary；禁止自写一句压缩
    - 禁止用 ai-bot.cn 内容填入 aihot_summary；禁止 10 条共用同一列表 source_url
 4. GitHub / arXiv 补充 — **仅读 prefetch raw，禁止 sandbox curl**（映射见 docs/supplemental-prefetch-api.md）：
-   a. arXiv：仅当 manifest.sources.arxiv.status==ok **且** state/daily/YYYY-MM-DD-arxiv-raw.xml 存在 → 解析 Atom `<entry>` 补充 longlist：
+   a. arXiv：仅当 manifest.sources.arxiv.status==ok **且** state/daily/active/YYYY-MM-DD-arxiv-raw.xml 存在 → 解析 Atom `<entry>` 补充 longlist：
       - original_url ← https://arxiv.org/abs/{id}
       - title ← `<title>`（去换行）
       - discovery_summary ← `<summary>` verbatim
       - source_origin ← primary；source_mix_note ← arxiv_export_supplement
       - aihot_id 空；aihot_summary 空；aihot_summary_status ← not_applicable
-   b. GitHub：仅当 manifest.sources.github.status==ok **且** state/daily/YYYY-MM-DD-github-raw.json 存在 → 读取 items[] 补充：
+   b. GitHub：仅当 manifest.sources.github.status==ok **且** state/daily/active/YYYY-MM-DD-github-raw.json 存在 → 读取 items[] 补充：
       - original_url ← html_url
       - title ← full_name（或 description 首句作副标题）
       - discovery_summary ← description（非空则 verbatim）
@@ -85,12 +89,12 @@ Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
 每条 JSONL link object 至少包含：
-id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, content_tags, read_reason, focus_direction, known_facts, open_questions, knowledge_gap_card。
-其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。content_tags 为 1-2 个内容标签数组（从 docs/ingestion-normalization.md §6 Content Tags 词表选取，如 agent、eval、2B、Vibe Coding），供 UI chip 与后续 Obsidian 双链预留。read_reason/focus_direction 仅阅读包且 suggested_pool 不是 knowledge_gap 时填写。known_facts/open_questions/knowledge_gap_card 在日报 run 必须为空；knowledge_gap 卡片仅在人工 confirmed + final_pool=knowledge_gap 后由后续流程写入（本 automation 不生成卡片）。去重/保留说明只写入 novelty_reason，reason 不得复述。
+id, date, title, original_url, source_url, source_origin, source_name, source_mix_note, aihot_id, aihot_summary, aihot_summary_status, discovery_summary, codex_summary, display_summary, published_at, priority, reading_pack_status, suggested_pool, human_status, final_pool, canonical_key, duplicate_status, novelty_reason, practice_fit, reason, priority_rationale, pool_rationale, content_tags, read_reason, focus_direction。
+其中：aihot_summary 仅 AIhot API verified 条目；discovery_summary 供非 AIhot 聚合页摘要；display_summary：verified AIhot 条目等于 aihot_summary（verbatim，禁止为修「今天」而改写）；published_at 来自 raw 或 null。reading_pack_status=selected 时 priority_rationale 与 pool_rationale 必填（各一句，供人工二次分类）。content_tags 为 1-2 个内容标签数组（从 docs/ingestion-normalization.md §6 Content Tags 词表选取，如 agent、eval、2B、Vibe Coding），供 UI chip 与后续 Obsidian 双链预留。read_reason/focus_direction 所有阅读包条目（reading_pack_status=selected）都填写。去重/保留说明只写入 novelty_reason，reason 不得复述。
 
 写入规则：
-- 所有采集链接先写入 state/daily/YYYY-MM-DD-links.jsonl。
-- 用户阅读版写入 state/daily/YYYY-MM-DD-report.md。
+- 所有采集链接先写入 state/daily/active/YYYY-MM-DD-links.jsonl。
+- 用户阅读版写入 state/daily/active/YYYY-MM-DD-report.md。
 - 入选 30 分钟阅读包、GitHub 主推、正式练习、候选池 pending/confirmed/changed 的链接写入 state/memory/ai-pm-7d.jsonl。
 - AI 建议进入候选池的链接写入对应 pools/*.jsonl，human_status: pending，final_pool 默认等于 suggested_pool。
 - 产品灵感池只保留手动确认或人工改入的候选；日报不要自动生成“今日 AI 产品灵感”段落。
@@ -114,8 +118,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 优先级分类原因：priority_rationale（一句，说明为何 P0/P1/archive）。
 - 分类池分类原因：pool_rationale（一句，说明为何建议进入该 suggested_pool，供人工二次分类参考）。
 - 内容标签：content_tags（JSON 数组 1-2 项，写入 JSONL；report 中可写成 `标签：agent · eval`）。
-- 若建议池不是 knowledge_gap：再给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度）。不要再输出"读的时候看/读完判断"模板句。
-- 若建议池是 knowledge_gap：**不要**输出「文章可获得的事实」「需要额外研究的问题」或知识空缺卡片；仅保留摘要 + 优先级分类原因 + 分类池分类原因。卡片指引仅在人工确认 final_pool=knowledge_gap 后由后续流程生成（本日报不写）。
+- 所有阅读包条目都给「推荐阅读原因」（read_reason，一句）和「关注方向」（focus_direction，读时关注的角度）。不要再输出"读的时候看/读完判断"模板句。
 - 若摘要 verbatim 含「今天/今日/昨天」且 published_at 已知：可加一句「摘要中的相对日期请参考新闻日期」，**不得**改写 display_summary 正文。
 - Codex 自写行（五段式、分类原因、read_reason 等）禁止使用「今天/今日/昨天」，改用「该报道/此文/消息源日期」。
 "P0 详细阅读"仅用于确有深度的来源；若来源只是产品功能/发布介绍页（信息浅），降为 P1 扫读，靠摘要让用户判断，不要为凑深度而过度解读。
@@ -142,5 +145,5 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 去重/保留原因只写入 novelty_reason，并在报告中只呈现一次，reason 不复述。
 - duplicate_7d / duplicate_suppressed 只进 JSONL，不进 §3；§1 披露 excluded_remaining_7d_dup。
 - 阅读包每条必须有 priority_rationale、pool_rationale 与 content_tags（1-2 个）。
-- knowledge_gap 日报不写 known_facts/open_questions/卡片；published_at 披露新闻日期；禁止改写 verbatim 摘要修「今天」。
+- published_at 披露新闻日期；禁止改写 verbatim 摘要修「今天」。
 - §1 五段标签必须精确使用：行业信号 / 工程信号 / 研究信号 / 工作流信号 / 风险提示。

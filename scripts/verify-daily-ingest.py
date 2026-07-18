@@ -35,7 +35,7 @@ def check_supplemental(
 def main() -> int:
     date = sys.argv[1] if len(sys.argv) > 1 else None
     root = Path(__file__).resolve().parents[1]
-    daily = root / "state" / "daily"
+    daily = root / "state" / "daily" / "active"
     if date is None:
         import os
 
@@ -45,8 +45,8 @@ def main() -> int:
             return 2
 
     mode = (
-        (daily / ".ingest-mode").read_text().strip()
-        if (daily / ".ingest-mode").exists()
+        (root / "state" / "daily" / ".ingest-mode").read_text().strip()
+        if (root / "state" / "daily" / ".ingest-mode").exists()
         else "strict"
     )
     manifest_path = daily / f"{date}-ingest-manifest.json"

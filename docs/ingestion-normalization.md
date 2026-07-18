@@ -11,12 +11,10 @@ become usable signal objects.
 The ingestion and normalization layer converts fragmented external inputs into a
 standard signal format that can be routed into:
 
-- product inspiration pool
-- paper candidate pool
-- demo replication pool
-- knowledge gap pool
-- personal work pool
-- archive / drop
+- product pool (做 demo / 探索产品想法)
+- paper pool (深读研究)
+- engineering pool (练技能 / 补知识缺口)
+- archive / drop (终态)
 
 This layer should run mostly in the background. The user should only see the
 result, exceptions, and items that require judgment.
@@ -312,10 +310,10 @@ Rules:
   awesome-ChatGPT-repositories, and other broad curated maps.
 - Background sources should extract directory changes, active projects,
   representative categories, ecosystem gaps, and durable reference value.
-- Background sources default to `archive` or `knowledge_gap`; they should not
+- Background sources default to `archive`; they should not
   directly enter the daily link list, 30-minute reading pack, P0/P1 selection,
   GitHub recommendation, product inspiration, or daily practice.
-- A background-source item may enter `demo_replication` or `personal_work` only
+- A background-source item may enter `product` or `engineering` only
   when the referenced project has strong practice fit, low or medium entry
   barrier, recent activity, and a visible artifact path.
 - High stars, historical popularity, or broad list coverage are not enough to
@@ -369,23 +367,14 @@ read_reason
 focus_direction
 priority_rationale
 pool_rationale
-known_facts
-open_questions
-knowledge_gap_card
 ```
+
 
 `priority_rationale` / `pool_rationale`:
 
 - Required when `reading_pack_status=selected`.
 - One sentence each; aid human re-triage of priority and `suggested_pool`.
-- Shown in daily report §2 for all selected items including `knowledge_gap`.
-
-`knowledge_gap_card`:
-
-- Optional object; **empty on daily automation**.
-- Populate only after `human_status=confirmed` and `final_pool=knowledge_gap`.
-- Fields: `classification_reason`, `gap_filled`, `extra_research` (questions
-  beyond what the link states).
+- Shown in daily report §2 for all selected items.
 
 `published_at`:
 
@@ -459,8 +448,7 @@ not_added_reason
 
 Use `source_mix_note` to explain why a non-AIhot item was added to the daily
 longlist, or why no non-AIhot supplement was used. Product case and product
-teardown sources may route to `product_inspiration`, `knowledge_gap`, or
-`personal_work`, but still require human confirmation.
+teardown sources may route to `product` or `engineering`, but still require human confirmation.
 
 `priority`:
 
@@ -483,11 +471,9 @@ low
 `candidate_pool`:
 
 ```text
-product_inspiration
-paper_candidate
-demo_replication
-knowledge_gap
-personal_work
+product
+paper
+engineering
 archive
 drop
 ```
@@ -585,15 +571,10 @@ extract a concise factual summary. No interpretation or recommendation.
 
 `read_reason` and `focus_direction`:
 
-Only for reading-pack items whose pool is not `knowledge_gap`. `read_reason` is
+For all reading-pack items (`reading_pack_status=selected`). `read_reason` is
 one line on why it is worth reading. `focus_direction` is the angle to focus on
 while reading; it must not assert specifics the source may not contain.
 
-`known_facts` and `open_questions`:
-
-Only for `knowledge_gap` items. `known_facts` lists facts obtainable from the
-article itself. `open_questions` lists questions that still need extra research
-after reading. Do not fabricate conclusions the article does not support.
 
 ## 4.1 State File Contracts
 
@@ -632,8 +613,6 @@ reason
 display_summary
 read_reason
 focus_direction
-known_facts
-open_questions
 novelty_reason
 ```
 

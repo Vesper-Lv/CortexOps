@@ -3,7 +3,7 @@ id = "automation-2"
 kind = "cron"
 name = "每月方向复盘"
 prompt = """
-请生成「月度 AI 方向复盘」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
+请生成「月度 AI PM 执行复盘」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
 
 基础规则：
@@ -12,49 +12,69 @@ prompt = """
 - 用户当前注意力、GitHub 实践适配度和求职面试证明力规则优先遵循 docs/focus-policy.md。
 
 必须优先读取：
+- state/memory/ai-pm-7d.jsonl
+- state/daily/*-links.jsonl（本月）
+- state/daily/*-report.md（本月，作阅读补充）
+- state/weekly/*-report.md（本月周报）
 - pools/product-inspiration.jsonl
 - pools/paper-candidates.jsonl
 - pools/demo-replication.jsonl
 - pools/knowledge-gap.jsonl
 - pools/personal-work.jsonl
 - pools/archive.jsonl
-- state/memory/ai-pm-7d.jsonl
-- state/daily/*-links.jsonl（本月）
-- state/weekly/**/*-report.md（本月，如有）
 
 必须写入的状态文件：
-- state/monthly/YYYY-MM-DD-monthly-review.md（YYYY-MM-DD = 本月 1 日，如 2026-07-01）
+- state/monthly/YYYY-MM-monthly-review.md（YYYY-MM = 本月，如 2026-07）
 
-目标：
-月报不是新闻月报，而是方向判断。优先基于候选池和 memory 判断本月继续追、降权观察、暂时放弃、本月动手做。confirmed 和 changed 条目优先；pending 条目只能作为待确认候选。
+月报原则：
+1. 月报不是新闻月报，是月度方向判断 + 系统健康诊断 + 下月建议。
+2. 看板数据（池状态、转化率、能力值、健康度指标）由 Web 端实时展示，月报不再逐一盘点候选池。
+3. 月报正文只做四件事：总结信号趋势、分析本月转化和产出、跑一次系统健康诊断、给出下月建议。
+4. 输出必须服务 2B AI PM、AI workflow、eval、agent/MCP、Vibe Coding 和作品证明力。
 
-月度背景源规则：
-每月做一次 monthly_background source 校准，固定参考 Awesome-LLM、awesome-ai-agents、awesome-agents、awesome-llm-apps、awesome-mcp-servers、AI-Papers-of-the-Week、awesome-ChatGPT-repositories。背景源只用于方向校准，不直接变成日报新闻。
+请按以下结构输出，并完整写入 state/monthly/YYYY-MM-monthly-review.md：
 
-请按以下结构输出，并**完整写入** `state/monthly/YYYY-MM-DD-monthly-review.md`：
+# 月度 AI PM 执行复盘
 
-# 月度 AI 方向复盘
+## 1. 本月信号趋势总结
+从本月 daily signals、memory、周报中归纳 5-8 个本月关键信号趋势。每个趋势包含：代表链接、来源池、置信度、本月演变（是否从观察到推进、从推进到产出）。不要逐池盘点——池的状态由 Web 端看板展示。
 
-## 1. 上月高信号趋势
-列出 5-8 个趋势，每个包含代表候选池条目、human_status、为什么重要、面试证明力、可信度。
+## 2. 本月信息处理与转化分析
+基于本月信号数据，分析信息处理的完整链路：
+- 信号总量及来源分布（AIhot / arXiv / GitHub）
+- 置信度分布变化（high/medium/low 月初 vs 月末）
+- 路由结果：自动确认多少条、拦截多少条、用户实际阅读多少条
+- 转化漏斗：阅读包 → 池 → Task → Works 产出，各环节转化率
+- 三池（产品/论文/工程练习）的信号占比和转化情况
+- 如果有 BehaviorEvent 导出数据，分析 thumbs up/down 分布和偏好变化趋势
 
-## 2. 本月方向决策
-按继续追、降权观察、暂时放弃、本月动手做分类。
+## 3. 产出回顾
+回顾本月 Works 产出情况：
+- 文章（Thinking）：本月几篇，主题是什么
+- 产品（Product）：本月几个，什么阶段
+- Idea：本月新增几个，什么类型
+- 与上月对比，产出节奏是否稳定
+- 哪些产出直接源于本月信号，哪些是长线积累
 
-## 3. 五个池整理
-分别整理产品灵感池、论文候选池、工程复刻池、知识补缺池、个人作品池。每池优先 confirmed/changed，再列 pending 待确认。
+## 4. 系统健康诊断
+自动跑一次系统健康诊断，输出简洁报告。诊断维度（全部基于本月数据计算）：
+- 路由准确率：未被撤销的 auto_confirmed / auto_confirmed 总数
+- 拦截精准度：被拒绝的拦截 / 拦截总数
+- 自动化覆盖率：auto_confirmed / 信号总数
+- 置信度校准度：预测分数与实际结果的偏差
+- 偏好稳定度：本月 PreferenceWeight 变化趋势
+- 能力均衡度：三池 Works 产出的均衡程度
+对每个维度给出：当前值、与上月对比、是否健康（正常/需关注/需调优）、一句话说明。
+对不健康的维度给出具体建议。
 
-## 4. 面试证明力整理
-整理 3-5 个最适合转成面试表达的证据，包含 proof_artifact、validation_window、interview_story_angle、next_proof_action。
-
-## 5. 本月个人路线图
-给出本月主题、每周重点、本月 Demo/side project 目标、本月输出物和验收标准。
-
-## 6. 个人主页 / 作品集更新建议
-说明最值得放到个人主页或作品集的成果，以及需要补齐的材料。
-
-## 7. 一句话战略判断
-用 3-5 句话总结本月押注。
+## 5. 下月建议
+根据信号趋势、转化分析和健康诊断，给出下月建议：
+- FocusRule 是否需要调整（新增、暂停、修改方向或权重）
+- 信息源是否需要增减
+- 三个池的注意力分配建议
+- 哪些方向值得加大关注，哪些应该降权或放弃
+- 下月优先推进的 1-2 个主题
+- 预期产出目标（文章/产品/Idea）
 """
 status = "ACTIVE"
 rrule = "FREQ=MONTHLY;BYMONTHDAY=1;BYHOUR=9;BYMINUTE=30;BYSECOND=0"

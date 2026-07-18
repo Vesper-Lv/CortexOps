@@ -1,0 +1,5 @@
+date=2026-07-18
+ready=true
+prefetch_host=terminal
+triggered_at=2026-07-18T10:01:11Z
+next_step=codex_exec_or_app_run

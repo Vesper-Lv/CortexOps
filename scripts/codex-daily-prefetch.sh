@@ -32,7 +32,7 @@ chmod +x scripts/ai-pm-ingest-prefetch.sh
 
 python3 scripts/verify-daily-ingest.py "$DATE"
 
-MANIFEST="state/daily/${DATE}-ingest-manifest.json"
+MANIFEST="state/daily/active/${DATE}-ingest-manifest.json"
 ITEMS=$(python3 - "$MANIFEST" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1])).get("sources", {}).get("aihot", {}).get("item_count", 0))
@@ -46,24 +46,24 @@ echo ""
 echo "Next:"
 echo "  1. cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml"
 echo "  2. Codex App → 每日 AI PM 行业雷达 → Run Now"
-echo "  3. Codex must NOT curl AIhot; it reads state/daily/${DATE}-aihot-raw.json only"
+echo "  3. Codex must NOT curl AIhot; it reads state/daily/active/${DATE}-aihot-raw.json only"
 echo ""
 
 if [[ "$AB_MODE" -eq 1 ]]; then
   echo "== A/B test (same prefetch, two Codex runs) =="
   echo "Run A (default output paths):"
-  echo "  - state/daily/${DATE}-links.jsonl"
-  echo "  - state/daily/${DATE}-report.md"
+  echo "  - state/daily/active/${DATE}-links.jsonl"
+  echo "  - state/daily/active/${DATE}-report.md"
   echo ""
   echo "Before run B, snapshot A:"
-  echo "  cp state/daily/${DATE}-links.jsonl state/daily/${DATE}-links.a.jsonl"
-  echo "  cp state/daily/${DATE}-report.md state/daily/${DATE}-report.a.md"
+  echo "  cp state/daily/active/${DATE}-links.jsonl state/daily/backups/2026-07-18-ab-test/${DATE}-links.a.jsonl"
+  echo "  cp state/daily/active/${DATE}-report.md state/daily/backups/2026-07-18-ab-test/${DATE}-report.a.md"
   echo ""
   echo "Run B (change model in Codex automation settings if needed), then snapshot:"
-  echo "  cp state/daily/${DATE}-links.jsonl state/daily/${DATE}-links.b.jsonl"
-  echo "  cp state/daily/${DATE}-report.md state/daily/${DATE}-report.b.md"
+  echo "  cp state/daily/active/${DATE}-links.jsonl state/daily/backups/2026-07-18-ab-test/${DATE}-links.b.jsonl"
+  echo "  cp state/daily/active/${DATE}-report.md state/daily/backups/2026-07-18-ab-test/${DATE}-report.b.md"
   echo ""
   echo "Compare:"
-  echo "  python3 scripts/compare-daily-links.py state/daily/${DATE}-links.a.jsonl state/daily/${DATE}-links.b.jsonl"
+  echo "  python3 scripts/compare-daily-links.py state/daily/backups/2026-07-18-ab-test/${DATE}-links.a.jsonl state/daily/backups/2026-07-18-ab-test/${DATE}-links.b.jsonl"
   echo ""
 fi

@@ -15,15 +15,16 @@ if [[ -f "$MODE_FILE" ]]; then
 fi
 
 MIN_AIHOT_ITEMS="${MIN_AIHOT_ITEMS:-1}"
-MANIFEST="state/daily/${DATE}-ingest-manifest.json"
-AIHOT_RAW="state/daily/${DATE}-aihot-raw.json"
-ERR_JSON="state/daily/${DATE}-ingest-error.json"
-ERR_MD="state/daily/${DATE}-ingest-error.md"
+ACTIVE_DIR="state/daily/active"
+MANIFEST="${ACTIVE_DIR}/${DATE}-ingest-manifest.json"
+AIHOT_RAW="${ACTIVE_DIR}/${DATE}-aihot-raw.json"
+ERR_JSON="${ACTIVE_DIR}/${DATE}-ingest-error.json"
+ERR_MD="${ACTIVE_DIR}/${DATE}-ingest-error.md"
 
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 PREFETCH_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-mkdir -p state/daily
+mkdir -p "$ACTIVE_DIR"
 
 # --- AIhot (required) ---
 AIHOT_STATUS="fail"
@@ -38,14 +39,31 @@ else
 fi
 
 AIHOT_URL="https://aihot.virxact.com/api/public/items?mode=selected&since=${since}&take=50"
-set +e
-AIHOT_HTTP=$(curl -4 -sS -o "$AIHOT_RAW" -w "%{http_code}" \
-  -H "User-Agent: $UA" "$AIHOT_URL" 2>/dev/null)
-curl_exit=$?
-set -e
-if [[ $curl_exit -ne 0 ]]; then
-  AIHOT_HTTP="000"
-fi
+AIHOT_ATTEMPTS="${AIHOT_ATTEMPTS:-3}"
+AIHOT_CONNECT_TIMEOUT="${AIHOT_CONNECT_TIMEOUT:-15}"
+AIHOT_MAX_TIME="${AIHOT_MAX_TIME:-30}"
+aihot_curl_exit=1
+
+for aihot_attempt in $(seq 1 "$AIHOT_ATTEMPTS"); do
+  rm -f "$AIHOT_RAW"
+  set +e
+  AIHOT_HTTP=$(curl -4 -sS -o "$AIHOT_RAW" -w "%{http_code}" \
+    --connect-timeout "$AIHOT_CONNECT_TIMEOUT" \
+    --max-time "$AIHOT_MAX_TIME" \
+    -H "User-Agent: $UA" "$AIHOT_URL" 2>/dev/null)
+  aihot_curl_exit=$?
+  set -e
+  if [[ $aihot_curl_exit -ne 0 ]]; then
+    AIHOT_HTTP="000"
+  fi
+  if [[ "$AIHOT_HTTP" == "200" && -s "$AIHOT_RAW" ]]; then
+    break
+  fi
+  if [[ "$aihot_attempt" -lt "$AIHOT_ATTEMPTS" ]]; then
+    echo "WARN: AIhot prefetch attempt ${aihot_attempt}/${AIHOT_ATTEMPTS} failed: HTTP ${AIHOT_HTTP} (curl exit ${aihot_curl_exit}); retrying..."
+    sleep 5
+  fi
+done
 
 if [[ "$AIHOT_HTTP" == "200" ]]; then
   AIHOT_COUNT=$(python3 - "$AIHOT_RAW" <<'PY'
@@ -65,7 +83,7 @@ PY
     AIHOT_ERR="items count ${AIHOT_COUNT} < min ${MIN_AIHOT_ITEMS}"
   fi
 else
-  AIHOT_ERR="HTTP ${AIHOT_HTTP} (curl exit ${curl_exit})"
+  AIHOT_ERR="HTTP ${AIHOT_HTTP} (curl exit ${aihot_curl_exit})"
   rm -f "$AIHOT_RAW"
 fi
 
@@ -79,7 +97,7 @@ fi
 
 # --- arXiv supplemental raw (optional; do not block ready) ---
 # Transient timeouts (curl exit 28) are common; retry with bounded timeouts.
-ARXIV_RAW="state/daily/${DATE}-arxiv-raw.xml"
+ARXIV_RAW="${ACTIVE_DIR}/${DATE}-arxiv-raw.xml"
 ARXIV_STATUS="skipped"
 ARXIV_HTTP="000"
 ARXIV_COUNT=0
@@ -145,7 +163,7 @@ if [[ "$ARXIV_STATUS" != "ok" ]]; then
 fi
 
 # --- GitHub supplemental raw (optional; do not block ready) ---
-GITHUB_RAW="state/daily/${DATE}-github-raw.json"
+GITHUB_RAW="${ACTIVE_DIR}/${DATE}-github-raw.json"
 GITHUB_STATUS="skipped"
 GITHUB_HTTP="000"
 GITHUB_COUNT=0
@@ -277,7 +295,7 @@ def supplemental(name, status, http, count, raw_suffix, fetch_mode, err):
         "status": status,
         "http_code": int(http),
         "item_count": int(count),
-        "raw_path": f"state/daily/{date}-{raw_suffix}" if status == "ok" else None,
+        "raw_path": f"state/daily/active/{date}-{raw_suffix}" if status == "ok" else None,
         "fetch_mode": fetch_mode,
         "error": err or None,
     }
@@ -295,7 +313,7 @@ manifest = {
             "status": os.environ["AIHOT_STATUS"],
             "http_code": int(os.environ["AIHOT_HTTP"]),
             "item_count": int(os.environ["AIHOT_COUNT"]),
-            "raw_path": f"state/daily/{date}-aihot-raw.json",
+            "raw_path": f"state/daily/active/{date}-aihot-raw.json",
             "error": aihot_err or None,
         },
         "github": supplemental(
@@ -351,7 +369,7 @@ Mode: **{os.environ['MODE']}**
 
 ## Next steps
 1. Run prefetch in Terminal: `./scripts/codex-daily-prefetch.sh {os.environ['DATE']}`
-2. Confirm `state/daily/{os.environ['DATE']}-ingest-manifest.json` has `"ready": true`
+2. Confirm `state/daily/active/{os.environ['DATE']}-ingest-manifest.json` has `"ready": true`
 3. Re-run Codex daily automation (Run Now in Codex App)
 
 Do **not** generate report until manifest is ready.
