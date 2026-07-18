@@ -18,7 +18,7 @@ source_toml: automations/ai-pm.toml
 - 先读取 state/memory/ai-pm-7d.jsonl 做 7 天去重；再用最近日报 Markdown 作为补充复核。
 
 总目标：
-日报不是只生成一篇自然语言摘要，而是维护一个文件驱动的信息工作台。请先形成结构化链接状态，再生成用户阅读版日报。用户端最终应先看到五段式方向判断，再看今日 30mins 阅读包，然后处理未入选阅读包的剩余链接和今日练习。每条链接后面带 AI 建议池、优先级、阅读包状态、人工确认状态；若 7 天内重复但因 material_update 或 carry_over 被保留，直接在该链接后注明原因。
+日报不是只生成一篇自然语言摘要，而是维护一个文件驱动的信息工作台。请先形成结构化链接状态，再生成用户阅读版日报。用户端最终应先看到五段式方向判断，再看今日 30mins 阅读包，然后处理未入选阅读包的剩余链接。每条链接后面带 AI 建议池、优先级、阅读包状态、人工确认状态；若 7 天内重复但因 material_update 或 carry_over 被保留，直接在该链接后注明原因。
 
 必须维护的状态文件：
 - state/daily/active/YYYY-MM-DD-links.jsonl
@@ -28,7 +28,6 @@ source_toml: automations/ai-pm.toml
 - pools/paper-candidates.jsonl
 - pools/demo-replication.jsonl
 - pools/knowledge-gap.jsonl
-- pools/personal-work.jsonl
 - pools/archive.jsonl
 
 AIhot 采集（两阶段，strict 默认）：
@@ -84,7 +83,7 @@ Phase 1 — 从 Terminal prefetch raw 映射（禁止 sandbox curl）：
 2. 建议配比（有 supplemental raw 时）：AIhot 约 18-24 条；官方/一手 2-5；产品案例 1-3；GitHub/release 2-4。若最终全部来自 AIhot，必须在 report 说明其他来源未补充的原因。
 3. 非 AIhot 补充来源应写入 source_mix_note，说明为什么补充进入 longlist，尤其是产品案例如何帮助建立产品思路。
 4. AIhot 条目使用 AIhot 标题作为日报标题候选；确认原始来源链接后，把 AIhot 摘要写入 aihot_summary。
-5. P0/P1、30 分钟阅读包、GitHub 主推和正式练习必须尽量指向原始来源 URL，而不是 AIhot 聚合页。
+5. P0/P1、30 分钟阅读包和 GitHub 主推必须尽量指向原始来源 URL，而不是 AIhot 聚合页。
 6. Codex 自己的判断写入 codex_summary 和 reason，不能和 AIhot 摘要混在一起。
 7. 每条链接都给 suggested_pool；AI 建议不是最终入池决定，human_status 默认 pending。
 
@@ -95,9 +94,10 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 写入规则：
 - 所有采集链接先写入 state/daily/active/YYYY-MM-DD-links.jsonl。
 - 用户阅读版写入 state/daily/active/YYYY-MM-DD-report.md。
-- 入选 30 分钟阅读包、GitHub 主推、正式练习、候选池 pending/confirmed/changed 的链接写入 state/memory/ai-pm-7d.jsonl。
+- 入选 30 分钟阅读包、GitHub 主推、候选池 pending/confirmed/changed 的链接写入 state/memory/ai-pm-7d.jsonl。
 - AI 建议进入候选池的链接写入对应 pools/*.jsonl，human_status: pending，final_pool 默认等于 suggested_pool。
 - 产品灵感池只保留手动确认或人工改入的候选；日报不要自动生成“今日 AI 产品灵感”段落。
+- 产品/工程建议只作为每条链接的 reason / priority_rationale / pool_rationale 进入 Web 端建议卡。
 
 用户阅读版输出结构：
 
@@ -127,18 +127,13 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 列出剩余链接（**排除** duplicate_status 为 duplicate_7d 或 duplicate_suppressed 的条目——它们已在 7 天内完成分类，不得重复出现在 §3；仍保留在 links.jsonl）。每条首行标注：新闻日期、优先级、AI 建议池、reading_pack_status、human_status、是否建议人工加入阅读包；非 AIhot 补充来源标注 source_mix_note。随后另起一行给「摘要」（display_summary，verbatim）。剩余链接不写推荐阅读原因/关注方向/分类原因，克制解读。
 去重/保留说明只出现一次：仅当 duplicate_status 为 material_update / carry_over 且该条 **仍出现在 §3** 时，追加一行「保留/去重说明：<duplicate_status> — <novelty_reason>」。duplicate_7d / duplicate_suppressed 不得出现在 §3，故不写保留说明。
 
-## 4. 今日练习三选一
-给 3 个 20-45 分钟练习选项，并明确选择其中 1 个作为正式练习。未选的 2 个给人工去向建议：产品灵感池、每周 Demo 候选池、archive 或 drop。
-格式固定为三行（全角竖线 `｜`）：
-1. **正式推荐：标题**｜时长与正文…
-2. **备选：标题**｜时长与正文…
-3. **备选：标题**｜时长与正文…
 
 质量要求：
 - 必须提供可点击来源链接。
 - 区分事实、AIhot 摘要、原作者观点、Codex 判断。
 - 长清单要完整，阅读包要克制。
 - 候选池建议只作为每条链接的状态字段和 UI 标签输出，不要额外生成“候选池建议表”段落。
+- 产品/工程建议只作为每条链接的 reason / priority_rationale / pool_rationale 进入 Web 端建议卡。
 - 不要为了凑数加入不可验证、过期或低质量链接。
 - 每条链接都要有 display_summary；AIhot 来源直接复用 aihot_summary，不改写。
 - 事实、AIhot 摘要、Codex 判断分离；剩余链接以事实摘要为主，克制解读。
