@@ -25,15 +25,15 @@ describe("syncSignalToCandidate", () => {
       id: "s1",
       humanStatus: "pending",
       recordKey: "daily:test-1",
-      finalPool: "knowledge_gap",
-      suggestedPool: "knowledge_gap"
+      finalPool: "engineering",
+      suggestedPool: "engineering"
     });
 
     await syncSignalToCandidate("s1");
     expect(candidateUpsert).not.toHaveBeenCalled();
   });
 
-  it("upserts candidate with pool name dashes on finalize", async () => {
+  it("upserts candidate with canonical pool name on finalize", async () => {
     signalFindUnique.mockResolvedValue({
       id: "s1",
       humanStatus: "confirmed",
@@ -43,8 +43,8 @@ describe("syncSignalToCandidate", () => {
       sourceUrl: "https://example.com",
       originalUrl: null,
       priority: "P1",
-      suggestedPool: "knowledge_gap",
-      finalPool: "demo_replication",
+      suggestedPool: "engineering",
+      finalPool: "personal_work",
       status: "confirmed",
       readingPackStatus: "selected",
       rawJson: "{}",
@@ -59,16 +59,57 @@ describe("syncSignalToCandidate", () => {
       expect.objectContaining({
         where: { recordKey: "signal-sync:daily:test-1" },
         create: expect.objectContaining({
-          poolName: "demo-replication",
+          poolName: "engineering",
           humanStatus: "confirmed",
           status: "confirmed",
           readingPackStatus: "selected"
         }),
         update: expect.objectContaining({
-          poolName: "demo-replication",
+          poolName: "engineering",
+          suggestedPool: "engineering",
           humanStatus: "confirmed",
           status: "confirmed",
           readingPackStatus: "selected"
+        })
+      })
+    );
+  });
+
+  it("archives unknown finalized pools during sync", async () => {
+    signalFindUnique.mockResolvedValue({
+      id: "s2",
+      humanStatus: "confirmed",
+      recordKey: "daily:test-2",
+      externalId: "test-2",
+      title: "Unknown pool",
+      sourceUrl: "https://example.com/unknown",
+      originalUrl: null,
+      priority: "P2",
+      suggestedPool: "custom_pool",
+      finalPool: "another_pool",
+      status: null,
+      readingPackStatus: "candidate",
+      rawJson: "{}",
+      sourceFile: "state/daily/links.jsonl",
+      sourceLine: 2,
+      importRunId: "run1"
+    });
+
+    await syncSignalToCandidate("s2");
+
+    expect(candidateUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          poolName: "archive",
+          suggestedPool: null,
+          finalPool: null,
+          status: "confirmed"
+        }),
+        update: expect.objectContaining({
+          poolName: "archive",
+          suggestedPool: null,
+          finalPool: null,
+          status: "confirmed"
         })
       })
     );
