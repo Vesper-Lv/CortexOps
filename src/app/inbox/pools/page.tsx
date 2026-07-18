@@ -35,11 +35,11 @@ export default async function PoolsPage({ searchParams }: PageProps) {
       <WorkbenchPage
         eyebrow="Option management"
         title="Candidate Pools"
-        description="Organize product inspiration, paper candidates, demo replication, knowledge gaps, personal work, archive, and dropped items."
+        description="Use List for editable product and engineering suggestion cards; use Board for quick pool and priority overview."
         metrics={[
           { label: "Pools", value: "-", detail: "Run npm run import" },
           { label: "Items", value: "0", detail: "No candidates imported" },
-          { label: "Write-back", value: "—", detail: "Drag cards or use pool dropdown" }
+          { label: "Write-back", value: "—", detail: "Use List cards or Board dropdowns" }
         ]}
         emptyState={{
           icon: Boxes,
@@ -60,7 +60,7 @@ export default async function PoolsPage({ searchParams }: PageProps) {
         <p className="mt-2 text-sm text-muted-foreground">
           {hasFilters
             ? `Filtered · ${totalItems} items`
-            : `${totalItems} items across ${nonEmptyPools} pools · Board 或 List 视图均可编辑。`}{" "}
+            : `${totalItems} items across ${nonEmptyPools} pools · Board is quick routing, List is the suggestion workspace.`}{" "}
           <Link href={"/inbox/backlog" as Route} className="font-medium text-primary hover:underline">
             Backlog →
           </Link>

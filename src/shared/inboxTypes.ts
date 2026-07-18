@@ -17,13 +17,21 @@ export type PoolGroup = {
   poolName: string;
   items: {
     id: string;
+    poolName: string;
     title: string;
     url: string;
+    date: string | null;
+    sourceName: string | null;
     humanStatus: string;
     status: string | null;
     finalPool: string | null;
     priority: string;
     summary: string;
+    reason: string;
+    suggestion: string;
+    priorityRationale?: string;
+    poolRationale?: string;
+    contentTags?: string[];
     hasLinkedTask: boolean;
     hasLinkedArtifact: boolean;
   }[];

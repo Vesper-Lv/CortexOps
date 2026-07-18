@@ -28,7 +28,10 @@ vi.mock("@/server/db", () => ({
   }
 }));
 
-import { updateCandidatePriority } from "@/server/services/candidatePools";
+import {
+  updateCandidatePriority,
+  updateCandidateSuggestion
+} from "@/server/services/candidatePools";
 
 describe("updateCandidatePriority", () => {
   beforeEach(() => {
@@ -60,5 +63,29 @@ describe("updateCandidatePriority", () => {
       where: { id: "signal-1" },
       data: { priority: "P0" }
     });
+  });
+
+  it("updates editable candidate suggestion text through reason storage", async () => {
+    candidateFindUnique.mockResolvedValue({
+      id: "candidate-1",
+      recordKey: "product:c1",
+      reason: "old suggestion"
+    });
+
+    await updateCandidateSuggestion("candidate-1", "new product suggestion");
+
+    expect(candidateUpdate).toHaveBeenCalledWith({
+      where: { id: "candidate-1" },
+      data: { reason: "new product suggestion" }
+    });
+    expect(auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "change_reason",
+          fromValue: "old suggestion",
+          toValue: "new product suggestion"
+        })
+      })
+    );
   });
 });
