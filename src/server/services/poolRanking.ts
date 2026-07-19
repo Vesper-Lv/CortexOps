@@ -126,12 +126,12 @@ export async function rankPoolItems(poolName: string, limit?: number): Promise<R
     where: { OR: [{ poolName: { in: aliases } }, { finalPool: { in: aliases } }] },
     orderBy: [{ date: "desc" }, { priority: "asc" }]
   });
+  const confidenceMap = await buildDecisionConfidenceMap(candidates);
 
   const items: RankedItem[] = candidates.map((c) => {
     const url = c.originalUrl ?? c.sourceUrl ?? "";
     const contentType = inferContentType(url);
-    // PR-A: decisionConfidence stays at default 0.5 until confidence-routing schema lands in PR-C.
-    const dc = 0.5;
+    const dc = confidenceMap.get(c.canonicalKey ?? "") ?? 0.5;
     const raw = parseSignalRaw(c.rawJson);
     const summary = raw.displaySummary ?? c.aihotSummary ?? c.reason ?? "";
 
@@ -142,7 +142,7 @@ export async function rankPoolItems(poolName: string, limit?: number): Promise<R
       pool: normalizedPool,
       priority: c.priority ?? null,
       rankScore: computeRankScore(normalizedPool, contentType, dc, c.priority, c.practiceFit, c.publishedAt),
-      decisionConfidence: null,
+      decisionConfidence: dc,
       practiceFit: c.practiceFit,
       sourceType: raw.sourceType ?? null,
       sourceTier: raw.sourceTier ?? null,
@@ -188,4 +188,24 @@ export async function rankEngineeringPracticeItems(limit = 3): Promise<RankedIte
     }))
     .sort((a, b) => b.rankScore - a.rankScore)
     .slice(0, limit);
+}
+
+async function buildDecisionConfidenceMap(
+  candidates: { canonicalKey: string | null }[]
+): Promise<Map<string, number>> {
+  const keys = [...new Set(candidates.map((c) => c.canonicalKey).filter((k): k is string => !!k))];
+  if (keys.length === 0) return new Map();
+
+  const signals = await prisma.signal.findMany({
+    where: { canonicalKey: { in: keys } },
+    select: { canonicalKey: true, decisionConfidence: true }
+  });
+
+  const map = new Map<string, number>();
+  for (const s of signals) {
+    if (s.canonicalKey && s.decisionConfidence !== null) {
+      map.set(s.canonicalKey, s.decisionConfidence);
+    }
+  }
+  return map;
 }

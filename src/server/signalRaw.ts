@@ -8,6 +8,9 @@ export type SignalRawFields = {
   priorityRationale?: string;
   poolRationale?: string;
   contentTags?: string[];
+  sourceType?: string;
+  sourceTier?: string;
+  confidence?: string;
 };
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
@@ -33,7 +36,10 @@ export function parseSignalRaw(rawJson: string): SignalRawFields {
     noveltyReason: str(obj.novelty_reason),
     priorityRationale: str(obj.priority_rationale),
     poolRationale: str(obj.pool_rationale),
-    contentTags: strArray(obj.content_tags)
+    contentTags: strArray(obj.content_tags),
+    sourceType: str(obj.source_type),
+    sourceTier: str(obj.source_tier),
+    confidence: str(obj.confidence)
   };
 }
 

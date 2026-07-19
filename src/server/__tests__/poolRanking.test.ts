@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { candidateFindMany, signalFindUnique } = vi.hoisted(() => ({
+const { candidateFindMany, signalFindMany } = vi.hoisted(() => ({
   candidateFindMany: vi.fn(),
-  signalFindUnique: vi.fn()
+  signalFindMany: vi.fn()
 }));
 
 vi.mock("@/server/db", () => ({
   prisma: {
     candidate: { findMany: candidateFindMany },
-    signal: { findUnique: signalFindUnique }
+    signal: { findMany: signalFindMany }
   }
 }));
 
@@ -69,8 +69,8 @@ describe("engineering practice ranking helpers", () => {
 describe("rankPoolItems", () => {
   beforeEach(() => {
     candidateFindMany.mockReset();
-    signalFindUnique.mockReset();
-    signalFindUnique.mockResolvedValue(null);
+    signalFindMany.mockReset();
+    signalFindMany.mockResolvedValue([]);
   });
 
   it("prefers practice-fit engineering items over merely recent ones", async () => {
@@ -108,6 +108,7 @@ describe("rankPoolItems", () => {
         rawJson: "{}"
       }
     ]);
+    signalFindMany.mockResolvedValue([]);
 
     const items = await rankPoolItems("engineering", 2);
 
@@ -120,13 +121,67 @@ describe("rankPoolItems", () => {
       })
     );
   });
+
+  it("reads decisionConfidence from Signal via canonicalKey and ranks higher confidence first", async () => {
+    candidateFindMany.mockResolvedValue([
+      {
+        id: "low-confidence",
+        recordKey: "engineering:low-confidence",
+        canonicalKey: "ck-low",
+        poolName: "engineering",
+        finalPool: "engineering",
+        title: "Low confidence item",
+        originalUrl: "https://github.com/example/low",
+        sourceUrl: null,
+        priority: "P1",
+        practiceFit: "high",
+        publishedAt: "2026-07-18T00:00:00.000Z",
+        date: "2026-07-18",
+        aihotSummary: null,
+        reason: null,
+        rawJson: "{}"
+      },
+      {
+        id: "high-confidence",
+        recordKey: "engineering:high-confidence",
+        canonicalKey: "ck-high",
+        poolName: "engineering",
+        finalPool: "engineering",
+        title: "High confidence item",
+        originalUrl: "https://github.com/example/high",
+        sourceUrl: null,
+        priority: "P1",
+        practiceFit: "high",
+        publishedAt: "2026-07-18T00:00:00.000Z",
+        date: "2026-07-18",
+        aihotSummary: null,
+        reason: null,
+        rawJson: "{}"
+      }
+    ]);
+    signalFindMany.mockResolvedValue([
+      { canonicalKey: "ck-low", decisionConfidence: 0.3 },
+      { canonicalKey: "ck-high", decisionConfidence: 0.9 }
+    ]);
+
+    const items = await rankPoolItems("engineering", 2);
+
+    expect(items.map((item) => item.id)).toEqual(["high-confidence", "low-confidence"]);
+    expect(items[0].decisionConfidence).toBe(0.9);
+    expect(items[1].decisionConfidence).toBe(0.3);
+    expect(signalFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { canonicalKey: { in: ["ck-low", "ck-high"] } }
+      })
+    );
+  });
 });
 
 describe("rankEngineeringPracticeItems", () => {
   beforeEach(() => {
     candidateFindMany.mockReset();
-    signalFindUnique.mockReset();
-    signalFindUnique.mockResolvedValue(null);
+    signalFindMany.mockReset();
+    signalFindMany.mockResolvedValue([]);
   });
 
   it("filters Today practice recommendations to high or medium practice-fit items", async () => {
@@ -180,6 +235,7 @@ describe("rankEngineeringPracticeItems", () => {
         rawJson: "{}"
       }
     ]);
+    signalFindMany.mockResolvedValue([]);
 
     const items = await rankEngineeringPracticeItems(3);
 
