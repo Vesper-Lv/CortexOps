@@ -11,6 +11,7 @@ import { importDailyReports } from "@/server/importers/importDailyReports";
 import { importArchiveReports } from "@/server/importers/importArchiveReports";
 import { importFocusPolicyFromMarkdown, refreshExpiredFocusRules } from "@/server/services/focusRules";
 import { prismaSignalRepository } from "@/server/importers/prismaSignalRepository";
+import { routeSignalsByConfidence } from "@/server/services/confidence";
 
 export async function POST() {
   try {
@@ -19,6 +20,7 @@ export async function POST() {
       { readFile: (p) => readFile(p, "utf8"), repo: prismaSignalRepository },
       sources
     );
+    const routingResult = await routeSignalsByConfidence(summary.importRunId);
     const reportFiles = await listDailyReportFiles();
     const reportSummary = await importDailyReports(
       (p) => readFile(p, "utf8"),
@@ -45,6 +47,7 @@ export async function POST() {
     }
     return NextResponse.json({
       ...summary,
+      routing: routingResult,
       dailyReports: reportSummary,
       archiveReports: archiveSummary,
       focusRules: focusSummary

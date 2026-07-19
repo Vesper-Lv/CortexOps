@@ -1,6 +1,6 @@
 import { prisma } from "@/server/db";
 import { syncSignalToCandidate } from "@/server/services/candidateSync";
-import { assertValidPool } from "@/shared/poolOptions";
+import { normalizePoolName } from "@/shared/poolOptions";
 import { computeStatusOnFinalize } from "@/shared/signalStatus";
 
 export type DraftState = {
@@ -34,10 +34,18 @@ function draftActionName(action: DraftAction): string {
   }
 }
 
+function resolvePool(pool: string): string {
+  const normalized = normalizePoolName(pool);
+  if (!normalized) {
+    throw new Error(`invalid pool: ${pool}`);
+  }
+  return normalized;
+}
+
 export function applyDraftAction(state: DraftState, action: DraftAction): DraftState {
   switch (action.type) {
     case "set_pool":
-      return { ...state, finalPool: action.pool };
+      return { ...state, finalPool: resolvePool(action.pool) };
     case "set_priority":
       return { ...state, priority: action.priority };
     case "toggle_reading_pack":
@@ -49,8 +57,9 @@ export function applyDraftAction(state: DraftState, action: DraftAction): DraftS
 }
 
 export function computeHumanStatusOnFinalize(input: FinalizeInput): "confirmed" | "changed" {
-  const effectivePool = input.finalPool ?? input.suggestedPool;
-  const poolChanged = effectivePool !== input.suggestedPool;
+  const effectivePool = normalizePoolName(input.finalPool ?? input.suggestedPool);
+  const suggestedPool = normalizePoolName(input.suggestedPool);
+  const poolChanged = effectivePool !== suggestedPool;
   const priorityChanged = input.priority !== input.initialPriority;
   const packChanged = input.readingPackStatus !== input.initialReadingPackStatus;
 
@@ -74,10 +83,6 @@ export function extractInitialFromRaw(rawJson: string): {
 }
 
 export async function draftSignalEdit(signalId: string, action: DraftAction): Promise<void> {
-  if (action.type === "set_pool") {
-    assertValidPool(action.pool);
-  }
-
   const signal = await prisma.signal.findUnique({ where: { id: signalId } });
   if (!signal) throw new Error(`signal not found: ${signalId}`);
 
@@ -115,7 +120,8 @@ export async function finalizeSignal(signalId: string): Promise<void> {
   if ((signal.humanStatus ?? "pending") !== "pending") return;
 
   const initial = extractInitialFromRaw(signal.rawJson);
-  const effectiveFinalPool = signal.finalPool ?? signal.suggestedPool;
+  const effectiveFinalPool =
+    normalizePoolName(signal.finalPool ?? signal.suggestedPool) ?? signal.finalPool ?? signal.suggestedPool;
   const humanStatus = computeHumanStatusOnFinalize({
     suggestedPool: signal.suggestedPool,
     finalPool: effectiveFinalPool,

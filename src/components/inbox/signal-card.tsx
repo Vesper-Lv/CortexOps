@@ -7,15 +7,16 @@ import {
 } from "@/server/actions/reviewActions";
 import { IconButton } from "@/components/shared/icon-button";
 import { ContentTagChips } from "@/components/shared/content-tag-chips";
-import { POOL_OPTIONS } from "@/shared/poolOptions";
+import { normalizePoolName, POOL_DISPLAY_ORDER } from "@/shared/poolOptions";
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 import type { InboxSignal } from "@/shared/inboxTypes";
 
-const POOL_SELECT_OPTIONS = POOL_OPTIONS.filter((p) => p !== "drop");
+const POOL_SELECT_OPTIONS = [...POOL_DISPLAY_ORDER];
 
 export function SignalCard({ signal }: { signal: InboxSignal }) {
   const [pending, startTransition] = useTransition();
   const inPack = signal.readingPackStatus === "selected";
+  const selectedPool = normalizePoolName(signal.finalPool);
 
   const run = (fn: () => Promise<void>) => startTransition(() => void fn());
 
@@ -52,7 +53,13 @@ export function SignalCard({ signal }: { signal: InboxSignal }) {
         </select>
         <select
           disabled={pending}
-          value={signal.finalPool === "drop" ? "" : signal.finalPool || ""}
+          value={
+            selectedPool && (POOL_SELECT_OPTIONS as readonly string[]).includes(selectedPool)
+              ? selectedPool
+              : signal.finalPool === "drop"
+                ? ""
+                : signal.finalPool || ""
+          }
           onChange={(e) => {
             const pool = e.target.value;
             if (pool) run(() => submitDraft(signal.id, { type: "set_pool", pool }));

@@ -17,7 +17,7 @@ describe("isDroppedItem", () => {
 describe("canWatchCandidate", () => {
   it("blocks pending and dropped", () => {
     expect(
-      canWatchCandidate({ humanStatus: "pending", status: "inbox", finalPool: "knowledge_gap" })
+      canWatchCandidate({ humanStatus: "pending", status: "inbox", finalPool: "engineering" })
     ).toBe(false);
     expect(
       canWatchCandidate({ humanStatus: "confirmed", status: "dropped", finalPool: "drop" })
@@ -29,7 +29,7 @@ describe("canWatchCandidate", () => {
 
   it("allows confirmed non-dropped", () => {
     expect(
-      canWatchCandidate({ humanStatus: "confirmed", status: "confirmed", finalPool: "knowledge_gap" })
+      canWatchCandidate({ humanStatus: "confirmed", status: "confirmed", finalPool: "engineering" })
     ).toBe(true);
   });
 });
@@ -37,7 +37,7 @@ describe("canWatchCandidate", () => {
 describe("canPromoteItem", () => {
   it("blocks pending and dropped", () => {
     expect(
-      canPromoteItem({ humanStatus: "pending", status: "inbox", finalPool: "knowledge_gap" })
+      canPromoteItem({ humanStatus: "pending", status: "inbox", finalPool: "engineering" })
     ).toBe(false);
     expect(
       canPromoteItem({ humanStatus: "confirmed", status: "dropped", finalPool: "archive" })
@@ -46,7 +46,7 @@ describe("canPromoteItem", () => {
 
   it("allows triaged non-dropped", () => {
     expect(
-      canPromoteItem({ humanStatus: "changed", status: "confirmed", finalPool: "demo_replication" })
+      canPromoteItem({ humanStatus: "changed", status: "confirmed", finalPool: "engineering" })
     ).toBe(true);
   });
 });
@@ -54,10 +54,10 @@ describe("canPromoteItem", () => {
 describe("isDownstreamEligible", () => {
   it("requires triaged non-drop lifecycle", () => {
     expect(
-      isDownstreamEligible({ humanStatus: "confirmed", status: "confirmed", finalPool: "knowledge_gap" })
+      isDownstreamEligible({ humanStatus: "confirmed", status: "confirmed", finalPool: "engineering" })
     ).toBe(true);
     expect(
-      isDownstreamEligible({ humanStatus: "pending", status: "inbox", finalPool: "knowledge_gap" })
+      isDownstreamEligible({ humanStatus: "pending", status: "inbox", finalPool: "engineering" })
     ).toBe(false);
   });
 });

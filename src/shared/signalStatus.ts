@@ -11,6 +11,17 @@ export const SIGNAL_STATUSES = [
 
 export type SignalLifecycleStatus = (typeof SIGNAL_STATUSES)[number];
 
+/** Valid humanStatus values including auto_confirmed for confidence-routed signals. */
+export const HUMAN_STATUSES = [
+  "pending",
+  "confirmed",
+  "changed",
+  "rejected",
+  "auto_confirmed"
+] as const;
+
+export type HumanStatus = (typeof HUMAN_STATUSES)[number];
+
 export function isValidSignalStatus(value: string): value is SignalLifecycleStatus {
   return (SIGNAL_STATUSES as readonly string[]).includes(value);
 }
@@ -34,11 +45,12 @@ export type DownstreamEligibilityInput = {
 
 /**
  * Whether weekly/monthly automations may consume this item.
+ * auto_confirmed is treated like confirmed/changed.
  * Import-only `humanStatus=rejected` is treated like drop.
  */
 export function isDownstreamEligible(input: DownstreamEligibilityInput): boolean {
   const human = input.humanStatus ?? "pending";
-  if (human !== "confirmed" && human !== "changed") return false;
+  if (human !== "confirmed" && human !== "changed" && human !== "auto_confirmed") return false;
   if (input.finalPool === "drop") return false;
   const lifecycle = input.status ?? "inbox";
   if (lifecycle === "dropped") return false;

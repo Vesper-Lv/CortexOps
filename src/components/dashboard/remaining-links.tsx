@@ -18,6 +18,11 @@ export function RemainingLinks({ items }: { items: SignalView[] }) {
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {item.priority && <span className="rounded bg-muted px-2 py-0.5">{item.priority}</span>}
               {item.pool && <span className="rounded bg-muted px-2 py-0.5">{item.pool}</span>}
+              {item.decisionConfidence !== null && item.decisionConfidence !== undefined && (
+                <span className="rounded bg-red-500/10 px-2 py-0.5 text-red-600">
+                  置信度 {item.decisionConfidence.toFixed(2)}
+                </span>
+              )}
             </div>
             <a
               href={item.url}

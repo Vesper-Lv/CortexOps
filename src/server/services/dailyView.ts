@@ -1,8 +1,11 @@
 import { prisma } from "@/server/db";
 import { parseSignalRaw, pickSummary } from "@/server/signalRaw";
+import { normalizePoolName } from "@/shared/poolOptions";
 
 export type SignalLike = {
   id?: string;
+  decisionConfidence?: number | null;
+  humanStatus?: string | null;
   title: string | null;
   originalUrl: string | null;
   sourceUrl: string | null;
@@ -17,6 +20,8 @@ export type SignalLike = {
 
 export type SignalView = {
   id?: string;
+  decisionConfidence?: number | null;
+  humanStatus?: string | null;
   title: string;
   url: string;
   priority: string;
@@ -42,9 +47,11 @@ export type DailyReadingView = {
 
 function toView(s: SignalLike): SignalView {
   const raw = parseSignalRaw(s.rawJson);
-  const pool = s.finalPool ?? s.suggestedPool ?? "";
+  const pool = normalizePoolName(s.finalPool ?? s.suggestedPool) ?? s.finalPool ?? s.suggestedPool ?? "";
   return {
     ...(s.id ? { id: s.id } : {}),
+    ...(s.decisionConfidence !== undefined ? { decisionConfidence: s.decisionConfidence } : {}),
+    ...(s.humanStatus !== undefined ? { humanStatus: s.humanStatus } : {}),
     title: s.title ?? "(untitled)",
     url: s.originalUrl ?? s.sourceUrl ?? "",
     priority: s.priority ?? "",
@@ -57,7 +64,7 @@ function toView(s: SignalLike): SignalView {
     priorityRationale: raw.priorityRationale,
     poolRationale: raw.poolRationale,
     contentTags: raw.contentTags,
-    isKnowledgeGap: pool === "knowledge_gap"
+    isKnowledgeGap: pool === "engineering"
   };
 }
 
