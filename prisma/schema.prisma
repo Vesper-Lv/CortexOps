@@ -65,6 +65,7 @@ model Signal {
   decisionConfidence Float? // PR-C1
   confidenceFactors  String?
   sourceTier         String?
+  behaviorEvents     BehaviorEvent[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -72,6 +73,32 @@ model Signal {
   @@index([canonicalKey])
   @@index([status])
   @@index([humanStatus])
+}
+
+model BehaviorEvent {
+  id                  String   @id @default(cuid())
+  signalId            String
+  signal              Signal   @relation(fields: [signalId], references: [id])
+  eventType           String // thumbs_up | thumbs_down
+  reason              String? // direction | shallow | source_quality
+  contentTags         String // JSON array snapshot
+  sourceType          String?
+  predictedConfidence Float?
+  createdAt           DateTime @default(now())
+
+  @@index([signalId])
+  @@index([eventType])
+}
+
+model PreferenceWeight {
+  id          String   @id @default(cuid())
+  contentTags String // sorted tags joined by "|"
+  sourceType  String   @default("")
+  weight      Float    @default(0.5)
+  eventCount  Int      @default(0)
+  lastUpdated DateTime @default(now())
+
+  @@unique([contentTags, sourceType])
 }
 
 model Candidate {
