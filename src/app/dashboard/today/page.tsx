@@ -2,14 +2,14 @@ import Link from "next/link";
 import { BookOpen, CheckCircle2, ListChecks } from "lucide-react";
 import { WorkbenchPage } from "@/components/layout/workbench-page";
 import { ActiveTasksStrip } from "@/components/dashboard/active-tasks-strip";
-import { CandidateSupplementPanel } from "@/components/dashboard/candidate-supplement-panel";
 import { FivePartSummary } from "@/components/dashboard/five-part-summary";
 import { PracticePicker } from "@/components/dashboard/practice-picker";
 import { ReadingPack } from "@/components/dashboard/reading-pack";
 import { RemainingLinks } from "@/components/dashboard/remaining-links";
 import { getDailyPageData } from "@/server/services/dailyView";
-import { getDailyReport, getDailySession } from "@/server/services/dailyReport";
-import { findPracticeTaskId, listActiveTasks } from "@/server/services/tasks";
+import { getDailyReport } from "@/server/services/dailyReport";
+import { listActiveTasks } from "@/server/services/tasks";
+import { rankEngineeringPracticeItems } from "@/server/services/poolRanking";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default async function TodayPage({ searchParams }: PageProps) {
       <WorkbenchPage
         eyebrow="Daily command center"
         title="Today"
-        description="Read the latest radar, review the 30-minute pack, choose one practice, and confirm routing suggestions."
+        description="Read the latest radar, review the 30-minute pack, and choose one engineering practice."
         metrics={[
           { label: "Reading pack", value: "-", detail: "Run npm run import to load daily state" },
           { label: "Remaining links", value: "-", detail: "No active daily state" },
@@ -47,20 +47,11 @@ export default async function TodayPage({ searchParams }: PageProps) {
   }
 
   const { date, view, remaining } = data;
-  const [report, session, activeTasks] = await Promise.all([
+  const practiceItems = await rankEngineeringPracticeItems(3);
+  const [report, activeTasks] = await Promise.all([
     getDailyReport(date),
-    getDailySession(date),
     listActiveTasks()
   ]);
-  const practiceTaskId =
-    session?.selectedPracticeIndex != null
-      ? await findPracticeTaskId(date, session.selectedPracticeIndex)
-      : null;
-
-  const candidatesWithId = view.candidates.filter(
-    (c): c is typeof c & { id: string } => typeof c.id === "string"
-  );
-  const showCandidates = !session?.candidatesDismissed && candidatesWithId.length > 0;
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -85,23 +76,10 @@ export default async function TodayPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      {report && (
-        <div>
-          <h3 className="mb-3 text-xl font-semibold text-foreground">今日练习三选一</h3>
-          {report.practices.length > 0 ? (
-            <PracticePicker
-              date={date}
-              practices={report.practices}
-              session={session}
-              practiceTaskId={practiceTaskId}
-            />
-          ) : (
-            <p className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-              今日练习暂无结构化内容（§4 需符合 `1. **标题**｜正文`）。重新导入日报后可恢复。
-            </p>
-          )}
-        </div>
-      )}
+      <div>
+        <h3 className="mb-3 text-xl font-semibold text-foreground">工程池今日练习</h3>
+        <PracticePicker items={practiceItems} />
+      </div>
 
       <div>
         <h3 className="mb-3 text-xl font-semibold text-foreground">今日 30 分钟阅读包</h3>
@@ -120,9 +98,6 @@ export default async function TodayPage({ searchParams }: PageProps) {
 
       <RemainingLinks items={remaining} />
 
-      {showCandidates && (
-        <CandidateSupplementPanel date={date} candidates={candidatesWithId} />
-      )}
     </section>
   );
 }

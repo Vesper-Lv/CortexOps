@@ -2,6 +2,8 @@ import { prisma } from "@/server/db";
 import { getLatestDailyDate } from "@/server/services/dailyView";
 import { getCandidatePoolGroups } from "@/server/services/candidatePools";
 import { parseSignalRaw, pickSummary } from "@/server/signalRaw";
+import { normalizePoolName } from "@/shared/poolOptions";
+import { REVOCABLE_THRESHOLD } from "@/server/services/confidence";
 import type { InboxSignal, PoolGroup, PendingBacklogSignal } from "@/shared/inboxTypes";
 
 export type { InboxSignal, PoolGroup, PendingBacklogSignal } from "@/shared/inboxTypes";
@@ -14,12 +16,12 @@ export async function getCandidatePools(filters?: {
 }): Promise<PoolGroup[]> {
   const groups = await getCandidatePoolGroups();
   if (!filters?.humanStatus && !filters?.pool && !filters?.priority) return groups;
+  const normalizedPool = normalizePoolName(filters.pool) ?? (filters.pool ? filters.pool.replace(/-/g, "_") : null);
 
   return groups
     .filter((g) => {
-      if (!filters.pool) return true;
-      const normalized = g.poolName.replace(/-/g, "_");
-      return normalized === filters.pool || g.poolName === filters.pool;
+      if (!normalizedPool) return true;
+      return (normalizePoolName(g.poolName) ?? g.poolName).replace(/-/g, "_") === normalizedPool;
     })
     .map((g) => ({
       poolName: g.poolName,
@@ -49,8 +51,9 @@ export async function getPendingSignalBacklog(): Promise<PendingBacklogSignal[]>
     url: s.originalUrl ?? s.sourceUrl ?? "",
     date: s.date,
     priority: s.priority ?? "",
-    suggestedPool: s.suggestedPool ?? "",
-    finalPool: s.finalPool ?? s.suggestedPool ?? ""
+    suggestedPool: normalizePoolName(s.suggestedPool) ?? s.suggestedPool ?? "",
+    finalPool:
+      normalizePoolName(s.finalPool ?? s.suggestedPool) ?? s.finalPool ?? s.suggestedPool ?? ""
   }));
 }
 
@@ -77,8 +80,9 @@ export async function getPendingBacklogInboxGroups(): Promise<
       title: s.title ?? "(untitled)",
       url: s.originalUrl ?? s.sourceUrl ?? "",
       priority: s.priority ?? "",
-      suggestedPool: s.suggestedPool ?? "",
-      finalPool: s.finalPool ?? s.suggestedPool ?? "",
+      suggestedPool: normalizePoolName(s.suggestedPool) ?? s.suggestedPool ?? "",
+      finalPool:
+        normalizePoolName(s.finalPool ?? s.suggestedPool) ?? s.finalPool ?? s.suggestedPool ?? "",
       humanStatus: s.humanStatus ?? "pending",
       readingPackStatus: s.readingPackStatus ?? "not_selected",
       summary: pickSummary(raw, s.aihotSummary, s.reason),
@@ -107,15 +111,22 @@ export async function getInboxToday(date?: string): Promise<{ date: string; sign
     where: { stream: "daily", date: targetDate, humanStatus: "pending" },
     orderBy: { sourceLine: "asc" }
   });
-  const signals = rows.map((s) => {
+  // Only return intercepted signals (low confidence pending), not all pending.
+  // Threshold mirrors routeByConfidence's intercept boundary.
+  const intercepted = rows.filter((s) => {
+    const dc = s.decisionConfidence;
+    return dc === null || dc === undefined || dc < REVOCABLE_THRESHOLD;
+  });
+  const signals = intercepted.map((s) => {
     const raw = parseSignalRaw(s.rawJson);
     return {
       id: s.id,
       title: s.title ?? "(untitled)",
       url: s.originalUrl ?? s.sourceUrl ?? "",
       priority: s.priority ?? "",
-      suggestedPool: s.suggestedPool ?? "",
-      finalPool: s.finalPool ?? s.suggestedPool ?? "",
+      suggestedPool: normalizePoolName(s.suggestedPool) ?? s.suggestedPool ?? "",
+      finalPool:
+        normalizePoolName(s.finalPool ?? s.suggestedPool) ?? s.finalPool ?? s.suggestedPool ?? "",
       humanStatus: s.humanStatus ?? "pending",
       readingPackStatus: s.readingPackStatus ?? "not_selected",
       summary: pickSummary(raw, s.aihotSummary, s.reason),

@@ -1,10 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { parseDailyReportMarkdown } from "@/server/importers/dailyReportParser";
+
+// Inline fixture replaces the old readFileSync("state/daily/2026-07-02-report.md").
+// The report file has moved to state/daily/backups; tests must not depend on disk layout.
+const SAMPLE_REPORT = `# 今日 AI PM 行业雷达
+
+## 1. 五段式日报
+
+**产品 / 行业动态**：企业 AI 从"能不能用最强模型"转向"能不能承担最强模型"。
+
+**GitHub / 工程信号**：AI 工程实践正在从"让模型写代码"走向"给 agent 提供可验证任务"。
+
+**论文 / 研究信号**：RLI 和 Senior SWE-Bench 更接近现实工作质量评估。
+
+**工具 / 工作流信号**：开发者工具正在围绕成本、访问控制、环境连接重组。
+
+**风险 / 限制 / 反例**：RLI 仍只有 16.1% 专业自动化率，AI PM 不能只讲能力跃迁。
+
+## 2. 今日 30mins 阅读包
+
+- **P0 详细阅读**｜[花旗、Adobe等企业限制员工使用AI旗舰模型以控制成本](https://example.com/p0-1)
+
+## 3. 未入选阅读包的剩余链接
+
+- [browser-use 发布开源 AI 视频剪辑 Skill](https://example.com/remaining-1)
+
+## 4. 今日练习三选一
+
+1. **正式推荐：企业 AI 成本控制产品 memo**｜20-30 分钟。写一页产品 memo。
+2. **备选：Senior SWE-Bench 评估拆解**｜30-45 分钟。画出差异表。
+3. **备选：ghealth Agent-first CLI 复刻范围**｜30-45 分钟。拆出最小 API wrapper。
+`;
 
 describe("parseDailyReportMarkdown", () => {
   it("parses five-part sections and three practices from sample report", () => {
-    const md = readFileSync("state/daily/2026-07-02-report.md", "utf8");
+    const md = SAMPLE_REPORT;
     const parsed = parseDailyReportMarkdown(md);
     expect(parsed.fivePart).toHaveLength(5);
     expect(parsed.fivePart[0].label).toBe("行业信号");

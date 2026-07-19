@@ -303,8 +303,7 @@ The daily AI PM radar should:
 6. Generate the user-facing report at `state/daily/YYYY-MM-DD-report.md` from
    the structured daily longlist.
 7. Use this visible daily order: five-part daily summary, 30-minute reading
-   pack, remaining links not selected for the reading pack, then three daily
-   practice options.
+   pack, then remaining links not selected for the reading pack.
 8. The 30-minute reading pack should contain the P0 detailed-reading items, P1
    skim-reading items, and GitHub practice-fit candidates. Do not repeat those
    as separate top-level report sections.
@@ -321,12 +320,12 @@ The daily AI PM radar should:
    daily report; show suggested routing as a per-link UI label or state field.
 12. Do not automatically produce today's AI product inspiration. Keep the
    product inspiration pool for manually confirmed or manually changed items.
-13. Produce three daily practice options, select one formal practice, and give
-    manual routing suggestions for the other two: product inspiration pool,
-    weekly demo candidate, archive, or drop.
-14. After the user chooses any remaining links to add to the reading pack or
-    chooses today's formal practice, update JSONL / pool state and provide a
-    short confirmation summary. Do not regenerate a full candidate-pool table.
+13. Product and engineering recommendations should stay attached to individual
+    link records through `reason`, `priority_rationale`, and `pool_rationale`;
+    Web Workbench renders those records as suggestion cards.
+14. After the user chooses any remaining links to add to the reading pack,
+    update JSONL / pool state and provide a short confirmation summary. Do not
+    regenerate a full candidate-pool table.
 15. Apply the 7-day no-repeat rule to links, repos, papers, product/model
     announcements, candidate-pool items, reading-pack items, and practice
     recommendations.

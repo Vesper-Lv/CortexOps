@@ -1,4 +1,5 @@
 import type { ParsedLine } from "@/server/importers/jsonlParser";
+import { normalizePoolName } from "@/shared/poolOptions";
 
 export type MappedCommon = {
   externalId: string | null;
@@ -31,6 +32,10 @@ export type CandidateInput = MappedCommon & { recordKey: string; poolName: strin
 
 const s = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
+function normalizeImportedPool(pool: string | null): string | null {
+  return pool ? normalizePoolName(pool) : null;
+}
+
 export function computeRecordKey(args: {
   scope: string; // stream（Signal）或 poolName（Candidate）
   externalId: string | null;
@@ -55,8 +60,8 @@ export function mapCommon(parsed: ParsedLine, sourceFile: string): MappedCommon 
     sourceUrl: s(v.source_url),
     originalUrl: s(v.original_url),
     priority: s(v.priority),
-    suggestedPool: s(v.suggested_pool),
-    finalPool: s(v.final_pool),
+    suggestedPool: normalizeImportedPool(s(v.suggested_pool)),
+    finalPool: normalizeImportedPool(s(v.final_pool)),
     humanStatus: s(v.human_status),
     status: s(v.status),
     readingPackStatus: s(v.reading_pack_status),
@@ -98,7 +103,7 @@ export function mapToCandidate(parsed: ParsedLine, ctx: { poolName: string; sour
       sourceFile: ctx.sourceFile,
       sourceLine: parsed.line
     }),
-    poolName: ctx.poolName,
+    poolName: normalizeImportedPool(ctx.poolName) ?? "archive",
     ...common
   };
 }

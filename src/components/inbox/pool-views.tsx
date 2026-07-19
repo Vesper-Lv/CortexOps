@@ -6,7 +6,7 @@ import { PoolListView } from "@/components/inbox/pool-list-view";
 import type { PoolGroup } from "@/shared/inboxTypes";
 
 export function PoolViews({ groups }: { groups: PoolGroup[] }) {
-  const [mode, setMode] = useState<"board" | "list">("board");
+  const [mode, setMode] = useState<"board" | "list">("list");
 
   return (
     <div className="flex flex-col gap-3">

@@ -1,14 +1,25 @@
-export const POOL_OPTIONS = [
-  "product_inspiration",
-  "paper_candidate",
-  "demo_replication",
-  "knowledge_gap",
-  "personal_work",
-  "archive",
-  "drop"
-] as const;
+export const POOL_OPTIONS = ["product", "paper", "engineering", "archive", "drop"] as const;
 
 export type PoolOption = (typeof POOL_OPTIONS)[number];
+
+function normalizePoolKey(pool: string): string {
+  return pool.trim().toLowerCase().replace(/-/g, "_");
+}
+
+export const POOL_MIGRATION_MAP: Record<string, PoolOption> = {
+  product: "product",
+  product_inspiration: "product",
+  paper: "paper",
+  paper_candidate: "paper",
+  paper_candidates: "paper",
+  engineering: "engineering",
+  demo_replication: "engineering",
+  engineering_learning: "engineering",
+  knowledge_gap: "engineering",
+  personal_work: "engineering",
+  archive: "archive",
+  drop: "drop"
+};
 
 export function isValidPool(pool: string): pool is PoolOption {
   return (POOL_OPTIONS as readonly string[]).includes(pool);
@@ -20,18 +31,27 @@ export function assertValidPool(pool: string): asserts pool is PoolOption {
   }
 }
 
-/** Board / list column order. `drop` stays a valid PoolOption but is not seeded or shown as a column. */
+/** Board / list column order. Only 3 action pools are shown as columns. */
 export const POOL_DISPLAY_ORDER = [
-  "product_inspiration",
-  "paper_candidate",
-  "demo_replication",
-  "knowledge_gap",
-  "personal_work",
-  "archive"
+  "product",
+  "paper",
+  "engineering"
 ] as const;
 
+/** Old pool names collapse into the current active pools. */
+export function normalizePoolName(pool: string | null | undefined): PoolOption | null {
+  if (pool === null || pool === undefined) return null;
+  const trimmed = pool.trim();
+  if (!trimmed) return null;
+  return POOL_MIGRATION_MAP[normalizePoolKey(trimmed)] ?? null;
+}
+
+export function migratePoolName(oldName: string): string {
+  return normalizePoolName(oldName) ?? oldName;
+}
+
 function poolRankKey(poolName: string): string {
-  return poolName.replace(/-/g, "_");
+  return normalizePoolName(poolName) ?? poolName;
 }
 
 export function sortPools<T extends { poolName: string }>(groups: T[]): T[] {
@@ -43,10 +63,21 @@ export function sortPools<T extends { poolName: string }>(groups: T[]): T[] {
 }
 
 export function poolOptionFromName(poolName: string): PoolOption | null {
-  const normalized = poolRankKey(poolName);
-  return isValidPool(normalized) ? normalized : null;
+  return normalizePoolName(poolName);
 }
 
 export function poolNameFromOption(option: PoolOption): string {
-  return option.replace(/_/g, "-");
+  return option;
+}
+
+export function getPoolAliases(poolName: string | null | undefined): string[] {
+  const normalized = normalizePoolName(poolName);
+  if (!normalized) return [];
+
+  const aliases = new Set<string>([normalized]);
+  for (const [alias, canonical] of Object.entries(POOL_MIGRATION_MAP)) {
+    if (canonical === normalized) aliases.add(alias);
+  }
+
+  return [...aliases];
 }

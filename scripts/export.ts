@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { listBySuffix } from "@/server/importers/importSources";
+import { DAILY_ACTIVE_DIR, listBySuffix } from "@/server/importers/importSources";
 import {
   exportJsonlFiles,
   formatJsonlExportSummary
@@ -17,7 +17,7 @@ function hasFlag(args: string[], flag: string): boolean {
 }
 
 async function buildDailyExportFiles() {
-  const dailyFiles = await listBySuffix("state/daily", "-links.jsonl");
+  const dailyFiles = await listBySuffix(DAILY_ACTIVE_DIR, "-links.jsonl");
   return dailyFiles.map((path) => ({ path, scope: "daily" }));
 }
 

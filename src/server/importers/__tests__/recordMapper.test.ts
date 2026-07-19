@@ -32,10 +32,22 @@ describe("mapToSignal", () => {
       sourceFile: "state/daily/2026-07-02-links.jsonl"
     });
     expect(rec.externalId).toBe("2026-07-02-01");
-    expect(rec.finalPool).toBe("knowledge_gap");
+    expect(rec.finalPool).toBe("engineering");
     expect(rec.stream).toBe("daily");
     expect(rec.recordKey).toBe("daily:2026-07-02-01");
     expect(rec.rawJson).toContain('"title":"t"');
+  });
+
+  it("drops unknown imported pool values", () => {
+    const rec = mapToSignal(
+      line({ id: "2026-07-02-02", suggested_pool: "custom_pool", final_pool: "another_pool" }),
+      {
+        stream: "daily",
+        sourceFile: "state/daily/2026-07-02-links.jsonl"
+      }
+    );
+    expect(rec.suggestedPool).toBeNull();
+    expect(rec.finalPool).toBeNull();
   });
 
   it("uses canonical_key when id is absent (memory stream)", () => {
@@ -54,9 +66,18 @@ describe("mapToCandidate", () => {
       poolName: "product-inspiration",
       sourceFile: "pools/product-inspiration.jsonl"
     });
-    expect(rec.poolName).toBe("product-inspiration");
-    expect(rec.finalPool).toBe("product_inspiration");
+    expect(rec.poolName).toBe("product");
+    expect(rec.finalPool).toBe("product");
     expect(rec.recordKey).toBe("product-inspiration:2026-07-02-11");
+  });
+
+  it("archives candidates from unknown pool files", () => {
+    const rec = mapToCandidate(line({ id: "2026-07-02-12" }), {
+      poolName: "custom-pool",
+      sourceFile: "pools/custom-pool.jsonl"
+    });
+    expect(rec.poolName).toBe("archive");
+    expect(rec.recordKey).toBe("custom-pool:2026-07-02-12");
   });
 });
 

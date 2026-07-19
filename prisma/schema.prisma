@@ -62,12 +62,16 @@ model Signal {
   sourceLine        Int
   importRunId       String
   importRun         ImportRun @relation(fields: [importRunId], references: [id])
+  decisionConfidence Float? // PR-C1
+  confidenceFactors  String?
+  sourceTier         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   @@index([stream])
   @@index([canonicalKey])
   @@index([status])
+  @@index([humanStatus])
 }
 
 model Candidate {

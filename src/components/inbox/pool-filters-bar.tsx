@@ -1,14 +1,21 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { POOL_OPTIONS } from "@/shared/poolOptions";
+
 import { PRIORITY_OPTIONS } from "@/shared/priorityOptions";
 
 const STATUS_FILTERS: { label: string; value?: string; href?: Route }[] = [
-  { label: "All" },
-  { label: "pending → Backlog", value: "pending", href: "/inbox/backlog" as Route },
-  { label: "confirmed", value: "confirmed" },
-  { label: "changed", value: "changed" }
+  { label: "全部" },
+  { label: "待处理 → Backlog", value: "pending", href: "/inbox/backlog" as Route },
+  { label: "已确认", value: "confirmed" },
+  { label: "已变更", value: "changed" }
 ];
+
+const POOL_LABELS: Record<string, string> = {
+  product: "产品",
+  paper: "论文",
+  engineering: "工程",
+  archive: "归档"
+};
 
 function buildHref(params: { status?: string; pool?: string; priority?: string }): Route {
   const q = new URLSearchParams();
@@ -62,9 +69,9 @@ export function PoolFiltersBar({
               : "border-border text-muted-foreground hover:bg-muted"
           }`}
         >
-          All
+          全部
         </Link>
-        {POOL_OPTIONS.filter((p) => p !== "drop").map((p) => (
+        {["product", "paper", "engineering", "archive"].map((p) => (
           <Link
             key={p}
             href={buildHref({ status: activeStatus, pool: p, priority: activePriority })}
@@ -74,7 +81,7 @@ export function PoolFiltersBar({
                 : "border-border text-muted-foreground hover:bg-muted"
             }`}
           >
-            {p}
+            {POOL_LABELS[p] ?? p}
           </Link>
         ))}
       </div>
@@ -88,7 +95,7 @@ export function PoolFiltersBar({
               : "border-border text-muted-foreground hover:bg-muted"
           }`}
         >
-          All
+          全部
         </Link>
         {PRIORITY_OPTIONS.map((p) => (
           <Link

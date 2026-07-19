@@ -38,6 +38,7 @@ export async function promoteCandidateToTaskAction(candidateId: string) {
   await promoteCandidateToTask(candidateId);
   revalidatePath("/dashboard/tasks");
   revalidatePath("/inbox/pools");
+  revalidatePath("/dashboard/today");
 }
 
 export async function updateTaskStatusAction(taskId: string, status: string) {

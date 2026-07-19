@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db";
 import {
   POOL_DISPLAY_ORDER,
-  assertValidPool,
+  normalizePoolName,
   poolNameFromOption,
   poolOptionFromName,
   sortPools,
@@ -45,17 +45,27 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
 
   const map = new Map<string, PoolGroup>();
   for (const c of rows) {
-    const key = c.poolName;
+    const key = normalizePoolName(c.poolName) ?? "archive";
+    const raw = parseSignalRaw(c.rawJson);
+    const suggestion = c.reason ?? "";
     if (!map.has(key)) map.set(key, { poolName: key, items: [] });
     map.get(key)!.items.push({
       id: c.id,
+      poolName: key,
       title: c.title ?? "(untitled)",
       url: c.originalUrl ?? c.sourceUrl ?? "",
+      date: c.date,
+      sourceName: c.sourceName,
       humanStatus: c.humanStatus ?? "pending",
       status: c.status,
-      finalPool: c.finalPool,
+      finalPool: normalizePoolName(c.finalPool),
       priority: c.priority ?? "",
-      summary: pickSummary(parseSignalRaw(c.rawJson), c.aihotSummary, c.reason),
+      summary: pickSummary(raw, c.aihotSummary, c.reason),
+      reason: c.reason ?? c.aihotSummary ?? "",
+      suggestion,
+      priorityRationale: raw.priorityRationale,
+      poolRationale: raw.poolRationale,
+      contentTags: raw.contentTags,
       hasLinkedTask: promoteFlags.taskIds.has(c.id),
       hasLinkedArtifact: promoteFlags.artifactIds.has(c.id)
     });
@@ -74,15 +84,18 @@ export async function getCandidatePoolGroups(): Promise<PoolGroup[]> {
 }
 
 export async function moveCandidatePool(candidateId: string, toPoolName: string): Promise<void> {
-  assertValidPool(toPoolName);
+  const normalizedPool = normalizePoolName(toPoolName);
+  if (!normalizedPool) {
+    throw new Error(`invalid pool: ${toPoolName}`);
+  }
 
   const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
   if (!candidate) throw new Error(`candidate not found: ${candidateId}`);
 
-  const newPoolName = poolNameFromOption(toPoolName as PoolOption);
+  const newPoolName = normalizedPool;
   if (candidate.poolName === newPoolName) return;
 
-  const status = computeStatusOnFinalize(toPoolName);
+  const status = computeStatusOnFinalize(newPoolName);
   const humanStatus = candidate.humanStatus === "rejected" ? "rejected" : "changed";
   const before = {
     poolName: candidate.poolName,
@@ -90,12 +103,12 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
     status: candidate.status,
     humanStatus: candidate.humanStatus
   };
-  const after = { poolName: newPoolName, finalPool: toPoolName, status, humanStatus };
+  const after = { poolName: newPoolName, finalPool: newPoolName, status, humanStatus };
 
   await prisma.$transaction([
     prisma.candidate.update({
       where: { id: candidateId },
-      data: { poolName: newPoolName, finalPool: toPoolName, humanStatus, status }
+      data: { poolName: newPoolName, finalPool: newPoolName, humanStatus, status }
     }),
     prisma.auditLog.create({
       data: {
@@ -110,7 +123,7 @@ export async function moveCandidatePool(candidateId: string, toPoolName: string)
   ]);
 
   await syncLinkedSignal(candidate.recordKey, {
-    finalPool: toPoolName,
+    finalPool: newPoolName,
     status,
     humanStatus
   });
@@ -176,6 +189,38 @@ export async function updateCandidatePriority(candidateId: string, priority: str
   ]);
 
   await syncLinkedSignal(candidate.recordKey, { priority });
+}
+
+export async function updateCandidateReason(candidateId: string, reason: string): Promise<void> {
+  const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
+  if (!candidate) throw new Error(`candidate not found: ${candidateId}`);
+
+  const nextReason = reason.trim();
+  if ((candidate.reason ?? "") === nextReason) return;
+
+  await prisma.$transaction([
+    prisma.candidate.update({
+      where: { id: candidateId },
+      data: { reason: nextReason || null }
+    }),
+    prisma.auditLog.create({
+      data: {
+        entityType: "candidate",
+        entityId: candidateId,
+        action: "change_reason",
+        fromValue: candidate.reason,
+        toValue: nextReason || null,
+        rationale: null
+      }
+    })
+  ]);
+}
+
+export async function updateCandidateSuggestion(
+  candidateId: string,
+  suggestion: string
+): Promise<void> {
+  await updateCandidateReason(candidateId, suggestion);
 }
 
 async function syncLinkedSignal(
