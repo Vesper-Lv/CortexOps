@@ -1,9 +1,9 @@
 # PR-C Confidence Routing — Handoff
 
-> **Status:** C1 ✅ · C2 ✅ · C3 design approved, implementation not started  
-> **Last updated:** 2026-07-19 (Cursor Cloud agent re-sync after Codex quota exhaustion)  
+> **Status:** C1 ✅ · C2 ✅ · C3 ✅  
+> **Last updated:** 2026-07-19 (C3 implemented on `cursor/pr-c3-preference-learning-plan-d108`)  
 > **Implementation plan:** `docs/superpowers/plans/2026-07-19-pr-c3-preference-learning.md`  
-> **Base branch for C3:** `codex/daily-practice-pool-plan` (contains C1+C2)
+> **Base branch for merge:** `codex/daily-practice-pool-plan` → then `codex/web-workbench`
 
 ---
 
@@ -19,121 +19,54 @@ Decision-confidence routing for daily signals:
 
 ## Progress snapshot
 
-| Slice | Status | Where |
-|-------|--------|--------|
-| **PR-C1** schema fields on `Signal` | ✅ Done | `2b4d125` on `codex/daily-practice-pool-plan` |
-| **PR-C2** two-factor scoring + routing + inbox intercept | ✅ Done | `14d5482` on `codex/daily-practice-pool-plan` |
-| **PR-C3** behavior learning (PreferenceWeight / BehaviorEvent) | 🟡 Design approved; **no code committed** | Plan ready; execute next |
-| Handoff file in git | ❌ Was local-only on Mac; restored here | this file |
+| Slice | Status | Commits |
+|-------|--------|---------|
+| **PR-C1** schema fields on `Signal` | ✅ | `2b4d125` |
+| **PR-C2** two-factor scoring + routing + inbox intercept | ✅ | `14d5482` |
+| **PR-C3** behavior learning | ✅ | `a41bc61` … `8220da2` (this branch) |
 
-### Important corrections vs Codex mid-session notes
+### Merge note
 
-1. **Handoff was incomplete** — Codex hit quota during the C3 decision gate; local Mac path existed, but the file was **not** in the remote repo until this restore.
-2. **`BehaviorEvent` / `PreferenceWeight` are NOT in committed schema** — exploration may have `db push`’d locally, but `prisma/schema.prisma` on the C2 tip still only has C1 fields (`decisionConfidence`, `confidenceFactors`, `sourceTier`). Treat schema work as **still to do**.
-3. **`codex/web-workbench` does not contain C1/C2** — C3 must branch from `codex/daily-practice-pool-plan` (or merge that tip first).
+C1–C3 live on the Workbench line (`codex/daily-practice-pool-plan` / this PR). They merge into **`codex/web-workbench`**, not `codex/source-layering-policy` (backend has no Prisma).
 
 ---
 
-## C1 delivered (committed)
+## C3 delivered
 
-- `Signal.decisionConfidence Float?`
-- `Signal.confidenceFactors String?` (JSON)
-- `Signal.sourceTier String?`
-- `@@index([humanStatus])`
-- Migration: `prisma/migrations/20260719190000_add_confidence_routing_fields/`
-- `poolRanking` reads `decisionConfidence` via batch `findMany` on `canonicalKey`
-- `signalRaw` parses `source_type` / `source_tier` / `confidence` / `content_tags`
+### Schema
 
----
+- `BehaviorEvent` — frozen feedback snapshot (`contentTags`, `sourceType`, `predictedConfidence`)
+- `PreferenceWeight` — unique `(contentTags, sourceType)` preference score
+- `Signal.behaviorEvents` relation
+- Migration: `prisma/migrations/20260719140000_add_preference_learning/`
 
-## C2 delivered (committed)
+### Learning
 
-File: `src/server/services/confidence.ts`
+- `src/shared/preferenceLearning.ts` — prediction-error math, reason scales
+- `src/server/services/behaviorLearning.ts` — record events, upsert weights, consolidate
+- `confidence.ts` `computeHistoryMatch` queries PreferenceWeight; history joins scoring when `eventCount >= 5`
+- Consolidation runs at end of `routeSignalsByConfidence`
 
-- **Source factor:** `confidence` label × `source_tier` → numeric map
-- **Focus factor:** match `contentTags` / `sourceType` against effective focus rules
-- **History factor:** intentionally `null` (stub for C3)
-- **Weights:** history null → `0.5·source + 0.5·focus`; else → `0.35·source + 0.3·focus + 0.35·history`
-- **Thresholds:** auto ≥ 0.75, revocable ≥ 0.4, intercept < 0.4
-- **Import hook:** `routeSignalsByConfidence(importRunId)` after import
-- **Inbox:** `getInboxToday` only returns intercepted pending (low confidence)
-- **Statuses:** `auto_confirmed` in human-status / eligibility paths
-- **UI:** remaining-links shows `decisionConfidence` badge
+### UI
 
----
+- Reading pack: 赞 / 踩（原因：方向不对 / 太浅 / 来源不行）
+- 赞：只记反馈；踩：记反馈并移出阅读包
+- `source_quality` 不更新内容标签 PreferenceWeight
 
-## C3 approved design (user confirmed 2026-07-19)
+### Tests
 
-### Goal
-
-Let the system learn preference from reading-pack feedback so `computeHistoryMatch` stops returning `null` and three-factor scoring activates when sample size is enough.
-
-### Schema (approved)
-
-**`BehaviorEvent`**
-
-| Field | Notes |
-|-------|--------|
-| `id` | cuid |
-| `signalId` | FK → Signal |
-| `eventType` | `thumbs_up` \| `thumbs_down` |
-| `reason` | null on up; on down: `direction` \| `shallow` \| `source_quality` |
-| `contentTags` | frozen snapshot (JSON string of tags at feedback time) |
-| `sourceType` | frozen snapshot |
-| `predictedConfidence` | frozen `decisionConfidence` at feedback time |
-| `createdAt` | default now |
-
-Indexes: `signalId`, `eventType`  
-Relation: `Signal.behaviorEvents BehaviorEvent[]`
-
-**`PreferenceWeight`**
-
-| Field | Notes |
-|-------|--------|
-| `id` | cuid |
-| `contentTags` | canonical key string (sorted tags joined) |
-| `sourceType` | string (empty string if unknown) |
-| `weight` | float preference score |
-| `eventCount` | int |
-| `lastUpdated` | DateTime |
-
-Unique: `@@unique([contentTags, sourceType])`
-
-### UI (approved)
-
-On each reading-pack item:
-
-- **👍 thumbsUp** — record positive feedback; **do not** remove from pack
-- **👎 thumbsDown** — pick reason (`direction` / `shallow` / `source_quality`); record feedback; **remove from pack** (`readingPackStatus → not_selected`)
-
-Reason → learning effect (approved intent):
-
-| Reason | Effect on content-tag PreferenceWeight |
-|--------|------------------------------------------|
-| `direction` | Full prediction-error update |
-| `shallow` | Reduced-magnitude update (depth ≠ direction) |
-| `source_quality` | **No** content-tag weight update |
-
-### Learning rules (locked for C3 plan)
-
-See implementation plan for exact formulas. Summary:
-
-- Prediction-error driven: `error = actual − predictedConfidence`
-- `actual`: thumbs_up → `1.0`; thumbs_down → `0.0`
-- History participates in scoring only when matching `PreferenceWeight.eventCount >= 5`
-- Consolidation job: reinforce patterns with ≥2 events in last 14 days; decay / prune inactive
+- `preferenceLearning.test.ts`, `behaviorLearning.test.ts`, `confidence.test.ts`
+- Full suite: 117 passed (as of C3 land)
 
 ---
 
-## Out of scope for C3
+## Local setup after pull
 
-- Changing C2 thresholds or source/focus maps
-- Multi-user preferences / auth
-- Rewriting focus-policy.md YAML from PreferenceWeight
-- Automatic export of preferences to JSONL memory (can be a later slice)
+```bash
+cp -n .env.example .env
+npx prisma generate
+npm run db:push   # creates BehaviorEvent + PreferenceWeight
+npm test
+```
 
----
-
-## Next action
-
-Execute `docs/superpowers/plans/2026-07-19-pr-c3-preference-learning.md` task-by-task on a branch off `codex/daily-practice-pool-plan`.
+If a local `dev.db` had experimental half-tables from earlier exploration: drop those two tables or recreate `dev.db`, then `db:push` again. Existing Signal/Candidate data is unaffected by additive schema.
