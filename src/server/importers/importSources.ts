@@ -2,6 +2,9 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import type { ImportSource } from "@/server/importers/runImport";
 
+/** Daily links/reports for import/export live under active/ (backups ignored). */
+export const DAILY_ACTIVE_DIR = "state/daily/active";
+
 export async function listBySuffix(dir: string, suffix: string): Promise<string[]> {
   try {
     const entries = await readdir(dir);

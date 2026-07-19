@@ -2,6 +2,8 @@ import { prisma } from "@/server/db";
 import { listEffectiveFocusRules } from "@/server/services/focusRules";
 import { parseSignalRaw } from "@/server/signalRaw";
 import { syncSignalToCandidate } from "@/server/services/candidateSync";
+import { consolidatePreferenceWeights } from "@/server/services/behaviorLearning";
+import { historyFromWeight, preferenceKey } from "@/shared/preferenceLearning";
 import type { FocusRuleItem } from "@/shared/focusRules";
 
 // Cross-mapping: confidence label x source_tier -> numeric value
@@ -52,12 +54,18 @@ async function computeHistoryMatch(
   contentTags: string[],
   sourceType: string | null
 ): Promise<number | null> {
-  // PR-C2: history factor disabled until behavior learning (PR-C3) lands.
-  // Without PreferenceWeight data, history is always null (insufficient data).
-  // PR-C3 will restore the preferenceWeight lookup and enable three-factor scoring.
-  void contentTags;
-  void sourceType;
-  return null;
+  const key = preferenceKey(contentTags, sourceType);
+  const row = await prisma.preferenceWeight.findUnique({
+    where: {
+      contentTags_sourceType: {
+        contentTags: key.contentTags,
+        sourceType: key.sourceType
+      }
+    },
+    select: { weight: true, eventCount: true }
+  });
+  if (!row) return null;
+  return historyFromWeight(row.weight, row.eventCount);
 }
 
 export type ConfidenceFactors = {
@@ -184,6 +192,8 @@ export async function routeSignalsByConfidence(importRunId: string): Promise<Rou
       intercepted += 1;
     }
   }
+
+  await consolidatePreferenceWeights();
 
   return { routed: signals.length, autoConfirmed, intercepted };
 }
