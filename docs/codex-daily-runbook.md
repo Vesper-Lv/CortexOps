@@ -10,6 +10,16 @@ DATE=$(TZ=Asia/Shanghai date +%Y-%m-%d)
 
 ---
 
+## Agent session start
+
+For coding / policy / prompt changes (not just daily ops commands), agents must
+start at `docs/change-protocol.md` and root `AGENTS.md`. When local
+collaboration memory is present, read `docs/collaboration/index.md` first for
+tag-routed retrieval. This runbook remains the command cheatsheet for prefetch
+and daily execution.
+
+---
+
 ## 目录口径
 
 - `state/daily` 分成两个逻辑区：`active/` 和 `backups/`
@@ -41,7 +51,7 @@ git pull origin codex/source-layering-policy
 git stash pop
 
 chmod +x scripts/*.sh
-python3 -c 'import tomllib; tomllib.loads(open("automations/ai-pm.toml").read()); print("toml ok")'
+python3 scripts/check-prompts.py
 ```
 
 ---
@@ -76,15 +86,17 @@ RUNNER=none   ./scripts/daily-ingest-pipeline.sh   # 只 prefetch
 
 ---
 
-## 三、Prompt 同步
+## 三、Prompt 检查
 
 ```bash
-cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
-diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
+python3 scripts/check-prompts.py
 
-python3 -c "import tomllib; print(tomllib.loads(open('automations/ai-pm.toml').read())['prompt'])" | pbcopy
+python3 - <<'PY'
+from pathlib import Path
 
-python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read())['prompt']; print('skipped_no_prefetch' in p, '禁止' in p and 'curl' in p)"
+p = Path("prompts/daily-ai-pm.md").read_text(encoding="utf-8")
+print("skipped_no_prefetch" in p, "禁止" in p and "curl" in p)
+PY
 ```
 
 ---
@@ -92,7 +104,6 @@ python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read(
 ## 四、验收 / 检查产物
 
 ```bash
-ls -la state/daily/${DATE}-{aihot-raw.json,arxiv-raw.xml,github-raw.json,ingest-manifest.json}
 ls -la state/daily/active/${DATE}-{aihot-raw.json,arxiv-raw.xml,github-raw.json,ingest-manifest.json}
 ls -la state/daily/active/${DATE}-{links.jsonl,report.md}
 open state/daily/active/${DATE}-report.md
@@ -147,26 +158,22 @@ ls -la state/weekly/*-report.md
 说明：
 - `StartCalendarInterval` 为每周日 20:30（`TZ=Asia/Shanghai`）
 - `RunAtLoad=true`：若周日 20:30 未联网，开机后会补跑（检测本周周报是否已存在）
-- 请在 Codex App 中**关闭**同名 automation 的 cron，避免与 launchd 重复执行
+- 不再配置同名 Codex App cron，避免与 launchd / terminal runner 重复执行
 
-### 周一论文 / Demo / 工程学习 + 月报 launchd
+### 周一论文 + 月报 launchd
 
 ```bash
 ./scripts/install-automation-launchd.sh
 
 FORCE=1 ./scripts/codex-automation-run.sh paper-radar
-FORCE=1 ./scripts/codex-automation-run.sh demo
-FORCE=1 ./scripts/codex-automation-run.sh engineering
 FORCE=1 ./scripts/codex-automation-run.sh monthly
 
-ls -la state/weekly/paper/ state/weekly/demo/ state/weekly/engineering/ state/monthly/
+ls -la state/weekly/paper/ state/monthly/
 ```
 
 | 任务 | 路径 |
 |------|------|
 | 论文雷达 | `state/weekly/paper/YYYY-MM-DD-paper-radar.md` |
-| Demo 推荐 | `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md` |
-| 工程学习 | `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md` |
 | 月报 | `state/monthly/YYYY-MM-01-monthly-review.md` |
 
 `YYYY-MM-DD`（周报子目录）= 当周周日，与执行周报日期一致。
@@ -277,7 +284,7 @@ which codex
 | 日志 | `state/daily/codex-daily-run.log` |
 | 周报 report | `state/weekly/YYYY-MM-DD-report.md` |
 | 周报日志 | `state/weekly/codex-weekly-run.log` |
-| Codex 配置 | `~/.codex/automations/ai-pm.toml` |
+| Daily prompt | `prompts/daily-ai-pm.md` |
 | Cursor webhook | `~/.cortexops/cursor-webhook.env` |
 
 ---

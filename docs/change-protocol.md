@@ -15,7 +15,7 @@ CortexOps has several policy and automation layers:
 - `docs/focus-policy.md`: what the user wants emphasized now
 - `state/*.jsonl`: reusable machine state for daily outputs and memory
 - `pools/*.jsonl`: reusable candidate pools for weekly and monthly decisions
-- `automations/*.toml`: which output each automation must produce
+- `prompts/*.md`: which output each terminal runner must produce
 
 When a change only updates one layer, the next run may not show the expected
 result. Every meaningful change should therefore define the desired output first,
@@ -38,7 +38,7 @@ Examples:
 
 Primary files:
 
-- `automations/*.toml`
+- `prompts/*.md`
 - sometimes `docs/source-policy.md`
 
 ### Signal Schema Change
@@ -84,7 +84,7 @@ Examples:
 
 Primary files:
 
-- `automations/*.toml`
+- `prompts/*.md`
 - `automations/README.md`
 
 ### State Contract Change
@@ -102,7 +102,7 @@ Primary files:
 - `docs/ingestion-normalization.md`
 - `state/README.md`
 - `pools/README.md`
-- `automations/*.toml`
+- `prompts/*.md`
 
 ## 3. Change Request Template
 
@@ -129,8 +129,8 @@ Which user goal does this serve?
 - job search / interview
 - 2B AI PM judgment
 - Vibe Coding proof
-- demo replication
-- engineering learning
+- product work
+- engineering work
 - paper reading
 - portfolio artifact
 - monthly direction decision
@@ -148,18 +148,16 @@ downgrade, or drop decisions?
 
 Which automations must read the policy or emit the new fields?
 
-- `ai-pm.toml`:
-- `weekly-execution-review.toml`:
-- `ai-paper-radar.toml`:
-- `demo.toml`:
-- `engineering-learning.toml`:
-- `monthly-review.toml`:
+- `daily-ai-pm.md`:
+- `weekly-execution-review.md`:
+- `ai-paper-radar.md`:
+- `monthly-review.md`:
 
 ## Acceptance Checks
 
 How will we prove the change is connected end to end?
 
-- TOML parses successfully.
+- Prompt specs validate successfully.
 - Every affected automation references the needed policy file.
 - The output contract names the new section or fields explicitly.
 - The signal schema defines any new fields.
@@ -175,7 +173,7 @@ Use this order unless the change is clearly tiny.
 2. Add or update signal fields in `docs/ingestion-normalization.md`.
 3. Add or update system-level rules in `docs/source-policy.md`.
 4. Add or update user focus rules in `docs/focus-policy.md`.
-5. Update affected automation prompts in `automations/*.toml`.
+5. Update affected automation prompts in `prompts/*.md`.
 6. Update `automations/README.md` if the convention changes.
 7. Run verification checks.
 
@@ -194,25 +192,36 @@ Prioritized in source-policy.md? yes / no / not needed
 Boosted in focus-policy.md? yes / no / not needed
 Emitted by daily radar? yes / no / not needed
 Consumed by weekly review? yes / no / not needed
-Consumed by demo recommendation? yes / no / not needed
-Consumed by engineering learning? yes / no / not needed
+Consumed by paper radar? yes / no / not needed
 Consumed by monthly review? yes / no / not needed
 Verification command or evidence:
+Collaboration ledger updated (when `docs/collaboration/` is present)? yes / no / not needed
 ```
+
+When the change is meaningful and local collaboration memory exists, update
+`docs/collaboration/` history plus area `entry_files` / `impact_files` (see
+`docs/collaboration/index.md`), then run
+`python3 scripts/check-collaboration-navigation.py`.
 
 ## 6. Verification Commands
 
 Run these after automation edits:
 
 ```sh
-python3 -c 'import tomllib, pathlib; [tomllib.loads(p.read_text()) for p in pathlib.Path("automations").glob("*.toml")]; print("all toml ok")'
-rg -n "focus-policy.md" automations/*.toml
+python3 scripts/check-prompts.py
+rg -n "focus-policy.md" prompts/*.md
+```
+
+Run this after candidate pool routing or JSONL pool-state edits:
+
+```sh
+python3 scripts/check-pool-labels.py
 ```
 
 Run targeted searches for new fields or sections:
 
 ```sh
-rg -n "field_name|section_title" docs automations
+rg -n "field_name|section_title" docs prompts
 ```
 
 When the change depends on downstream consumption, search the downstream
@@ -238,7 +247,7 @@ For tiny wording changes, use a shorter checklist:
 What visible output changes?
 Which file owns that output?
 Does any downstream automation depend on it?
-Does TOML still parse?
+Do prompt specs validate?
 ```
 
 If the answer touches more than one automation or policy file, use the full

@@ -5,14 +5,18 @@ system.
 
 ## Contents
 
+- `AGENTS.md`: agent bootstrap; start at `docs/change-protocol.md`; optional
+  local collaboration retrieval via `docs/collaboration/index.md` when present
 - `docs/source-policy.md`: base execution policy for all automations
 - `docs/ingestion-normalization.md`: rules for turning raw inputs into signal objects
 - `docs/focus-policy.md`: user-controlled attention layer for future automation runs
 - `docs/change-protocol.md`: change workflow for output contracts, schema, policy, automation bindings, and verification
 - `docs/workbench-design.md`: product and UI design for the CortexOps workbench
-- `automations/`: snapshot copies of current automation configurations
+- `prompts/`: canonical prompt files read by terminal Codex runners
+- `automations/`: prompt runtime notes and verification checklist
 - `state/`: machine-readable daily radar state and 7-day memory
-- `pools/`: machine-readable candidate pools used by weekly and monthly reviews
+- `pools/`: machine-readable candidate pools for product, engineering, and
+  paper; archive/drop are terminal dispositions
 
 ## Purpose
 
@@ -23,9 +27,8 @@ source and evaluation logic in one place.
 ## Current automation set
 
 - Daily AI PM radar
+- Weekly AI PM execution review
 - Weekly AI × cognitive science paper radar
-- Weekly demo replication recommendation
-- Weekly engineering learning task
 - Monthly direction review
 
 ## Usage model
@@ -38,6 +41,7 @@ source and evaluation logic in one place.
 6. Then update the relevant automation prompt if prompt-level behavior must change.
 7. Keep daily state in `state/` and candidate pools in `pools/` when a report
    needs to be reused by later automations.
-8. Verify automation linkage and TOML parsing before considering the change complete.
-9. Keep copies of automation configs in `automations/` for review and auditing.
+8. Verify prompt specs before considering the change complete.
+9. Do not recreate TOML automation snapshots; Markdown prompts are the runtime
+   source.
 10. Use weekly and monthly outputs to guide action, not just to summarize.
