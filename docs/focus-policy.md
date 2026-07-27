@@ -19,7 +19,7 @@ Use focus rules when the user wants to:
 
 - pay more attention to a source type, such as GitHub repositories
 - track a topic for a limited period
-- bias outputs toward demo, engineering learning, or portfolio work
+- bias outputs toward product, engineering, or paper work
 - prefer signals that can be tried, replicated, or turned into an artifact
 - bias outputs toward job-search readiness and interview proof
 - reduce attention on noisy topics
@@ -35,7 +35,7 @@ quality, confidence, or basic relevance checks.
 3. A focus rule can upgrade a borderline signal from P2 to P1, or from P1 to P0
    when the signal is also timely, actionable, and well-supported.
 4. Low-confidence signals should still require manual review before entering
-   product inspiration, demo replication, or personal work pools.
+   product, engineering, or paper pools.
 5. Expired focus rules should not affect new automation runs.
 6. Every active focus rule should be visible, editable, pausable, and removable.
 
@@ -84,7 +84,6 @@ Suggested `applies_to` values:
 daily_radar
 weekly_execution_review
 paper_radar
-demo_recommendation
 monthly_review
 ```
 
@@ -131,8 +130,9 @@ candidate_pool_boost:
 applies_to:
   - daily_radar
   - weekly_execution_review
-  - demo_recommendation
-  - start_date: 2026-07-01
+  - monthly_review
+  - paper_radar
+start_date: 2026-07-01
 end_date: 2026-07-14
 review_cadence: weekly
 created_at: 2026-07-01
@@ -196,8 +196,7 @@ applies_to:
   - daily_radar
   - weekly_execution_review
   - paper_radar
-  - demo_recommendation
-  -   - monthly_review
+  - monthly_review
 start_date: 2026-07-02
 end_date: 2026-08-31
 review_cadence: weekly
@@ -244,13 +243,13 @@ Downgrade or avoid GitHub projects when:
   beginner path
 - the main value is high stars, trendiness, or architecture admiration, without
   a clear next action for the user
-- it cannot become a demo, product inspiration, knowledge gap, or portfolio
-  artifact within one week
+- it cannot become a product, engineering, or paper pool item, or support a
+  demo or portfolio artifact within one week
 
 ### Required GitHub Recommendation Fields
 
-When a GitHub project is included in the daily radar, demo recommendation, or
-weekly execution review, include these practice-fit fields:
+When a GitHub project is included in the daily radar, weekly execution review,
+or monthly review, include these practice-fit fields:
 
 ```text
 practice_fit: high / medium / low
@@ -277,8 +276,7 @@ When monthly background sources are scanned under this focus rule:
   actions, lack recent maintenance, or are useful only for background
   understanding.
 - Promote a monthly background-source item only when it can feed next month's
-  demo replication pool, engineering learning task, knowledge gap, product
-  inspiration, or personal work pool.
+  product, engineering, or paper pool.
 
 ## 4.2 Job Interview Proof Rules
 
@@ -425,7 +423,7 @@ Send a focused signal to manual review when:
 
 - confidence is medium or low
 - the priority was upgraded because of a focus rule
-- the item may become a demo or personal work artifact
+- the item may become a demo or portfolio artifact
 - the routing decision is ambiguous
 - the source is strong but metadata is incomplete
 

@@ -11,9 +11,9 @@ become usable signal objects.
 The ingestion and normalization layer converts fragmented external inputs into a
 standard signal format that can be routed into:
 
-- product pool (做 demo / 探索产品想法)
-- paper pool (深读研究)
-- engineering pool (练技能 / 补知识缺口)
+- product pool
+- engineering pool
+- paper pool
 - archive / drop (终态)
 
 This layer should run mostly in the background. The user should only see the
@@ -312,7 +312,7 @@ Rules:
   representative categories, ecosystem gaps, and durable reference value.
 - Background sources default to `archive`; they should not
   directly enter the daily link list, 30-minute reading pack, P0/P1 selection,
-  GitHub recommendation, product inspiration, or daily practice.
+  GitHub recommendation, product pool, or daily practice.
 - A background-source item may enter `product` or `engineering` only
   when the referenced project has strong practice fit, low or medium entry
   barrier, recent activity, and a visible artifact path.
@@ -386,7 +386,7 @@ pool_rationale
 ### Report §3 omission (7-day duplicates)
 
 Links with `duplicate_status` in `duplicate_7d`, `duplicate_suppressed` remain
-in `state/daily/YYYY-MM-DD-links.jsonl` for audit but **must not** be listed in
+in `state/daily/active/YYYY-MM-DD-links.jsonl` for audit but **must not** be listed in
 report §3. Count them in §1 as `excluded_remaining_7d_dup=N`.
 
 ### Field Values
@@ -586,7 +586,7 @@ human-readable report.
 Write every collected daily link to:
 
 ```text
-state/daily/YYYY-MM-DD-links.jsonl
+state/daily/active/YYYY-MM-DD-links.jsonl
 ```
 
 Each line should use the standard signal schema and include at minimum:
@@ -616,7 +616,7 @@ focus_direction
 novelty_reason
 ```
 
-The daily Markdown report at `state/daily/YYYY-MM-DD-report.md` is a view over
+The daily Markdown report at `state/daily/active/YYYY-MM-DD-report.md` is a view over
 this JSONL file. It should not be the primary data source for future automation
 runs.
 
@@ -646,21 +646,6 @@ pool routing. It should preserve links, confidence, product / engineering
 implications, interview proof candidates, and the weekly action item. It does
 not need a JSONL companion unless a future automation needs structured weekly
 paper selections.
-
-### Weekly Demo Recommendation Record
-
-```text
-state/weekly/demo/YYYY-MM-DD-demo-recommendation.md
-```
-
-### Weekly Engineering Learning Record
-
-```text
-state/weekly/engineering/YYYY-MM-DD-engineering-learning.md
-```
-
-`YYYY-MM-DD` for weekly sub-reports is the **Sunday date** of that week (same
-week key as the weekly execution report).
 
 ### Monthly Review Record
 
@@ -700,14 +685,17 @@ and use the report only as context for why the item mattered.
 
 AI may suggest pool routing, but the user owns the final route.
 
-Write suggested candidates to:
+The current semantic pools are `product`, `engineering`, and `paper`.
+`archive` and `drop` are terminal dispositions used after the primary review.
+
+Write suggested candidates to the pool files that back those semantic pools:
 
 ```text
 pools/product-inspiration.jsonl
-pools/paper-candidates.jsonl
 pools/demo-replication.jsonl
 pools/knowledge-gap.jsonl
 pools/personal-work.jsonl
+pools/paper-candidates.jsonl
 pools/archive.jsonl
 ```
 
@@ -722,15 +710,14 @@ If the user accepts the route, set `human_status: confirmed`. If the user
 changes the route, set `human_status: changed` and update `final_pool`. If the
 user rejects the item, set `human_status: rejected`.
 
-Weekly, monthly, demo, and engineering-learning automations must prefer
-`confirmed` and `changed` entries. They may use `pending` entries only when they
-need fresh candidates and should clearly label them as unconfirmed.
+Weekly, paper, and monthly automations must prefer `confirmed` and `changed`
+entries. They may use `pending` entries only when they need fresh candidates
+and should clearly label them as unconfirmed.
 
 ## 4.2 Pre-Inclusion Gates
 
 Run these gates before a candidate enters the daily link list, P0/P1 selection,
-30-minute reading pack, GitHub recommendation, product inspiration, or daily
-practice.
+30-minute reading pack, GitHub recommendation, product pool, or daily practice.
 
 1. URL Reachability Gate
    - Keep only reachable URLs for P0/P1 and action-oriented sections.
@@ -738,10 +725,10 @@ practice.
      review for strategic reasons.
 
 2. 7-Day Duplicate Gate
-   - Check `state/memory/ai-pm-7d.jsonl` first, then recent long-form reports
-     only as fallback context.
-   - Match by URL, repo, paper/arXiv ID, product/model name, announcement,
-     product inspiration, and practice target.
+  - Check `state/memory/ai-pm-7d.jsonl` first, then recent long-form reports
+    only as fallback context.
+  - Match by URL, repo, paper/arXiv ID, product/model name, announcement,
+    product pool item, and practice target.
    - Suppress duplicates unless there is a material update or explicit user
      override.
 
@@ -754,10 +741,10 @@ practice.
 4. Background Source Gate
    - Keep `monthly_background` sources out of daily outputs unless a specific
      referenced item has a material new update.
-   - Route background-source findings to monthly review, knowledge gap, archive,
-     or manual review by default.
+   - Route background-source findings to monthly review, archive, or manual
+     review by default.
    - Require practice fit and recent activity before a background-source project
-     enters demo replication or personal work pools.
+     enters the engineering pool.
 
 ## 5. Deduplication Rules
 
@@ -837,12 +824,10 @@ Development
 Use one or more:
 
 ```text
-product inspiration
-paper candidate
-demo replication
-knowledge gap
-personal work
-light archive
+product
+engineering
+paper
+archive
 drop
 ```
 
@@ -875,7 +860,7 @@ Before final signal judgment, pre-classify priority:
 
 - Worth watching this week
 - Needs more evidence or a second source
-- May become a product inspiration, demo, paper, or knowledge task
+- May become a product, engineering, or paper pool item
 
 ### P2 Candidate
 
@@ -912,7 +897,7 @@ Before final signal judgment, pre-classify priority:
 - Community rumor or vague commentary
 
 Low-confidence signals can be kept, but should require manual review before
-entering product inspiration, demo, or personal work pools.
+entering the product, engineering, or paper pools.
 
 ## 9. Candidate Pool Routing
 
@@ -1001,7 +986,7 @@ Common exceptions:
 Handling rules:
 
 - Broken or unreachable URL: exclude from P0/P1, reading pack, GitHub
-  recommendation, product inspiration, and daily practice. Route to manual
+  recommendation, product pool, and daily practice. Route to manual
   review only if strategically important.
 - Duplicate within 7 days without material update: suppress from the daily
   radar.

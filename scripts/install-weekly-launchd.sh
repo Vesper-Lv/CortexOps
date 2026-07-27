@@ -37,5 +37,5 @@ launchctl kickstart -k "gui/$(id -u)/com.cortexops.weekly-ai-pm" 2>/dev/null || 
 echo "Installed: $PLIST_DST"
 echo "Logs: state/weekly/codex-weekly-run.log"
 echo ""
-echo "Important: disable Codex App built-in cron for 每周 AI PM 执行周报 to avoid double runs."
+echo "Important: do not configure a duplicate Codex App cron for 每周 AI PM 执行周报."
 echo "Test now: FORCE=1 ${ROOT}/scripts/codex-weekly-run.sh"

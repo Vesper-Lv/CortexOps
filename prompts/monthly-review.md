@@ -1,7 +1,6 @@
 ---
 automation_id: automation-2
 kind: monthly
-source_toml: automations/monthly-review.toml
 ---
 请生成「月度 AI 方向复盘」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
@@ -13,13 +12,13 @@ source_toml: automations/monthly-review.toml
 
 必须优先读取：
 - pools/product-inspiration.jsonl
-- pools/paper-candidates.jsonl
 - pools/demo-replication.jsonl
 - pools/knowledge-gap.jsonl
 - pools/personal-work.jsonl
+- pools/paper-candidates.jsonl
 - pools/archive.jsonl
 - state/memory/ai-pm-7d.jsonl
-- state/daily/*-links.jsonl（本月）
+- state/daily/active/*-links.jsonl（本月）
 - state/weekly/**/*-report.md（本月，如有）
 
 必须写入的状态文件：
@@ -41,14 +40,14 @@ source_toml: automations/monthly-review.toml
 ## 2. 本月方向决策
 按继续追、降权观察、暂时放弃、本月动手做分类。
 
-## 3. 五个池整理
-分别整理产品灵感池、论文候选池、工程复刻池、知识补缺池、个人作品池。每池优先 confirmed/changed，再列 pending 待确认。
+## 3. 三个池整理
+分别整理产品池、工程池、论文池。每池优先 confirmed/changed，再列 pending 待确认。`archive` 和 `drop` 是后续处置，不计入这三个常规池。
 
 ## 4. 面试证明力整理
 整理 3-5 个最适合转成面试表达的证据，包含 proof_artifact、validation_window、interview_story_angle、next_proof_action。
 
 ## 5. 本月个人路线图
-给出本月主题、每周重点、本月 Demo/side project 目标、本月输出物和验收标准。
+给出本月主题、每周重点、本月产品调研 / 论文精读目标、本月输出物和验收标准。
 
 ## 6. 个人主页 / 作品集更新建议
 说明最值得放到个人主页或作品集的成果，以及需要补齐的材料。

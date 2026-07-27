@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install macOS launchd jobs for Monday weekly + monthly Codex automations.
+# Install macOS launchd jobs for paper radar and monthly Codex automations.
 # Usage: ./scripts/install-automation-launchd.sh
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,11 +33,9 @@ install_one() {
 chmod +x "${ROOT}/scripts/codex-automation-run.sh"
 
 install_one com.cortexops.paper-radar launchd/com.cortexops.paper-radar.plist.example state/weekly/paper
-install_one com.cortexops.demo-recommendation launchd/com.cortexops.demo-recommendation.plist.example state/weekly/demo
-install_one com.cortexops.engineering-learning launchd/com.cortexops.engineering-learning.plist.example state/weekly/engineering
 install_one com.cortexops.monthly-review launchd/com.cortexops.monthly-review.plist.example state/monthly
 
 echo ""
 echo "Also run ./scripts/install-weekly-launchd.sh for Sunday execution review."
-echo "Disable matching Codex App crons to avoid double runs."
+echo "Do not configure duplicate Codex App crons for these terminal runners."
 echo "Test: FORCE=1 ${ROOT}/scripts/codex-automation-run.sh paper-radar"

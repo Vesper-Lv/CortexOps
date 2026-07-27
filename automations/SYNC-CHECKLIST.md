@@ -1,84 +1,66 @@
-# Automation live sync checklist
+# Prompt Runtime Checklist
 
-Run this checklist after every change to `automations/*.toml` (especially `ai-pm.toml`).
+Run this checklist after every change to `prompts/*.md`, especially
+`prompts/daily-ai-pm.md`.
 
-## 1. Export prompt from snapshot
+## 1. Validate prompt files
 
 From the main CortexOps worktree on `codex/source-layering-policy`:
 
 ```bash
-cd /Users/jiexinlv/Documents/CortexOps
-git show codex/source-layering-policy:automations/ai-pm.toml | \
-  python3 -c "import sys,tomllib; print(tomllib.load(sys.stdin.buffer)['prompt'])"
+python3 scripts/check-prompts.py
 ```
 
-Copy the full printed prompt.
+Expected: `prompt specs ok`.
 
-## 2. Terminal prefetch (required — AIhot + supplemental raw)
+## 2. Terminal prefetch (required for daily)
 
 ```bash
-cd /Users/jiexinlv/Documents/CortexOps
 ./scripts/codex-daily-prefetch.sh
 ```
 
-Expected: `INGEST PREFETCH OK` with `aihot_items=N`; `arxiv_items` / `github_items` as `ok` or `skipped`.
+Expected: ingest manifest is ready, with `aihot_items=N`; `arxiv_items` and
+`github_items` are `ok` or `skipped`.
 
-Optional: `~/.cortexops/github-prefetch.env` with `GITHUB_TOKEN` for higher GitHub rate limits.
+Optional: `~/.cortexops/github-prefetch.env` with `GITHUB_TOKEN` for higher
+GitHub rate limits.
 
 See `docs/codex-terminal-prefetch.md` and `docs/supplemental-prefetch-api.md`.
 
-## 3. AIhot API precheck (optional if prefetch already passed)
-
-Verify the Public API responds before syncing the prompt:
+## 3. Daily prompt gate
 
 ```bash
-UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=selected&take=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok', len(d.get('items',[])))"
+python3 - <<'PY'
+from pathlib import Path
+
+p = Path("prompts/daily-ai-pm.md").read_text(encoding="utf-8")
+assert "禁止" in p and "curl" in p
+assert "skipped_no_prefetch" in p
+print("daily prompt ok")
+PY
+rg '允许 curl' prompts/daily-ai-pm.md && exit 1 || echo "no forbidden 允许 curl phrase"
 ```
 
-Expected: `ok 1` (or similar non-zero item count). **Automation must not curl AIhot** in strict mode; this precheck is for operators only.
+Expected: `daily prompt ok` and `no forbidden 允许 curl phrase`.
 
-## 3b. PR-A prompt gate (forbid sandbox curl)
+Daily structured output must stay compatible with the workbench
+`dailyReportParser.ts`: §1 line starts with `**行业信号**：`; §4 practice items
+use single-line step blocks.
 
-After syncing prompt, confirm strict supplemental rules are present:
+## 4. Run through terminal entrypoints
 
 ```bash
-cd /Users/jiexinlv/Documents/CortexOps
-python3 -c "import tomllib; p=tomllib.loads(open('automations/ai-pm.toml').read())['prompt']; assert '禁止' in p and 'curl' in p; assert 'skipped_no_prefetch' in p; print('PR-A prompt ok')"
-rg '允许 curl' automations/ai-pm.toml && exit 1 || echo "no forbidden 允许 curl phrase"
+SKIP_CODEX=1 ./scripts/codex-daily-run.sh
+FORCE=1 ./scripts/codex-weekly-run.sh
+FORCE=1 ./scripts/codex-automation-run.sh paper-radar
+FORCE=1 ./scripts/codex-automation-run.sh monthly
 ```
 
-Expected: `PR-A prompt ok` and `no forbidden 允许 curl phrase`.
+`SKIP_CODEX=1` verifies daily prefetch without launching Codex. Use `FORCE=1`
+only when intentionally overwriting an existing report.
 
-日报结构化输出须与 workbench `dailyReportParser.ts` 一致：§1 行首 `**行业信号**：`（勿用 `- **行业信号**：`）；§4 `1. **正式推荐：标题**｜时长。步骤：1) … 2) …；验收：…`（步骤块强制，确认练习后进 Task）。
+## Current prompt source
 
-## 4. Paste into Cursor Automation UI
-
-1. Open Cursor → Automations → AI 日报 → Settings → Prompt.
-2. Paste the exported prompt from step 1.
-3. Confirm Environment:
-
-```text
-Repository: Vesper-Lv/CortexOps
-Branch: codex/source-layering-policy
-```
-
-## 5. Copy ai-pm.toml to ~/.codex/automations/
-
-```bash
-cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
-```
-
-## 6. Verify diff is empty
-
-```bash
-diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
-```
-
-Expected: `in sync` (no diff output).
-
-## 7. Run Test
-
-In Cursor → Automations → AI 日报, click **Run Test** (avoid the 08:00 peak window if possible).
-
-If Run Test fails with `resource_exhausted`, the Git and Codex Desktop sync from steps 1–5 is still valid; retry later or run the same prompt via Codex Desktop.
+Runtime scripts read `prompts/*.md` directly. Do not recreate
+`automations/*.toml`; prompt changes should be made in Markdown and verified
+with `python3 scripts/check-prompts.py`.

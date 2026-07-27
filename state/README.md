@@ -6,16 +6,18 @@ This directory stores machine-readable daily state for CortexOps automations.
 
 Daily radar runs should create:
 
-- `daily/YYYY-MM-DD-links.jsonl`: one JSON object per collected link
-- `daily/YYYY-MM-DD-report.md`: the human-readable daily report
+- `daily/active/YYYY-MM-DD-links.jsonl`: one JSON object per collected link
+- `daily/active/YYYY-MM-DD-report.md`: the human-readable daily report
 
 The JSONL file is the source of truth for link state. The Markdown report is a
 reading view generated from that state.
 
-Optionally, daily radar runs may also write `daily/YYYY-MM-DD-aihot-raw.json`
-with the raw AIhot Public API response for provenance auditing. This file is
-not read by downstream automations; it exists so operators can verify that
-`aihot_summary` values were copied verbatim from the API.
+Daily radar runs also write `daily/active/YYYY-MM-DD-aihot-raw.json`,
+`daily/active/YYYY-MM-DD-arxiv-raw.xml`,
+`daily/active/YYYY-MM-DD-github-raw.json`, and
+`daily/active/YYYY-MM-DD-ingest-manifest.json` for provenance auditing and
+strict ingest verification. Downstream automations should read only
+`daily/active/` for current daily data.
 
 ## Memory Files
 
@@ -43,8 +45,6 @@ Terminal scheduling: `scripts/codex-weekly-run.sh` + `scripts/install-weekly-lau
 Sub-reports (Monday, same week Sunday date):
 
 - `weekly/paper/YYYY-MM-DD-paper-radar.md` — `codex-automation-run.sh paper-radar`
-- `weekly/demo/YYYY-MM-DD-demo-recommendation.md` — `codex-automation-run.sh demo`
-- `weekly/engineering/YYYY-MM-DD-engineering-learning.md` — `codex-automation-run.sh engineering`
 
 Install Monday + monthly launchd: `scripts/install-automation-launchd.sh`.
 

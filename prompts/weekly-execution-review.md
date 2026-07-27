@@ -1,7 +1,6 @@
 ---
 automation_id: ai-pm-2
 kind: weekly
-source_toml: automations/weekly-execution-review.toml
 ---
 请生成本周「AI PM 执行周报」，面向一个正在成长为全栈型 AI 产品经理和个人独立开发者的用户。当前日期按运行时日期，时区 Asia/Shanghai。
 所有文件路径均相对于仓库根目录（CortexOps 项目根）。不要使用 /Users/... 绝对路径。运行时工作目录即为仓库根目录。
@@ -13,13 +12,13 @@ source_toml: automations/weekly-execution-review.toml
 
 必须优先读取的文件：
 - state/memory/ai-pm-7d.jsonl
-- state/daily/*-links.jsonl（本周及近 7 天）
-- state/daily/*-report.md（本周及近 7 天，作阅读补充；JSONL 仍是主数据源）
+- state/daily/active/*-links.jsonl（本周及近 7 天）
+- state/daily/active/*-report.md（本周及近 7 天，作阅读补充；JSONL 仍是主数据源）
 - pools/product-inspiration.jsonl
-- pools/paper-candidates.jsonl
 - pools/demo-replication.jsonl
 - pools/knowledge-gap.jsonl
 - pools/personal-work.jsonl
+- pools/paper-candidates.jsonl
 - pools/archive.jsonl
 
 必须写入的状态文件：
@@ -30,8 +29,8 @@ source_toml: automations/weekly-execution-review.toml
 
 周报原则：
 1. 不要重复日报，不要做新闻堆砌。
-2. 从候选池和 7 天 memory 中判断本周哪些方向值得推进、观察、归档或丢弃。
-3. 每周最多选择：主推 Demo 1 个、论文精读 1-2 篇、工程学习主题 1 个、产品灵感调研 1-2 个、个人作品推进 1-2 个。
+2. 从当前语义池（product、engineering、paper）和 7 天 memory 中判断本周哪些方向值得推进、观察、归档或丢弃。`archive` 和 `drop` 是后续处置，不属于前三类常规池。
+3. 每周最多选择：论文精读 1-2 篇、产品灵感调研 1-2 个、归档/暂缓判断若干。
 4. weekly_candidate sources 可用于刷新池子，但不能绕过 practice_fit、entry_barrier 和人工确认状态。
 5. 输出必须服务 2B AI PM、AI workflow、eval、agent/MCP、Vibe Coding 和作品证明力。
 6. §2 候选池盘点必须统计并写出：confirmed/changed 数量、pending 数量；若 pending > 0，在 §2 开头加一行「分拣完成度警告：本周仍有 N 条 pending，执行卡准确度可能不足」。
@@ -45,10 +44,10 @@ source_toml: automations/weekly-execution-review.toml
 从 daily state、memory 和候选池归纳 3-5 个趋势。每个包含代表链接、来源池、人工确认状态、为什么重要、下周处理方式。
 
 ## 2. 候选池状态盘点
-先写分拣完成度（confirmed/changed vs pending）。再按产品灵感池、论文候选池、工程复刻池、知识补缺池、个人作品池输出。每池区分 confirmed/changed/pending，并说明本周应推进、继续观察或归档的条目。
+先写分拣完成度（confirmed/changed vs pending）。再按产品池、工程池、论文池输出。每池区分 confirmed/changed/pending，并说明本周应推进、继续观察或归档的条目。`archive` 和 `drop` 只在后续处置里出现。
 
 ## 3. 下周执行卡
-给出下周只做的核心任务：主推 Demo、论文精读、工程学习主题、产品调研、个人作品推进。每个任务包含来源文件/链接、为什么选、预计耗时、最小产出物、成功标准、proof_artifact、interview_story_angle。优先 confirmed/changed。
+给出下周只做的核心任务：论文精读、产品调研、归档复核。每个任务包含来源文件/链接、为什么选、预计耗时、最小产出物、成功标准、proof_artifact、interview_story_angle。优先 confirmed/changed。
 
 ## 4. 面试证明力任务
 列出 1-3 个最适合形成面试证明力的任务，包含 target_role_signal、validation_window、next_proof_action。

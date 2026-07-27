@@ -40,10 +40,10 @@ cd ~/Documents/CortexOps
 ./scripts/codex-daily-prefetch.sh
 DATE=$(TZ=Asia/Shanghai date +%Y-%m-%d)
 
-git add -f state/daily/${DATE}-ingest-manifest.json \
-           state/daily/${DATE}-aihot-raw.json \
-           state/daily/${DATE}-arxiv-raw.xml \
-           state/daily/${DATE}-github-raw.json
+git add -f state/daily/active/${DATE}-ingest-manifest.json \
+           state/daily/active/${DATE}-aihot-raw.json \
+           state/daily/active/${DATE}-arxiv-raw.xml \
+           state/daily/active/${DATE}-github-raw.json
 git commit -m "chore(ingest): daily prefetch ${DATE}"
 git push origin codex/source-layering-policy
 

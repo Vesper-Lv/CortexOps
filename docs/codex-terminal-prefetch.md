@@ -1,6 +1,7 @@
-# Codex daily workflow (Terminal prefetch + Codex report)
+# Codex daily workflow (Terminal prefetch + Codex exec report)
 
-Use this when **Codex App shell has no DNS** but macOS Terminal can reach AIhot.
+Use this when Codex should read prefetched files and generate the daily report
+through the terminal runner.
 
 ## Quick start
 
@@ -11,11 +12,11 @@ git pull origin codex/source-layering-policy   # or your feature branch
 # 1) Terminal: prefetch AIhot + write manifest (uses system DNS / Clash)
 ./scripts/codex-daily-prefetch.sh
 
-# 2) Sync automation to Codex
-cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
+# 2) Run Codex from the prompt file
+./scripts/codex-daily-run.sh
 
-# 3) Codex App → 每日 AI PM 行业雷达 → Run Now
-#    Codex reads state/daily/active/YYYY-MM-DD-aihot-raw.json only — do NOT curl AIhot inside Codex.
+# Codex reads prompts/daily-ai-pm.md and state/daily/active/YYYY-MM-DD-aihot-raw.json.
+# Do NOT curl AIhot inside Codex.
 ```
 
 Shanghai date:
@@ -83,12 +84,11 @@ sandbox_mode = "workspace-write"
 network_access = true
 ```
 
-## Sync checklist
+## Prompt checklist
 
-After changing `automations/ai-pm.toml`:
+After changing `prompts/daily-ai-pm.md`:
 
 ```bash
-cp automations/ai-pm.toml ~/.codex/automations/ai-pm.toml
-diff automations/ai-pm.toml ~/.codex/automations/ai-pm.toml && echo "in sync"
-python3 -c 'import tomllib, pathlib; tomllib.loads(pathlib.Path("automations/ai-pm.toml").read_text()); print("toml ok")'
+python3 scripts/check-prompts.py
+rg -n "skipped_no_prefetch|禁止.*curl|focus-policy.md" prompts/daily-ai-pm.md
 ```

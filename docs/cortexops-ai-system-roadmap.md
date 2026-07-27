@@ -45,11 +45,10 @@ Core pages:
 
 - `Today`: daily report, 30-minute reading pack, remaining links, daily
   practice, and candidate-pool confirmation.
-- `Reports`: daily radar, weekly review, paper radar, demo recommendation,
-  engineering learning, and monthly review.
+- `Reports`: daily radar, weekly execution review, paper radar, and monthly
+  review.
 - `Review Inbox`: confirm, reroute, reject, watch, or convert signals to tasks.
-- `Candidate Pools`: product inspiration, paper candidates, demo replication,
-  knowledge gaps, personal work, and archive.
+- `Candidate Pools`: product, engineering, paper, archive, and drop.
 - `Tasks`: unified task board.
 - `Artifacts`: demos, memos, README files, diagrams, and portfolio material.
 - `Focus Rules`: view, edit, pause, extend, and archive attention rules.
@@ -114,16 +113,14 @@ PromptTemplate
 
 ### Phase 1
 
-- Codex automations remain the AI runner.
-- Prompts stay in `automations/*.toml`.
+- Terminal Codex runners remain the AI runner.
+- Prompts stay in `prompts/*.md`.
 - Policies stay in `docs/*.md`.
 - The app reads automation outputs and does not call AI directly.
 
 ### Phase 2
 
-- Add a `prompts/` directory.
-- Split daily, weekly, demo, engineering-learning, and monthly prompts into
-  versionable templates.
+- Keep daily, weekly, paper, and monthly prompts as versionable templates.
 - Record prompt version, policy snapshot, input files, and output files.
 
 ### Phase 3
@@ -195,9 +192,7 @@ CortexOps/
   prompts/
     daily-ai-pm.md
     weekly-execution-review.md
-    paper-radar.md
-    demo-recommendation.md
-    engineering-learning.md
+    ai-paper-radar.md
     monthly-review.md
 
   prisma/
@@ -264,7 +259,7 @@ Acceptance criteria:
 
 - Current automation files are recoverable from Git.
 - Web App work happens in an isolated worktree.
-- Current TOML automation configs still parse.
+- Current prompt specs validate with `scripts/check-prompts.py`.
 
 ### Phase 1: Web App Skeleton
 
@@ -299,7 +294,7 @@ Deliverables:
 Priority imports:
 
 ```text
-state/daily/YYYY-MM-DD-links.jsonl
+state/daily/active/YYYY-MM-DD-links.jsonl
 state/memory/ai-pm-7d.jsonl
 pools/*.jsonl
 ```
@@ -505,7 +500,7 @@ Defer:
 
 ## Test Plan
 
-- TOML parse: current `automations/*.toml` still parse.
+- Prompt specs: current `prompts/*.md` validate with `scripts/check-prompts.py`.
 - Import tests: empty JSONL, normal JSONL, bad lines, and missing fields are
   handled.
 - Schema tests: Signal, Candidate, Task, and FocusRule fields match the current

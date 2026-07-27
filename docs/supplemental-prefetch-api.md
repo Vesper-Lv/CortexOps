@@ -10,8 +10,8 @@ AIhot remains **required**; GitHub and arXiv are **optional** — failure →
 
 | Source | Raw path | Manifest `fetch_mode` |
 |--------|----------|------------------------|
-| arXiv | `state/daily/YYYY-MM-DD-arxiv-raw.xml` | `export_api` |
-| GitHub | `state/daily/YYYY-MM-DD-github-raw.json` | `search_api` |
+| arXiv | `state/daily/active/YYYY-MM-DD-arxiv-raw.xml` | `export_api` |
+| GitHub | `state/daily/active/YYYY-MM-DD-github-raw.json` | `search_api` |
 
 Manifest `sources.*.status`:
 

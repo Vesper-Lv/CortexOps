@@ -1,43 +1,37 @@
-# Automation Snapshots
+# Prompt Runtime Notes
 
-This folder contains copies of the current automation configurations that power
-the CortexOps system.
+Current CortexOps terminal runners read prompt bodies from `../prompts/*.md`.
+Prompt changes happen in those Markdown files.
 
-## Files
+Live daily state and candidate pools live outside this folder:
 
-- `ai-pm.toml`: daily AI PM radar
-- `weekly-execution-review.toml`: weekly AI PM execution review and planning
-- `ai-paper-radar.toml`: weekly AI / cognitive science paper radar
-- `demo.toml`: weekly demo replication recommendation
-- `engineering-learning.toml`: weekly engineering learning task
-- `monthly-review.toml`: monthly direction review
-- `ai-pm-memory.md`: deprecated historical memory notes; use
-  `../state/memory/ai-pm-7d.jsonl` for current deduplication
-
-Live daily state and candidate pools live outside this snapshot folder:
-
-- `../state/daily/YYYY-MM-DD-links.jsonl`: structured daily link state
-- `../state/daily/YYYY-MM-DD-report.md`: human-readable daily report view
+- `../state/daily/active/YYYY-MM-DD-links.jsonl`: structured daily link state
+- `../state/daily/active/YYYY-MM-DD-report.md`: human-readable daily report view
 - `../state/memory/ai-pm-7d.jsonl`: rolling 7-day deduplication index
-- `../pools/*.jsonl`: candidate pools for weekly, monthly, demo, and learning
-  automations
+- `../pools/product-inspiration.jsonl`: product pool storage
+- `../pools/demo-replication.jsonl`, `../pools/knowledge-gap.jsonl`,
+  `../pools/personal-work.jsonl`: engineering pool storage
+- `../pools/paper-candidates.jsonl`: paper pool storage
+- `../pools/archive.jsonl`: archive pool storage
+- `drop`: terminal disposition in the UI, not a pool file
+
+The current semantic pools in the workbench are `product`, `engineering`, and
+`paper`. `archive` and `drop` are later dispositions.
 
 ## Prompt templates (`prompts/`)
 
-Workbench keeps a versioned copy of each automation prompt under `../prompts/`.
-TOML files in this folder remain snapshots for Codex; `prompts/` is the workbench
-canonical copy for registry sync.
+`../prompts/*.md` is the canonical prompt source for terminal `codex exec`
+runners. Prompt frontmatter is metadata only; runners strip it before execution.
 
 Workflow when changing a prompt:
 
 1. Edit the matching file in `../prompts/<slug>.md`
-2. Run `npm run prompts:sync` to upsert `PromptTemplate` rows (hash + metadata)
-3. Optionally update the TOML snapshot here for Codex parity
+2. Run the relevant runner or prompt check.
+3. Re-run the relevant prompt check or automation script.
 
 CLI helpers:
 
-- `npm run prompts:sync` — extract missing prompt files from TOML and sync DB registry
-- `npm run automation:register -- --id ai-pm --outputs state/daily/YYYY-MM-DD-links.jsonl` — manually record an external Codex run
+- `npm run automation:register -- --id ai-pm --outputs state/daily/active/YYYY-MM-DD-links.jsonl` — manually record an external Codex run
 - `npm run import` — attaches a `PolicySnapshot` to each import and heuristically registers `AutomationRun` rows
 
 View read-only status at **Settings → Automations** in the workbench.
@@ -54,12 +48,12 @@ and `prompts/daily-ai-pm.md`):
 3. **If still < 25:** note in the report that fresh signals were thin; do not pad
    to 30 with duplicates.
 
-After prompt changes, run `npm run prompts:sync` and update the live Codex copy in
-`~/.codex/automations` when ready.
+After prompt changes, run the corresponding script and verify the generated
+state/report files.
 
 ## Weekly AI PM — Terminal launch (Codex CLI)
 
-The weekly execution review (`weekly-execution-review.toml`) is scheduled for
+The weekly execution review (`prompts/weekly-execution-review.md`) is scheduled for
 **Sunday 20:30 Asia/Shanghai** via launchd, mirroring the daily pipeline:
 
 1. `scripts/codex-weekly-run.sh` — reads pools + daily JSONL + memory, runs
@@ -67,16 +61,13 @@ The weekly execution review (`weekly-execution-review.toml`) is scheduled for
 2. `scripts/install-weekly-launchd.sh` — installs `com.cortexops.weekly-ai-pm`
    with `RunAtLoad` catch-up if Sunday 20:30 was missed
 
-Disable the Codex App built-in cron for the same automation to avoid double runs.
-Prompt source: `prompts/weekly-execution-review.md` (synced to TOML snapshot).
+Prompt source: `prompts/weekly-execution-review.md`.
 
 ## Monday weekly + monthly automations — Terminal launch
 
 | Automation | Script key | Output path | Schedule |
 |---|---|---|---|
 | Paper radar | `paper-radar` | `state/weekly/paper/YYYY-MM-DD-paper-radar.md` | Mon 09:00 |
-| Demo recommendation | `demo` | `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md` | Mon 10:30 |
-| Engineering learning | `engineering` | `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md` | Mon 11:30 |
 | Monthly review | `monthly` | `state/monthly/YYYY-MM-01-monthly-review.md` | 1st 09:30 |
 
 ```bash
@@ -84,7 +75,7 @@ Prompt source: `prompts/weekly-execution-review.md` (synced to TOML snapshot).
 ./scripts/install-automation-launchd.sh
 ```
 
-Prompt sources: `prompts/paper-radar.md`, `demo-recommendation.md`, `engineering-learning.md`, `monthly-review.md`.
+Prompt sources: `prompts/ai-paper-radar.md` and `prompts/monthly-review.md`.
 
 ## Convention
 
@@ -100,17 +91,16 @@ They should also reference:
 - `../docs/focus-policy.md` when they should respond to active user attention
   rules
 
-Daily, weekly, demo, engineering-learning, and monthly automations should treat
-JSONL state and pool files as reusable source-of-truth files. Long-form reports
-are reading views, not the primary interface for later automation runs.
+Daily, weekly, paper, and monthly automations should treat JSONL state and pool
+files as reusable source-of-truth files. Long-form reports are reading views,
+not the primary interface for later automation runs.
 
-When the source policy changes, update this folder only as a snapshot of the
-current automation state. The live automations remain managed in `~/.codex/automations`.
+When the source policy changes, update `../prompts/*.md`.
 
-Before considering an automation snapshot valid, run:
+Before considering prompt specs valid, run:
 
 ```sh
-python3 -c 'import tomllib, pathlib; [tomllib.loads(p.read_text()) for p in pathlib.Path("automations").glob("*.toml")]; print("all toml ok")'
+python3 scripts/check-prompts.py
 ```
 
 For focus-rule changes, also verify the affected automations reference

@@ -5,8 +5,6 @@ set -euo pipefail
 #
 # Usage:
 #   ./scripts/codex-automation-run.sh paper-radar [YYYY-MM-DD]
-#   ./scripts/codex-automation-run.sh demo [YYYY-MM-DD]
-#   ./scripts/codex-automation-run.sh engineering [YYYY-MM-DD]
 #   ./scripts/codex-automation-run.sh monthly [YYYY-MM-01]
 #   FORCE=1 ./scripts/codex-automation-run.sh paper-radar
 #
@@ -27,8 +25,6 @@ Usage: ./scripts/codex-automation-run.sh <key> [date]
 
 Keys:
   paper-radar   → state/weekly/paper/YYYY-MM-DD-paper-radar.md
-  demo          → state/weekly/demo/YYYY-MM-DD-demo-recommendation.md
-  engineering   → state/weekly/engineering/YYYY-MM-DD-engineering-learning.md
   monthly       → state/monthly/YYYY-MM-DD-monthly-review.md
 
 Weekly keys default to last Sunday's date. Monthly defaults to YYYY-MM-01.
@@ -40,40 +36,20 @@ EOF
 
 case "$KEY" in
   paper-radar)
-    TOML="automations/ai-paper-radar.toml"
+    PROMPT_FILE="prompts/ai-paper-radar.md"
     LOG_DIR="${ROOT}/state/weekly/paper"
     LOG_FILE="${LOG_DIR}/codex-paper-radar-run.log"
     DATE="$(resolve_week_sunday "$DATE_ARG")"
     REPORT="${LOG_DIR}/${DATE}-paper-radar.md"
     REPORT_REL="state/weekly/paper/${DATE}-paper-radar.md"
-    CODEX_APP_NAME="每周 AI × 认知科学论文雷达"
-    ;;
-  demo)
-    TOML="automations/demo.toml"
-    LOG_DIR="${ROOT}/state/weekly/demo"
-    LOG_FILE="${LOG_DIR}/codex-demo-run.log"
-    DATE="$(resolve_week_sunday "$DATE_ARG")"
-    REPORT="${LOG_DIR}/${DATE}-demo-recommendation.md"
-    REPORT_REL="state/weekly/demo/${DATE}-demo-recommendation.md"
-    CODEX_APP_NAME="每周 Demo 复刻推荐"
-    ;;
-  engineering)
-    TOML="automations/engineering-learning.toml"
-    LOG_DIR="${ROOT}/state/weekly/engineering"
-    LOG_FILE="${LOG_DIR}/codex-engineering-run.log"
-    DATE="$(resolve_week_sunday "$DATE_ARG")"
-    REPORT="${LOG_DIR}/${DATE}-engineering-learning.md"
-    REPORT_REL="state/weekly/engineering/${DATE}-engineering-learning.md"
-    CODEX_APP_NAME="每周工程学习任务"
     ;;
   monthly)
-    TOML="automations/monthly-review.toml"
+    PROMPT_FILE="prompts/monthly-review.md"
     LOG_DIR="${ROOT}/state/monthly"
     LOG_FILE="${LOG_DIR}/codex-monthly-run.log"
     DATE="$(resolve_month_first "$DATE_ARG")"
     REPORT="${LOG_DIR}/${DATE}-monthly-review.md"
     REPORT_REL="state/monthly/${DATE}-monthly-review.md"
-    CODEX_APP_NAME="每月方向复盘"
     ;;
   *)
     usage
@@ -92,12 +68,12 @@ fi
 
 CODEX_BIN="$(resolve_codex_bin || true)"
 if [[ -z "$CODEX_BIN" ]]; then
-  log_automation "$LOG_FILE" "WARN: codex CLI not found — open Codex App → ${CODEX_APP_NAME} → Run Now"
+  log_automation "$LOG_FILE" "WARN: codex CLI not found — install or configure CODEX_BIN to run ${KEY}"
   exit 0
 fi
 
-log_automation "$LOG_FILE" "Extracting prompt from ${TOML}"
-PROMPT="$(build_prompt_with_header "$RUN_DATE" "$DATE" "$REPORT_REL" "$TOML")"
+log_automation "$LOG_FILE" "Reading prompt from ${PROMPT_FILE}"
+PROMPT="$(build_prompt_with_header "$RUN_DATE" "$DATE" "$REPORT_REL" "$PROMPT_FILE")"
 
 log_automation "$LOG_FILE" "Launching: ${CODEX_BIN} exec (workspace-write, cwd=${ROOT})"
 code="$(run_codex_automation "$CODEX_BIN" "$ROOT" "$PROMPT" "$LOG_FILE")"

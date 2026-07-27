@@ -1,7 +1,6 @@
 ---
 automation_id: ai-pm
 kind: daily
-source_toml: automations/ai-pm.toml
 ---
 ## 文件写入规则
 
@@ -25,9 +24,10 @@ source_toml: automations/ai-pm.toml
 - state/daily/active/YYYY-MM-DD-report.md
 - state/memory/ai-pm-7d.jsonl
 - pools/product-inspiration.jsonl
-- pools/paper-candidates.jsonl
 - pools/demo-replication.jsonl
 - pools/knowledge-gap.jsonl
+- pools/personal-work.jsonl
+- pools/paper-candidates.jsonl
 - pools/archive.jsonl
 
 AIhot 采集（两阶段，strict 默认）：
@@ -95,7 +95,7 @@ id, date, title, original_url, source_url, source_origin, source_name, source_mi
 - 所有采集链接先写入 state/daily/active/YYYY-MM-DD-links.jsonl。
 - 用户阅读版写入 state/daily/active/YYYY-MM-DD-report.md。
 - 入选 30 分钟阅读包、GitHub 主推、候选池 pending/confirmed/changed 的链接写入 state/memory/ai-pm-7d.jsonl。
-- AI 建议进入候选池的链接写入对应 pools/*.jsonl，human_status: pending，final_pool 默认等于 suggested_pool。
+- AI 建议进入候选池的链接只写入当前语义池：product、engineering、paper；`archive` 和 `drop` 是后续处置，不属于前三类常规池。实现上写入对应的 `pools/*.jsonl` 文件，`human_status: pending`，`final_pool` 默认等于 `suggested_pool`。
 - 产品灵感池只保留手动确认或人工改入的候选；日报不要自动生成“今日 AI 产品灵感”段落。
 - 产品/工程建议只作为每条链接的 reason / priority_rationale / pool_rationale 进入 Web 端建议卡。
 

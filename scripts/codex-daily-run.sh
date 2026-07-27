@@ -3,9 +3,8 @@ set -euo pipefail
 
 # CortexOps: Terminal prefetch → verify → trigger Codex headless run.
 #
-# Use this instead of Codex App cron when local shell DNS is broken.
-# Schedule via launchd (09:00 + RunAtLoad on login). Disable duplicate
-# Codex App automation cron to avoid double runs.
+# Schedule via launchd (09:00 + RunAtLoad on login). Do not configure a
+# duplicate Codex App automation cron for the same daily report.
 #
 # Usage:
 #   ./scripts/codex-daily-run.sh              # today (Asia/Shanghai)
@@ -19,6 +18,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=lib/codex-automation-common.sh
+source "${ROOT}/scripts/lib/codex-automation-common.sh"
 
 DATE="${1:-$(TZ=Asia/Shanghai date +%Y-%m-%d)}"
 LOG_DIR="${ROOT}/state/daily"
@@ -63,32 +64,17 @@ if [[ "${SKIP_CODEX:-0}" == "1" ]]; then
   exit 0
 fi
 
-CODEX_BIN="${CODEX_BIN:-}"
-if [[ -z "$CODEX_BIN" ]]; then
-  if command -v codex >/dev/null 2>&1; then
-    CODEX_BIN="$(command -v codex)"
-  elif [[ -x "${HOME}/.local/bin/codex" ]]; then
-    CODEX_BIN="${HOME}/.local/bin/codex"
-  elif [[ -x "${HOME}/.npm-global/bin/codex" ]]; then
-    CODEX_BIN="${HOME}/.npm-global/bin/codex"
-  fi
-fi
+CODEX_BIN="$(resolve_codex_bin || true)"
 
 if [[ -z "$CODEX_BIN" ]]; then
-  log "WARN: codex CLI not found — prefetch OK; open Codex App → 每日 AI PM → Run Now"
+  log "WARN: codex CLI not found — prefetch OK; install or configure CODEX_BIN to run the report"
   log "Install: curl -fsSL https://chatgpt.com/codex/install.sh | sh"
   exit 0
 fi
 
-log "Extracting prompt from automations/ai-pm.toml"
-PROMPT="$(
-  python3 - <<'PY'
-import tomllib
-from pathlib import Path
-p = Path("automations/ai-pm.toml")
-print(tomllib.loads(p.read_text(encoding="utf-8"))["prompt"])
-PY
-)"
+PROMPT_FILE="prompts/daily-ai-pm.md"
+log "Reading prompt from ${PROMPT_FILE}"
+PROMPT="$(read_prompt_file "$PROMPT_FILE")"
 
 log "Launching: ${CODEX_BIN} exec (workspace-write, cwd=${ROOT})"
 # workspace-write: write state/daily + pools; strict mode reads aihot raw only (no network).

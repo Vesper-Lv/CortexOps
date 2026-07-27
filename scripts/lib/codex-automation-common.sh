@@ -44,22 +44,39 @@ log_automation() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $*" | tee -a "$log_file"
 }
 
+read_prompt_file() {
+  local prompt_path="$1"
+
+  PROMPT_PATH="$prompt_path" python3 - <<'PY'
+import os
+from pathlib import Path
+
+prompt_path = Path(os.environ["PROMPT_PATH"])
+text = prompt_path.read_text(encoding="utf-8")
+if text.startswith("---\n"):
+    _, _, text = text.partition("\n---\n")
+print(text, end="" if text.endswith("\n") else "\n")
+PY
+}
+
 build_prompt_with_header() {
   local run_date="$1"
   local report_date="$2"
   local target_rel="$3"
-  local toml_path="$4"
+  local prompt_path="$4"
 
-  RUN_DATE="$run_date" REPORT_DATE="$report_date" TARGET_REL="$target_rel" TOML_PATH="$toml_path" python3 - <<'PY'
+  RUN_DATE="$run_date" REPORT_DATE="$report_date" TARGET_REL="$target_rel" PROMPT_PATH="$prompt_path" python3 - <<'PY'
 import os
-import tomllib
 from pathlib import Path
 
 run_date = os.environ["RUN_DATE"]
 report_date = os.environ["REPORT_DATE"]
 target_rel = os.environ["TARGET_REL"]
-toml_path = Path(os.environ["TOML_PATH"])
-base = tomllib.loads(toml_path.read_text(encoding="utf-8"))["prompt"]
+prompt_path = Path(os.environ["PROMPT_PATH"])
+base = prompt_path.read_text(encoding="utf-8")
+if base.startswith("---\n"):
+    _, _, rest = base.partition("\n---\n")
+    base = rest
 header = f"""【运行指令 — 优先于下文占位符】
 - 运行日（Asia/Shanghai）：{run_date}
 - 本报告文件名日期：{report_date}

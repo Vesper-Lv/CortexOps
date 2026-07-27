@@ -78,7 +78,7 @@ Cursor Automation 支持 **Webhook** 与 **Push to branch** 触发（[官方文�
 1. [cursor.com/automations](https://cursor.com/automations) → 日报 Automation
 2. **Triggers**：删除或禁用纯 Schedule；添加 **Webhook**
 3. 绑定 repo：`Vesper-Lv/CortexOps` / `codex/source-layering-policy`
-4. Prompt 与 `automations/ai-pm.toml` 一致（Phase 0 strict，禁止 curl AIhot）
+4. Prompt 使用 `prompts/daily-ai-pm.md`（Phase 0 strict，禁止 curl AIhot）
 5. 保存后复制 Webhook URL + Generate auth header
 6. 本机：
 
@@ -192,15 +192,15 @@ SKIP_CODEX=1 ./scripts/codex-daily-run.sh
 - 绕过 App shell 的 DNS 问题
 - prefetch 成功后可 **脚本直接衔接**，无需人工点 Run
 
-### 方案 2（备选）：仅 signal + 人工 Run App
+### 方案 2（备选）：仅 prefetch，稍后补跑 CLI
 
 ```bash
 SKIP_CODEX=1 ./scripts/codex-daily-run.sh
 # 看 state/daily/active/YYYY-MM-DD-ingest-ready.signal
-# 再打开 Codex App 点 Run Now
+# 安装或配置 CODEX_BIN 后再运行 ./scripts/codex-daily-run.sh
 ```
 
-适合未装 CLI 时。
+适合暂时未装 CLI 或希望先确认 prefetch 产物时。
 
 ### 方案 3（不推荐）：AppleScript 点 Codex App
 

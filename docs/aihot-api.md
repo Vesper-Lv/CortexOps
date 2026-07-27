@@ -55,6 +55,6 @@ curl -sS -H "User-Agent: $UA" "https://aihot.virxact.com/api/public/items?mode=s
 
 ## 可选审计文件
 
-`state/daily/YYYY-MM-DD-aihot-raw.json` — 保存 API 响应原文，便于 provenance 审计。
+`state/daily/active/YYYY-MM-DD-aihot-raw.json` — 保存 API 响应原文，便于 provenance 审计。
 
 GitHub / arXiv supplemental raw：见 `docs/supplemental-prefetch-api.md`。

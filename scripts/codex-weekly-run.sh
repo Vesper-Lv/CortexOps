@@ -4,7 +4,7 @@ set -euo pipefail
 # CortexOps: weekly execution review via Codex CLI (no prefetch).
 #
 # Schedule via launchd (Sunday 20:30 Asia/Shanghai + RunAtLoad on login).
-# Disable duplicate Codex App cron for the same automation to avoid double runs.
+# Do not configure a duplicate Codex App cron for the same weekly report.
 #
 # Usage:
 #   ./scripts/codex-weekly-run.sh                    # last Sunday's date (Mon–Sat catch-up)
@@ -16,6 +16,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=lib/codex-automation-common.sh
+source "${ROOT}/scripts/lib/codex-automation-common.sh"
 
 resolve_weekly_date() {
   if [[ -n "${1:-}" ]]; then
@@ -51,45 +53,17 @@ fi
 RUN_DATE="$(TZ=Asia/Shanghai date +%Y-%m-%d)"
 log "START weekly pipeline — run_date=${RUN_DATE} report_sunday=${DATE} target=${REPORT_REL}"
 
-CODEX_BIN="${CODEX_BIN:-}"
-if [[ -z "$CODEX_BIN" ]]; then
-  if command -v codex >/dev/null 2>&1; then
-    CODEX_BIN="$(command -v codex)"
-  elif [[ -x "${HOME}/.local/bin/codex" ]]; then
-    CODEX_BIN="${HOME}/.local/bin/codex"
-  elif [[ -x "${HOME}/.npm-global/bin/codex" ]]; then
-    CODEX_BIN="${HOME}/.npm-global/bin/codex"
-  fi
-fi
+CODEX_BIN="$(resolve_codex_bin || true)"
 
 if [[ -z "$CODEX_BIN" ]]; then
-  log "WARN: codex CLI not found — open Codex App → 每周 AI PM 执行周报 → Run Now"
+  log "WARN: codex CLI not found — install or configure CODEX_BIN to run the weekly report"
   log "Install: curl -fsSL https://chatgpt.com/codex/install.sh | sh"
   exit 0
 fi
 
-log "Extracting prompt from automations/weekly-execution-review.toml"
-PROMPT="$(
-  RUN_DATE="$RUN_DATE" REPORT_DATE="$DATE" python3 - <<'PY'
-import os
-import tomllib
-from pathlib import Path
-
-run_date = os.environ["RUN_DATE"]
-report_date = os.environ["REPORT_DATE"]
-p = Path("automations/weekly-execution-review.toml")
-base = tomllib.loads(p.read_text(encoding="utf-8"))["prompt"]
-header = f"""【运行指令 — 优先于下文占位符】
-- 运行日（Asia/Shanghai）：{run_date}
-- 本周周报文件名日期（周日）：{report_date}
-- 必须将完整周报写入此确切路径（不要用 YYYY-MM-DD 占位符、不要改日期）：
-  state/weekly/{report_date}-report.md
-- 禁止写到 state/daily/、仓库根目录、或用运行日代替周日日期。
-
-"""
-print(header + base)
-PY
-)"
+PROMPT_FILE="prompts/weekly-execution-review.md"
+log "Reading prompt from ${PROMPT_FILE}"
+PROMPT="$(build_prompt_with_header "$RUN_DATE" "$DATE" "$REPORT_REL" "$PROMPT_FILE")"
 
 log "Launching: ${CODEX_BIN} exec (workspace-write, cwd=${ROOT}, target=${REPORT_REL})"
 set +e

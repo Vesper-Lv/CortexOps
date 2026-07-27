@@ -59,8 +59,6 @@ Examples:
 - daily AI PM radar
 - weekly execution review
 - weekly paper radar
-- weekly demo recommendation
-- weekly engineering learning task
 - monthly direction review
 
 Suggested fields:
@@ -111,11 +109,9 @@ action.
 Candidate pools:
 
 ```text
-product_inspiration
-paper_candidate
-demo_replication
-knowledge_gap
-personal_work
+product
+engineering
+paper
 archive
 drop
 ```
@@ -260,10 +256,10 @@ items should regularly become tasks.
 Candidate pool files are the source of truth:
 
 - `pools/product-inspiration.jsonl`
-- `pools/paper-candidates.jsonl`
 - `pools/demo-replication.jsonl`
 - `pools/knowledge-gap.jsonl`
 - `pools/personal-work.jsonl`
+- `pools/paper-candidates.jsonl`
 - `pools/archive.jsonl`
 
 Each pool item should show whether it is pending AI suggestion, confirmed by the
@@ -320,9 +316,8 @@ an AI PM / indie developer artifact.
 Priority boost: high
 Source types: github_repo, github_release, github_issue, github_pull_request
 Tags: agent, AI coding, eval, memory, workflow, demo, MVP, portfolio
-Candidate pool boost: demo_replication, knowledge_gap, personal_work,
-product_inspiration
-Applies to: daily_radar, weekly_review, demo_recommendation, engineering_learning
+Candidate pool boost: engineering, product, paper
+Applies to: daily_radar, weekly_execution_review, paper_radar, monthly_review
 Status: active
 ```
 
@@ -381,8 +376,6 @@ Shows:
 - daily radar
 - weekly execution review
 - weekly paper radar
-- weekly demo recommendation
-- weekly engineering learning task
 - monthly direction review
 
 Primary question: What did the system generate on a given day or week?
@@ -409,12 +402,10 @@ The option management area.
 
 Shows:
 
-- product inspiration pool
-- paper candidate pool
-- demo replication pool
-- knowledge gap pool
-- personal work pool
-- archive / drop
+- product
+- engineering
+- paper
+- archive / drop as terminal dispositions
 
 Primary question: What is worth keeping for future action?
 

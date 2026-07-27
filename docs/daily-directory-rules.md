@@ -77,10 +77,10 @@ state/daily/
 
 保留在正式区的典型文件：
 
-- `state/daily/2026-07-18-report.md`
-- `state/daily/2026-07-18-links.jsonl`
-- `state/daily/2026-07-18-ingest-manifest.json`
-- `state/daily/2026-07-18-aihot-raw.json`
+- `state/daily/active/2026-07-18-report.md`
+- `state/daily/active/2026-07-18-links.jsonl`
+- `state/daily/active/2026-07-18-ingest-manifest.json`
+- `state/daily/active/2026-07-18-aihot-raw.json`
 
 ## 一句话版本
 

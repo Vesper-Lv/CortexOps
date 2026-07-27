@@ -11,11 +11,10 @@ who is becoming a full-stack builder and preparing for AI PM interviews. Its
 job is to convert fragmented external information into:
 
 - durable signal
-- manually confirmed product inspiration
-- demo candidates
-- paper candidates
-- engineering learning tasks
-- personal work artifacts
+- product pool candidates
+- engineering pool candidates
+- paper pool candidates
+- archive / drop disposition decisions
 - interview-ready proof points
 - weekly and monthly execution decisions
 
@@ -107,7 +106,7 @@ Rules:
      For AIhot items, set `display_summary` equal to the API summary verbatim.
   2. If `selected.count < 12`, expand with **new** `canonical_key` values only:
      a. AIhot supplement: Shanghai-day `/daily` or `since` widened to 36–48h;
-        exclude keys already in yesterday's `state/daily/*-links.jsonl`.
+        exclude keys already in yesterday's `state/daily/active/*-links.jsonl`.
      b. Primary-source supplements: GitHub changelog/release, Anthropic/OpenAI
         official posts, arXiv.
      c. Narrow carry-over (max 3–5): `candidate`, `material_update`, or
@@ -137,8 +136,8 @@ Primary sources:
 
 Rules:
 
-- Weekly candidate sources should feed the demo replication pool, paper
-  product, paper, and engineering pools.
+- Weekly candidate sources should feed the product, engineering, or paper
+  pools.
 - Prefer candidates with a clear first action, recent activity, readable
   documentation, and a 3-8 hour replication path.
 - Do not promote a weekly candidate into next week's execution card unless it
@@ -166,7 +165,7 @@ Rules:
 - Monthly background sources should not answer "what happened today".
 - Use them to ask whether an ecosystem direction is still worth following,
   whether CortexOps missed an important repo / paper / tool category, which
-  directions should enter next month's product, paper, or engineering pools,
+  directions should enter next month's product, engineering, or paper pools,
   and which high-heat but low-practice directions should be downgraded.
 - A background source cannot enter P0 / P1 only because it has high stars,
   historical fame, or broad coverage.
@@ -267,7 +266,7 @@ Upgrade a signal when:
 
 - the same theme appears 2-3 days in a row
 - GitHub, paper, and product sources converge
-- the signal can become product inspiration or a demo
+- the signal can become a product pool item or a demo artifact
 - the signal is clearly tied to the user's current portfolio, job search, or learning gap
 
 Downgrade or drop when:
@@ -298,13 +297,13 @@ The daily AI PM radar should:
    Older sources may appear only as carry-over context, not as fresh daily
    signals.
 0b. Resolve `since` from the last successful daily links write
-   (`state/daily/*-links.jsonl` finished_at), compare `published_at` in UTC, and
+   (`state/daily/active/*-links.jsonl` finished_at), compare `published_at` in UTC, and
    use Asia/Shanghai only for report date / filename boundaries—not for API
    `/daily/{date}` unless the date is the Shanghai calendar day.
 1. Read `state/memory/ai-pm-7d.jsonl` before selecting P0/P1, reading-pack,
    GitHub, practice, or candidate-pool items.
 2. Build and write the structured daily longlist first:
-   `state/daily/YYYY-MM-DD-links.jsonl`.
+   `state/daily/active/YYYY-MM-DD-links.jsonl`.
 3. Aim for 25-30 links in the daily longlist when fresh signals allow. If fresh
    signals are thin after steps 1–2 of the AIhot contract, prefer an honest
    shorter longlist plus a source-mix note over padding to 30. AIhot is the main
@@ -320,7 +319,7 @@ The daily AI PM radar should:
 5. For AIhot items, use AIhot as discovery and summary support. Confirm the
    original source URL before promoting to P0/P1 or the reading pack, and keep
    `aihot_summary` separate from CortexOps judgment.
-6. Generate the user-facing report at `state/daily/YYYY-MM-DD-report.md` from
+6. Generate the user-facing report at `state/daily/active/YYYY-MM-DD-report.md` from
    the structured daily longlist.
 7. Use this visible daily order: five-part daily summary, 30-minute reading
    pack, then remaining links not selected for the reading pack.
@@ -344,8 +343,9 @@ The daily AI PM radar should:
    `human_status: pending`; later human edits to `final_pool` override the AI
    suggestion. Do not output a separate candidate-pool suggestion table in the
    daily report; show suggested routing as a per-link UI label or state field.
-12. Do not automatically produce today's AI product inspiration. Keep the
-   product inspiration pool for manually confirmed or manually changed items.
+12. Do not automatically produce today's candidate-pool entries. Keep the
+   product, engineering, and paper pools for manually confirmed or manually
+   changed items.
 13. Product and engineering recommendations should stay attached to individual
     link records through `reason`, `priority_rationale`, and `pool_rationale`;
     Web Workbench renders those records as suggestion cards.
@@ -405,10 +405,6 @@ The daily radar is the entry point, not the final output.
   a later automation needs structured weekly selection state.
 - Weekly AI / cognitive science paper radar reports should be kept as Markdown
   records under `state/weekly/paper/YYYY-MM-DD-paper-radar.md`.
-- Weekly Demo replication recommendations should be kept as Markdown records under
-  `state/weekly/demo/YYYY-MM-DD-demo-recommendation.md`.
-- Weekly engineering learning tasks should be kept as Markdown records under
-  `state/weekly/engineering/YYYY-MM-DD-engineering-learning.md`.
 
 ### Monthly
 
