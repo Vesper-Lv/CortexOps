@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "neat-freak": {
+      "source": "KKKKhazix/khazix-skills",
+      "sourceType": "github",
+      "skillPath": "neat-freak/SKILL.md",
+      "computedHash": "e30772f296f23b31a7168c974c6e89505f4c7139dbea5a7c9175552d03ee908e"
+    }
+  }
+}
